@@ -1,0 +1,118 @@
+/* Service Tech field UI — mobile-first */
+:root {
+  --bg: #0f1419;
+  --surface: #1a2332;
+  --surface2: #243044;
+  --text: #f2f5f8;
+  --muted: #9aa8b8;
+  --accent: #3d9cf0;
+  --accent2: #2ecc71;
+  --danger: #e74c3c;
+  --border: #2c3a4d;
+  --radius: 14px;
+  --tap: 48px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg); color: var(--text);
+  font-family: var(--font);
+  font-size: 17px; line-height: 1.4;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--accent); text-decoration: none; }
+.app {
+  max-width: 480px; margin: 0 auto;
+  min-height: 100dvh; padding: 16px 16px 88px;
+}
+header.app-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 20px;
+}
+header h1 { font-size: 1.35rem; margin: 0; flex: 1; }
+.back {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: var(--tap); min-height: var(--tap);
+  border-radius: 12px; background: var(--surface);
+  border: 1px solid var(--border); color: var(--text);
+  font-size: 1.1rem; cursor: pointer; padding: 0 14px;
+}
+.btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; min-height: var(--tap);
+  padding: 14px 18px; border: none; border-radius: var(--radius);
+  font-size: 1.05rem; font-weight: 650; cursor: pointer;
+  text-align: center; gap: 8px;
+}
+.btn-primary { background: var(--accent); color: #061018; }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-copy { background: var(--accent2); color: #062012; margin-top: 12px; }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.45; }
+.tile-grid { display: grid; gap: 12px; margin-top: 16px; }
+.tile {
+  display: block; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 16px; min-height: 72px;
+  color: var(--text);
+}
+.tile strong { display: block; font-size: 1.1rem; margin-bottom: 4px; }
+.tile span { color: var(--muted); font-size: 0.92rem; }
+.tile:active { background: var(--surface2); }
+.hero { margin: 8px 0 24px; }
+.hero p { color: var(--muted); margin: 8px 0 0; }
+.stepper {
+  display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap;
+}
+.step-pill {
+  flex: 1; text-align: center; padding: 10px 6px;
+  border-radius: 999px; background: var(--surface);
+  border: 1px solid var(--border); color: var(--muted);
+  font-size: 0.85rem; font-weight: 600; min-width: 64px;
+  cursor: pointer;
+}
+.step-pill.active { background: var(--accent); color: #061018; border-color: var(--accent); }
+.step-pill.done { border-color: var(--accent2); color: var(--accent2); }
+label.field {
+  display: block; margin-bottom: 14px;
+}
+label.field > span {
+  display: block; font-size: 0.85rem; color: var(--muted);
+  margin-bottom: 6px; font-weight: 600;
+}
+input, select, textarea {
+  width: 100%; min-height: var(--tap);
+  padding: 12px 14px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font-size: 1rem; font-family: inherit;
+}
+textarea { min-height: 96px; resize: vertical; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.check {
+  display: flex; align-items: center; gap: 12px;
+  min-height: var(--tap); padding: 8px 0;
+}
+.check input { width: 24px; height: 24px; min-height: 24px; }
+.nav-row { display: flex; gap: 10px; margin-top: 16px; }
+.nav-row .btn { flex: 1; }
+.search {
+  width: 100%; margin-bottom: 12px;
+}
+.group-title {
+  margin: 20px 0 8px; font-size: 0.8rem;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+}
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  background: var(--accent2); color: #062012;
+  padding: 12px 18px; border-radius: 999px;
+  font-weight: 650; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s; z-index: 50; max-width: 90%;
+}
+.toast.show { opacity: 1; }
+.hidden { display: none !important; }
+.footer-note {
+  margin-top: 28px; color: var(--muted); font-size: 0.8rem; text-align: center;
+}
+.doc-list { display: grid; gap: 12px; }
