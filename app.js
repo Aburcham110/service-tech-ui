@@ -2,114 +2,33 @@
 (function () {
   const STORAGE_KEY = "serviceTechCallDraft_v1";
   const STEPS = ["open", "readings", "mid", "close"];
-  const STEP_LABELS = { open: "Open", readings: "Readings", mid: "Mid", close: "Close" };
 
   const TOOLS = [
-  [
-    "Diagnostics",
-    [
-      [
-        "SH / Subcool",
-        "When charging or verifying capacity",
-        "hvac-superheat-subcool"
-      ],
-      [
-        "\u0394T / Airflow",
-        "Supply/return split and rough CFM",
-        "hvac-airflow-delta-t"
-      ],
-      [
-        "Psychrometrics",
-        "DB + RH/WB dew point & enthalpy",
-        "hvac-psychrometrics"
-      ],
-      [
-        "Compressor diag",
-        "High DLT, floodback, LRA, high amps",
-        "hvac-compressor-diag-tree"
-      ],
-      [
-        "TXV / EEV path",
-        "Hunting, high/low SH metering issues",
-        "hvac-txv-eev-path"
-      ]
-    ]
-  ],
-  [
-    "Charge & evacuate",
-    [
-      [
-        "Charge / recover",
-        "Line-set add vs recover estimate",
-        "hvac-charge-recovery-estimator"
-      ],
-      [
-        "Vacuum coach",
-        "Microns, hold/decay, pre-charge",
-        "hvac-vacuum-evacuation-coach"
-      ],
-      [
-        "Leak rate practice",
-        "Practice annualized % (NOT compliance)",
-        "hvac-leak-rate-helper"
-      ],
-      [
-        "A2L checklist",
-        "R-454B / R-32 field service & install",
-        "hvac-a2l-field-checklist"
-      ]
-    ]
-  ],
-  [
-    "Commercial / rack",
-    [
-      [
-        "Box load sizer",
-        "Rough walk-in cooler/freezer load",
-        "commercial-box-load-sizer"
-      ],
-      [
-        "Defrost checklist",
-        "Time clock vs demand defrost path",
-        "hvac-defrost-controls-checklist"
-      ],
-      [
-        "Oil / rack",
-        "Separator, filters, oil logging",
-        "hvac-oil-rack-checklist"
-      ],
-      [
-        "Case controller",
-        "Probes first, defrost history, EEV hunt",
-        "hvac-case-controller-playbook"
-      ]
-    ]
-  ],
-  [
-    "Electrical & notes",
-    [
-      [
-        "Electrical helper",
-        "Voltage, amps, FLA / MCA checks",
-        "hvac-electrical-helper"
-      ],
-      [
-        "Nameplate / codes",
-        "Capture plate + stub fault codes",
-        "hvac-nameplate-fault-codes"
-      ],
-      [
-        "Job log notes",
-        "Structured field job notes",
-        "hvac-job-log-notes"
-      ],
-      [
-        "Duct / static",
-        "Velocity and ESP reminders",
-        "hvac-duct-static-helper"
-      ]
-    ]
-  ]
+  ["Diagnostics",[
+    ["SH / Subcool","When charging or verifying capacity","hvac-superheat-subcool","superheat-subcool"],
+    ["\u0394T / Airflow","Supply/return split and rough CFM","hvac-airflow-delta-t","airflow-delta-t"],
+    ["Psychrometrics","DB + RH/WB dew point & enthalpy","hvac-psychrometrics","psychrometrics"],
+    ["Compressor diag","High DLT, floodback, LRA, high amps","hvac-compressor-diag-tree","compressor-diag"],
+    ["TXV / EEV path","Hunting, high/low SH metering issues","hvac-txv-eev-path","txv-eev"]
+  ]],
+  ["Charge & evacuate",[
+    ["Charge / recover","Line-set add vs recover estimate","hvac-charge-recovery-estimator","charge-recovery"],
+    ["Vacuum coach","Microns, hold/decay, pre-charge","hvac-vacuum-evacuation-coach","vacuum-coach"],
+    ["Leak rate practice","Practice annualized % (NOT compliance)","hvac-leak-rate-helper","leak-rate"],
+    ["A2L checklist","R-454B / R-32 field service & install","hvac-a2l-field-checklist","a2l-checklist"]
+  ]],
+  ["Commercial / rack",[
+    ["Box load sizer","Rough walk-in cooler/freezer load","commercial-box-load-sizer","box-load"],
+    ["Defrost checklist","Time clock vs demand defrost path","hvac-defrost-controls-checklist","defrost-checklist"],
+    ["Oil / rack","Separator, filters, oil logging","hvac-oil-rack-checklist","oil-rack"],
+    ["Case controller","Probes first, defrost history, EEV hunt","hvac-case-controller-playbook","case-controller"]
+  ]],
+  ["Electrical & notes",[
+    ["Electrical helper","Voltage, amps, FLA / MCA checks","hvac-electrical-helper","electrical"],
+    ["Nameplate / codes","Capture plate + stub fault codes","hvac-nameplate-fault-codes","nameplate-faults"],
+    ["Job log notes","Structured field job notes","hvac-job-log-notes","job-log"],
+    ["Duct / static","Velocity and ESP reminders","hvac-duct-static-helper","duct-static"]
+  ]]
 ];
 
   const DOCS = [
@@ -161,13 +80,6 @@
 
   function mergeDraft() {
     return Object.assign(defaultDraft(), loadDraft());
-  }
-
-  function val(id) {
-    const el = document.getElementById(id);
-    if (!el) return "";
-    if (el.type === "checkbox") return !!el.checked;
-    return el.value;
   }
 
   function readFormIntoDraft(d) {
@@ -227,21 +139,10 @@
       );
     }
     if (idx >= 2) {
-      parts.push(
-        "",
-        "MID CALL",
-        line("Did", d.did),
-        line("Found", d.found),
-        line("Still seeing", d.stillSeeing),
-      );
+      parts.push("", "MID CALL", line("Did", d.did), line("Found", d.found), line("Still seeing", d.stillSeeing));
     }
     if (idx >= 3) {
-      parts.push(
-        "",
-        "CLOSE",
-        line("Fixed", d.fixed),
-        line("Parts used", d.partsUsed),
-      );
+      parts.push("", "CLOSE", line("Fixed", d.fixed), line("Parts used", d.partsUsed));
     }
     parts.push("", "(Educational field helper — verify with OEM / AHJ)");
     return parts.join("\n");
@@ -268,10 +169,8 @@
     return p;
   }
 
-  /* ---- Home ---- */
   function initHome() {}
 
-  /* ---- Call wizard ---- */
   function showStep(name) {
     STEPS.forEach((s) => {
       const panel = document.getElementById("panel-" + s);
@@ -288,7 +187,6 @@
     let d = mergeDraft();
     fillForm(d);
     showStep(d.step || "open");
-
     $all(".step-pill").forEach((pill) => {
       pill.addEventListener("click", () => {
         d = readFormIntoDraft(d);
@@ -297,18 +195,10 @@
         showStep(d.step);
       });
     });
-
     $all("input, select, textarea").forEach((el) => {
-      el.addEventListener("change", () => {
-        d = readFormIntoDraft(d);
-        saveDraft(d);
-      });
-      el.addEventListener("input", () => {
-        d = readFormIntoDraft(d);
-        saveDraft(d);
-      });
+      el.addEventListener("change", () => { d = readFormIntoDraft(d); saveDraft(d); });
+      el.addEventListener("input", () => { d = readFormIntoDraft(d); saveDraft(d); });
     });
-
     $("#btn-prev")?.addEventListener("click", () => {
       d = readFormIntoDraft(d);
       const i = Math.max(0, STEPS.indexOf(d.step) - 1);
@@ -338,7 +228,6 @@
     });
   }
 
-  /* ---- Toolkit ---- */
   function renderTools(filter) {
     const root = $("#toolkit-root");
     if (!root) return;
@@ -356,12 +245,10 @@
       root.appendChild(h);
       const grid = document.createElement("div");
       grid.className = "tile-grid";
-      filtered.forEach(([name, use, repo]) => {
+      filtered.forEach(([name, use, repo, id]) => {
         const a = document.createElement("a");
         a.className = "tile";
-        a.href = "https://github.com/Aburcham110/" + repo;
-        a.target = "_blank";
-        a.rel = "noopener";
+        a.href = "tool.html?id=" + id;
         a.innerHTML = "<strong>" + name + "</strong><span>Use when: " + use + "</span>";
         grid.appendChild(a);
       });
@@ -377,7 +264,6 @@
     $("#tool-search")?.addEventListener("input", (e) => renderTools(e.target.value));
   }
 
-  /* ---- Docs ---- */
   function initDocs() {
     const root = $("#docs-root");
     if (!root) return;
