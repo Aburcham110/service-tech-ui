@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1419" />
+  <title>New call — Service Tech</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+  <header class="app-header">
+    <a class="back" href="index.html" aria-label="Back">←</a>
+    <h1>New call</h1>
+  </header>
+
+    <div class="stepper" role="tablist">
+      <button type="button" class="step-pill active" data-step="open">Open</button>
+      <button type="button" class="step-pill" data-step="readings">Readings</button>
+      <button type="button" class="step-pill" data-step="mid">Mid</button>
+      <button type="button" class="step-pill" data-step="close">Close</button>
+    </div>
+
+    <section id="panel-open">
+      <label class="field"><span>Site</span><input id="site" autocomplete="organization" placeholder="Store / address" /></label>
+      <label class="field"><span>Equipment</span>
+        <select id="equipment">
+          <option value="cooler">cooler</option>
+          <option value="freezer">freezer</option>
+          <option value="RTU">RTU</option>
+          <option value="split">split</option>
+          <option value="rack">rack</option>
+          <option value="other">other</option>
+        </select>
+      </label>
+      <label class="field"><span>Symptom</span><textarea id="symptom" placeholder="What is the complaint?"></textarea></label>
+      <label class="field"><span>Refrigerant</span><input id="refrigerant" placeholder="R-404A, R-448A, R-410A…" /></label>
+      <label class="check"><input type="checkbox" id="photosReady" /> <span>Photos ready</span></label>
+    </section>
+
+    <section id="panel-readings" class="hidden">
+      <div class="row">
+        <label class="field"><span>Suction psig</span><input id="suctionPsig" inputmode="decimal" /></label>
+        <label class="field"><span>Suction °F</span><input id="suctionTemp" inputmode="decimal" /></label>
+      </div>
+      <div class="row">
+        <label class="field"><span>Liquid psig</span><input id="liquidPsig" inputmode="decimal" /></label>
+        <label class="field"><span>Liquid °F</span><input id="liquidTemp" inputmode="decimal" /></label>
+      </div>
+      <div class="row">
+        <label class="field"><span>Supply °F</span><input id="supplyTemp" inputmode="decimal" /></label>
+        <label class="field"><span>Return °F</span><input id="returnTemp" inputmode="decimal" /></label>
+      </div>
+      <div class="row">
+        <label class="field"><span>Amps</span><input id="amps" inputmode="decimal" /></label>
+        <label class="field"><span>FLA</span><input id="fla" inputmode="decimal" /></label>
+      </div>
+      <label class="field"><span>Voltage</span><input id="voltage" inputmode="decimal" placeholder="L1-L2 / phases" /></label>
+    </section>
+
+    <section id="panel-mid" class="hidden">
+      <label class="field"><span>Did</span><textarea id="did" placeholder="Actions taken"></textarea></label>
+      <label class="field"><span>Found</span><textarea id="found" placeholder="Findings"></textarea></label>
+      <label class="field"><span>Still seeing</span><textarea id="stillSeeing" placeholder="What remains"></textarea></label>
+    </section>
+
+    <section id="panel-close" class="hidden">
+      <label class="field"><span>Fixed</span><textarea id="fixed" placeholder="Resolution"></textarea></label>
+      <label class="field"><span>Parts used</span><textarea id="partsUsed" placeholder="Parts / materials"></textarea></label>
+    </section>
+
+    <button type="button" class="btn btn-copy" id="btn-copy">Copy for Service Tech</button>
+    <div class="nav-row">
+      <button type="button" class="btn btn-secondary" id="btn-prev">Back</button>
+      <button type="button" class="btn btn-primary" id="btn-next">Next</button>
+    </div>
+    <p class="footer-note"><button type="button" class="btn btn-secondary" id="btn-reset" style="margin-top:12px">Clear draft</button></p>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
