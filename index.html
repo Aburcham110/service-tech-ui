@@ -6,9 +6,14 @@
   <meta name="theme-color" content="#0f1419" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Service Tech" />
   <meta http-equiv="Cache-Control" content="no-cache" />
   <title>Service Tech</title>
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
   <div class="app">
@@ -20,15 +25,10 @@
     <div class="tile-grid">
       <a class="tile" href="toolkit.html"><strong>Toolkit</strong><span>17 interactive in-app tools + CLI links</span></a>
       <a class="tile" href="docs.html"><strong>Docs</strong><span>Field docs, call card, manuals</span></a>
-      <a class="tile" href="https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba" target="_blank" rel="noopener"><strong>OEM map</strong><span>Where to find OEM literature</span></a>
+      <a class="tile" href="https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba" target="_blank" rel="noopener"><strong>OEM map <small class="online-only">(online only)</small></strong><span>Where to find OEM literature</span></a>
     </div>
     <p class="footer-note">Educational only — verify with OEM / AHJ. No login in v1.</p>
   </div>
-  <script src="app.js?v=3"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(console.error);
-    }
-  </script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
