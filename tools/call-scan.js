@@ -1,9 +1,9 @@
 /** Call card: "Scan data plate" in the Open panel. Writes into the form only on Confirm.
  *  Also shows manual links for the plate's brand/model and picks the troubleshooting tree. */
-import { mountPlateScan, plateSummary } from "./plate-scan.js?v=10";
-import { parsePlate } from "./plate-parse.js?v=10";
-import { loadManualsIndex, findManuals, renderManuals } from "./manuals.js?v=10";
-import { chooseTree, treeHref } from "./trees.js?v=10";
+import { mountPlateScan, plateSummary } from "./plate-scan.js?v=11";
+import { parsePlate } from "./plate-parse.js?v=11";
+import { loadManualsIndex, findManuals, renderManuals } from "./manuals.js?v=11";
+import { chooseTree, treeHref } from "./trees.js?v=11";
 
 const SCAN_KEY = "serviceTechLastScan_v1";
 

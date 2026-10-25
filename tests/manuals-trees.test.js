@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { findManuals, brandKey } from "../tools/manuals.js";
-import { parseSources, parseManuals } from "../tools/gen-manuals-index.mjs";
+import { parseSources, parseManuals, familyEntries } from "../tools/gen-manuals-index.mjs";
 import { TREES, chooseTree, toolHref } from "../tools/trees.js";
 import { TOOLS, getTool } from "../tools/registry.js";
 
@@ -53,19 +53,18 @@ test("real index: falls back to the brand's official OEM literature pages", () =
 });
 
 test("real index: no match and no OEM page -> none ('No manual on file')", () => {
-  assert.equal(findManuals(INDEX, { brand: "Goodman", model: "GSX140361" }).status, "none");
-  assert.equal(findManuals(INDEX, { brand: "Unitary Products Group (York/Coleman)", model: "BRCS0301BDG" }).status, "none");
+  assert.equal(findManuals(INDEX, { brand: "Bryant", model: "187BNA036" }).status, "none");
   assert.equal(findManuals(INDEX, {}).status, "none");
   assert.equal(findManuals(INDEX, { model: "ZX15" }).status, "none");
 });
 
 test("real index: only official OEM domains, all https, every link sourced from Notion", () => {
-  const OFFICIAL = /^https:\/\/(?:[a-z0-9-]+\.)*(copeland\.com|tecumseh\.com|heatcraftrpd\.com|manitowocice\.com|airstagehvac\.com|daikincomfort\.com|daikincity\.com|mylinkdrive\.com)\//;
+  const OFFICIAL = /^https:\/\/(?:[a-z0-9-]+\.)*(copeland\.com|tecumseh\.com|heatcraftrpd\.com|manitowocice\.com|airstagehvac\.com|daikincomfort\.com|daikincity\.com|mylinkdrive\.com|carrier\.com|hvacpartners\.com|apps\.apple\.com|tranetechnologies\.com|trane\.com|goodmanmfg\.com|lennoxpros\.com|lennox\.com|hvacliteraturelibrary\.com|rheem\.com|yorknow\.com|york\.com|lghvac\.com|lg\.com)\//;
   const SOURCES = "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba";
   let n = 0;
   for (const b of Object.values(INDEX.brands)) for (const o of b.oem) { n++; assert.match(o.url, OFFICIAL, o.url); assert.equal(o.source, SOURCES); assert.ok(o.verified); }
-  assert.equal(n, 19);
-  for (const e of INDEX.entries) assert.equal(e.url, "https://app.notion.com/p/3d3402f833af8106af2ae647a39fcf48");
+  assert.equal(n, 40);
+  for (const e of INDEX.entries) if (e.brand !== "Trane") assert.equal(e.url, "https://app.notion.com/p/3d3402f833af8106af2ae647a39fcf48");
 });
 
 test("generator parses the Notion markdown (sources map + manuals index)", () => {
@@ -137,6 +136,66 @@ test("chooseTree picks by equipment / scanned unit type", () => {
 
 test("offline: new files are precached and the cache is bumped", () => {
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  for (const f of ["./tree.html", "./tools/manuals.js?v=10", "./tools/trees.js?v=10", "./tools/tree-app.js?v=10", "./data/manuals-index.json?v=10"]) assert.ok(sw.includes('"' + f + '"'), f);
-  assert.match(sw, /const VERSION = "v10"/);
+  for (const f of ["./tree.html", "./tools/manuals.js?v=11", "./tools/trees.js?v=11", "./tools/tree-app.js?v=11", "./data/manuals-index.json?v=11"]) assert.ok(sw.includes('"' + f + '"'), f);
+  assert.match(sw, /const VERSION = "v11"/);
+});
+
+const count = (b) => INDEX.brands[b].oem.length;
+
+test("oem2: link counts per brand from the extended Notion sources map", () => {
+  assert.deepEqual(Object.fromEntries(["Carrier", "Trane", "Goodman", "Lennox", "Rheem", "York", "LG"].map((b) => [b, count(b)])),
+    { Carrier: 3, Trane: 3, Goodman: 3, Lennox: 4, Rheem: 3, York: 2, LG: 3 }); // Trane LED-code page excluded: HTTP 403 to automated fetch
+  assert.ok(INDEX.failedToLoad.some((u) => /support\.trane\.com/.test(u)));
+  for (const b of Object.values(INDEX.brands)) for (const o of b.oem) assert.ok(!INDEX.failedToLoad.some((f) => f.startsWith(o.url + " ")));
+});
+
+test("oem2: Trane model families match at model level, cited to the 2026 Residential Product Handbook", () => {
+  const ac = findManuals(INDEX, { brand: "Trane", model: "5TTR4036A1000A" });
+  assert.equal(ac.status, "match");
+  assert.equal(ac.docs[0].matchedBy, "prefix");
+  assert.match(ac.docs[0].title, /AC \(5TTV\/5TTX\/5TTR\).*2026 Residential Product Handbook/);
+  assert.match(ac.docs[0].url, /^https:\/\/elibrary\.tranetechnologies\.com\/.*22-8301-39_05012026\.pdf$/);
+  assert.match(findManuals(INDEX, { brand: "American Standard", model: "5TWX-5036" }).docs[0].title, /HP/);
+  assert.match(findManuals(INDEX, { brand: "TRANE", model: "5TEM4B04ACV" }).docs[0].title, /air handlers/);
+  // Unknown Trane family -> Trane OEM pages; Trane patterns never apply to other brands or brand-less scans.
+  assert.equal(findManuals(INDEX, { brand: "Trane", model: "4TTR4036" }).status, "oem");
+  assert.equal(findManuals(INDEX, { brand: "Carrier", model: "5TTR4036" }).status, "oem");
+  assert.equal(findManuals(INDEX, { model: "5TTR4036" }).status, "none");
+  // Only Trane has model-family entries.
+  assert.deepEqual([...new Set(INDEX.entries.filter((e) => e.prefixes.length).map((e) => e.brand))], ["Trane"]);
+});
+
+test("oem2: aliases — Ruud, Coleman, Luxaire, UPG plate brand", () => {
+  assert.equal(findManuals(INDEX, { brand: "Ruud", model: "RA1636AJ1NA" }).brand, "Rheem");
+  for (const b of ["Coleman", "Luxaire", "York", "Unitary Products Group (York/Coleman)"]) {
+    const r = findManuals(INDEX, { brand: b, model: "BRCS0301BDG" });
+    assert.equal(r.status, "oem", b);
+    assert.equal(r.brand, "York", b);
+  }
+  // York/UPG: no fault-code page in the map.
+  assert.ok(INDEX.brands.York.oem.every((o) => !/fault|code/i.test(o.title + " " + o.url)));
+});
+
+test("oem2: caveat labels", () => {
+  const o = (b, re) => INDEX.brands[b].oem.find((x) => re.test(x.url));
+  assert.match(o("Rheem", /hvacliteraturelibrary\.com/).note, /Attribution caveat.*rheemweb\.com/);
+  assert.match(o("Carrier", /hvacpartners\.com/).note, /dealer login/i);
+  const app = o("Carrier", /apps\.apple\.com/);
+  assert.match(app.note, /Official Carrier Service Technician app.*not a code list/);
+  assert.match(o("LG", /lg\.com\/us\/support/).note, /Consumer \/ room AC units only/);
+  // Labels render next to the link.
+  const r = findManuals(INDEX, { brand: "Carrier" });
+  assert.ok(r.oem.some((x) => x.flag === "app") && r.oem.some((x) => x.flag === "login"));
+});
+
+test("generator: picks each bullet's own https link, aliases sub-brands, extracts Trane families only", () => {
+  const md = "## Trane (Residential + Commercial; American Standard shares literature)\n- Product Handbook (families, e.g. 5TTV/5TTX AC, 5TAM air handlers): [https://t.example/h.pdf](https://t.example/h.pdf)\n" +
+    "## Rheem / Ruud\n- Library (on [rheemweb.com](http://rheemweb.com)): [https://www.hvacliteraturelibrary.com/](https://www.hvacliteraturelibrary.com/) (caveat)\n" +
+    "## Goodman (x)\n- Handbook (e.g. GSX AC): [https://g.example/](https://g.example/)\n";
+  const b = parseSources(md);
+  assert.equal(b.Rheem.oem[0].url, "https://www.hvacliteraturelibrary.com/");
+  assert.equal(b.Rheem.oem[0].title, "Library (on rheemweb.com)");
+  assert.ok(b.Rheem.aliases.includes("Ruud"));
+  const f = familyEntries(b);
+  assert.deepEqual(f.map((e) => [e.brand, e.prefixes]), [["Trane", ["5TTV", "5TTX"]], ["Trane", ["5TAM"]]]);
 });

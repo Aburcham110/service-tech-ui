@@ -42,6 +42,7 @@ export function findManuals(index, { brand, model, family } = {}) {
   const docs = [];
   for (const e of (index && index.entries) || []) {
     if (!key && !(e.prefixes || []).length) continue; // without a brand only an exact model prefix can match
+    if (e.requireBrand && !key) continue; // brand-specific model families (Trane) need the brand too
     const how = entryMatches(e, key, model, family);
     if (how) docs.push({ ...e, matchedBy: how });
   }
@@ -57,7 +58,7 @@ export function findManuals(index, { brand, model, family } = {}) {
 
 let cached = null;
 /** Loads the bundled index (precached by sw.js, so it works offline). */
-export function loadManualsIndex(url = new URL("../data/manuals-index.json?v=10", import.meta.url).href) {
+export function loadManualsIndex(url = new URL("../data/manuals-index.json?v=11", import.meta.url).href) {
   if (!cached) cached = fetch(url).then((r) => { if (!r.ok) throw new Error("manuals index " + r.status); return r.json(); }).catch((e) => { cached = null; throw e; });
   return cached;
 }
@@ -93,7 +94,7 @@ export function renderManuals(host, res, { brand, model } = {}) {
     p.textContent = "No manual on file for this model. Official " + res.brand + " literature:";
     host.appendChild(p);
   }
-  res.oem.forEach((o) => add(res.brand + ": " + o.title, o.url, ""));
+  res.oem.forEach((o) => add(res.brand + ": " + o.title, o.url, o.note ? "(" + o.note + ")" : ""));
   host.appendChild(list);
   const n = document.createElement("small");
   n.className = "online-only";

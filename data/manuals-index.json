@@ -141,6 +141,8 @@
           "title": "Contractor ACCESS portal (training / dealer tools; login)",
           "url": "https://access.airstagehvac.com/en-US/",
           "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "note": "Contractor login",
+          "flag": "login",
           "notionUrl": "https://access.fujitsugeneral.com",
           "verified": "2026-10-25"
         }
@@ -192,6 +194,211 @@
           "verified": "2026-10-25"
         }
       ]
+    },
+    "Carrier": {
+      "heading": "Carrier (Residential / Bryant-family docs via Carrier)",
+      "aliases": [
+        "Carrier"
+      ],
+      "oem": [
+        {
+          "title": "Product Documents (model-number lookup: install, owner, service docs)",
+          "url": "https://www.carrier.com/us/en/product-documents/",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "HVACpartners dealer portal (service manuals / tech literature; login, dealer-only)",
+          "url": "https://hvacpartners.com/",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "note": "Dealer login required (HVACpartners dealer portal)",
+          "flag": "login",
+          "notionUrl": "https://www.hvacpartners.com/",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "Carrier Service Technician app (fault-code lookup / troubleshooting)",
+          "url": "https://apps.apple.com/us/app/carrier-service-technician/id1123086541",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "note": "Official Carrier Service Technician app (fault-code lookup) — an app, not a code list",
+          "flag": "app",
+          "verified": "2026-10-25"
+        }
+      ]
+    },
+    "Trane": {
+      "heading": "Trane (Residential + Commercial; American Standard shares literature)",
+      "aliases": [
+        "Trane",
+        "American Standard"
+      ],
+      "oem": [
+        {
+          "title": "e-Library (public; search by model or literature number; IOMs, wiring, catalogs)",
+          "url": "https://elibrary.tranetechnologies.com/public",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "Residential owner's manuals",
+          "url": "https://www.trane.com/residential/en/resources/owners-guides/",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "2026 Residential Product Handbook (model nomenclature + families, e.g. 5TTV/5TTX/5TTR AC, 5TWV/5TWX/5TWR HP, 5TAM/5TEM air handlers)",
+          "url": "https://elibrary.tranetechnologies.com/public/residential-hvac/Literature/Product%20Catalog/22-8301-39_05012026.pdf",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        }
+      ]
+    },
+    "Goodman": {
+      "heading": "Goodman (Daikin Comfort; Amana-brand docs similar)",
+      "aliases": [
+        "Goodman"
+      ],
+      "oem": [
+        {
+          "title": "Literature Library",
+          "url": "https://www.goodmanmfg.com/support/literature-library",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "Literature Search (by model / literature type, e.g. Installation Instructions, Service)",
+          "url": "https://mobile.goodmanmfg.com/app/springrest/info_finder/litfinder_home",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "Diagnostic Code Identification System (official fault-code lookup)",
+          "url": "https://mobile.goodmanmfg.com/mobileapp/faultcodes/searchCriteria.jsp",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        }
+      ]
+    },
+    "Lennox": {
+      "heading": "Lennox (Residential + Commercial)",
+      "aliases": [
+        "Lennox"
+      ],
+      "oem": [
+        {
+          "title": "LennoxPros Document Library (search by model, serial, part #; install, service notes, wiring; no login per Lennox)",
+          "url": "https://www.lennoxpros.com/documentlibrary",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "Residential product literature (owner's manuals, brochures)",
+          "url": "https://www.lennox.com/residential/owners/assistance/product-literature/index",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "Commercial product documentation",
+          "url": "https://www.lennox.com/commercial/resources/product-documentation",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "Error Code Lookup tool (communicating equipment; also in LennoxPros app; via Technical Tools)",
+          "url": "https://www.lennoxpros.com/news/error-code-lookup-1810",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        }
+      ]
+    },
+    "Rheem": {
+      "heading": "Rheem / Ruud",
+      "aliases": [
+        "Rheem",
+        "Ruud",
+        "Rheem / Ruud"
+      ],
+      "oem": [
+        {
+          "title": "Literature Library (Rheem technical library: specs, wiring, install, QRD charging sheets; \"for professional HVAC contractors\")",
+          "url": "https://www.hvacliteraturelibrary.com/",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "note": "Attribution caveat: hosted on rheemweb.com per search index; domain ownership confirmed only by that host",
+          "flag": "caveat",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "MyRheem Pro Tech Support (PTS) — model-series install/service pages and topics",
+          "url": "https://my.rheem.com/en-US/",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "notionUrl": "https://my.rheem.com/",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "Standard gas furnace flash codes (official PTS page)",
+          "url": "https://my.rheem.com/pts/Topics/GF_Flash_Code.asp",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        }
+      ]
+    },
+    "York": {
+      "heading": "York / UPG (Johnson Controls Unitary Products — York, Coleman, Luxaire)",
+      "aliases": [
+        "York",
+        "UPG",
+        "Unitary Products Group",
+        "Johnson Controls Unitary Products",
+        "Coleman",
+        "Luxaire"
+      ],
+      "oem": [
+        {
+          "title": "YorkNow Document Search (by model or SKU; technical guides, install manuals, user manuals)",
+          "url": "https://www.yorknow.com/documentsearch/",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "York Resources for Professionals",
+          "url": "https://www.york.com/services-and-support/professional-services",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "verified": "2026-10-25"
+        }
+      ]
+    },
+    "LG": {
+      "heading": "LG (LG Air Conditioning Technologies, US — Multi V VRF / Multi F / single-zone)",
+      "aliases": [
+        "LG",
+        "LG Electronics",
+        "LG Air Conditioning Technologies"
+      ],
+      "oem": [
+        {
+          "title": "Resources library (install, service, engineering manuals; lghvac.com/resources redirects to media.us.lg.com)",
+          "url": "https://media.us.lg.com/web/fb9b717fcfa19bcc/public-resources/",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "notionUrl": "https://lghvac.com/resources/",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "Publications Downloads (licensed-pro technical publications)",
+          "url": "https://lghvac.com/mylg-hvac/publications-downloads-page/",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "note": "Licensed-pro publications",
+          "flag": "pro",
+          "verified": "2026-10-25"
+        },
+        {
+          "title": "Error codes: LG USA support guide (consumer/room AC focus)",
+          "url": "https://www.lg.com/us/support/help-library/lg-air-conditioner-guide-to-error-codes--20155047719306",
+          "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+          "note": "Consumer / room AC units only — ductless/VRF error tables are in each system's install/service manual",
+          "flag": "consumer",
+          "verified": "2026-10-25"
+        }
+      ]
     }
   },
   "entries": [
@@ -212,6 +419,62 @@
       "kind": "notion",
       "note": "Filed PDF on your Notion Manuals page (shop-only; needs Notion sign-in)",
       "source": "https://app.notion.com/p/3d3402f833af8106af2ae647a39fcf48"
+    },
+    {
+      "brand": "Trane",
+      "families": [],
+      "prefixes": [
+        "5TTV",
+        "5TTX",
+        "5TTR"
+      ],
+      "brandWide": false,
+      "requireBrand": true,
+      "title": "Trane AC (5TTV/5TTX/5TTR) — 2026 Residential Product Handbook",
+      "docType": "AC",
+      "url": "https://elibrary.tranetechnologies.com/public/residential-hvac/Literature/Product%20Catalog/22-8301-39_05012026.pdf",
+      "kind": "oem",
+      "note": "Model family per 2026 Residential Product Handbook",
+      "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+      "verified": "2026-10-25"
+    },
+    {
+      "brand": "Trane",
+      "families": [],
+      "prefixes": [
+        "5TWV",
+        "5TWX",
+        "5TWR"
+      ],
+      "brandWide": false,
+      "requireBrand": true,
+      "title": "Trane HP (5TWV/5TWX/5TWR) — 2026 Residential Product Handbook",
+      "docType": "HP",
+      "url": "https://elibrary.tranetechnologies.com/public/residential-hvac/Literature/Product%20Catalog/22-8301-39_05012026.pdf",
+      "kind": "oem",
+      "note": "Model family per 2026 Residential Product Handbook",
+      "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+      "verified": "2026-10-25"
+    },
+    {
+      "brand": "Trane",
+      "families": [],
+      "prefixes": [
+        "5TAM",
+        "5TEM"
+      ],
+      "brandWide": false,
+      "requireBrand": true,
+      "title": "Trane air handlers (5TAM/5TEM) — 2026 Residential Product Handbook",
+      "docType": "air handlers",
+      "url": "https://elibrary.tranetechnologies.com/public/residential-hvac/Literature/Product%20Catalog/22-8301-39_05012026.pdf",
+      "kind": "oem",
+      "note": "Model family per 2026 Residential Product Handbook",
+      "source": "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba",
+      "verified": "2026-10-25"
     }
+  ],
+  "failedToLoad": [
+    "https://support.trane.com/hc/en-us/articles/360045062271-List-of-Light-Commercial-LED-Codes -> HTTP 403"
   ]
 }
