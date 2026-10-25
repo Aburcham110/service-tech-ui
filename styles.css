@@ -211,3 +211,5 @@ textarea { min-height: 96px; resize: vertical; }
 .chip { display: inline-block; padding: 4px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--muted); font-size: 0.9rem; text-decoration: none; }
 .tree-quick { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
 .tree-quick-link { text-align: center; text-decoration: none; }
+.scan-actions { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.scan-actions .btn { text-align: center; text-decoration: none; }

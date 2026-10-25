@@ -29,3 +29,26 @@ test("SH/SC refrigerant pre-select matches the tool's own options", () => {
   assert.equal(prefillValue({ type: "number" }, "12x"), null);
   assert.equal(prefillValue({ type: "number" }, "12.5"), "12.5");
 });
+
+import { callCardFill, mergeIntoDraft, troubleshootHref } from "../tools/call-card.js";
+
+const SCAN = { brand: "Carrier", unitType: "outdoor", model: "24ACC636A003", serial: "1234A56789", refrigerant: "R-410A", charge: "7.5", voltage: "208/230", phase: "1", rla: "14.1" };
+
+test("Add to call card: brand, model, serial, refrigerant and charge land in the Open step without re-typing", () => {
+  const f = callCardFill(SCAN);
+  assert.equal(f.refrigerant, "R-410A");
+  assert.equal(f.fla, "14.1");
+  for (const s of ["Carrier", "Model 24ACC636A003", "S/N 1234A56789", "R-410A 7.5 lb"]) assert.ok(f.plate.includes(s), s);
+  assert.deepEqual(Object.keys(f).sort(), ["fla", "plate", "refrigerant"]); // Open-step fields (+ FLA reference) only
+  const d = mergeIntoDraft({ step: "open", site: "Store 12", symptom: "warm", plate: "old" }, SCAN);
+  assert.equal(d.site, "Store 12"); assert.equal(d.symptom, "warm"); assert.equal(d.plate, f.plate);
+  assert.deepEqual(callCardFill({ brand: "Trane" }), { plate: "Trane" });
+});
+
+test("Start troubleshooting for this equipment opens the matching tree", () => {
+  assert.equal(troubleshootHref(SCAN, "split"), "tree.html?type=split-ac-hp&refrigerant=R-410A");
+  assert.equal(troubleshootHref({ brand: "Copeland", unitType: "compressor" }, "cooler"), "tree.html?type=compressor");
+  assert.equal(troubleshootHref({ brand: "Fujitsu", unitType: "indoor" }, "split"), "tree.html?type=mini-split");
+  assert.equal(troubleshootHref({ brand: "Heatcraft" }, "freezer"), "tree.html?type=walk-in");
+  assert.equal(troubleshootHref({}, "other"), "tree.html");
+});

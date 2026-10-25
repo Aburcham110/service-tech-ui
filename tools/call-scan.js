@@ -1,11 +1,12 @@
-/** Call card: "Scan data plate" in the Open panel. Writes into the form only on Confirm.
+/** Call card: "Scan data plate" in the Open panel. After Confirm, "Add to call card" writes the
+ *  plate (brand, model, serial, refrigerant, charge…) into the Open step; nothing is written before that.
  *  Also shows manual links for the plate's brand/model and picks the troubleshooting tree. */
-import { mountPlateScan, plateSummary } from "./plate-scan.js?v=11";
+import { mountPlateScan } from "./plate-scan.js?v=11";
+import { callCardFill, renderScanActions, saveScan, SCAN_KEY } from "./call-card.js?v=12";
 import { parsePlate } from "./plate-parse.js?v=11";
 import { loadManualsIndex, findManuals, renderManuals } from "./manuals.js?v=11";
 import { chooseTree, treeHref } from "./trees.js?v=11";
 
-const SCAN_KEY = "serviceTechLastScan_v1";
 
 function set(id, value) {
   const el = document.getElementById(id);
@@ -45,12 +46,15 @@ async function refresh() {
 document.addEventListener("DOMContentLoaded", () => {
   const host = document.getElementById("plate-scan-host");
   if (host) mountPlateScan(host, (v) => {
-    set("refrigerant", v.refrigerant);
-    set("fla", v.rla); // rated compressor RLA as the amps reference (the measured Voltage field is left alone)
-    const summary = plateSummary(v);
-    try { localStorage.setItem(SCAN_KEY, JSON.stringify({ brand: v.brand, model: v.model, unitType: v.unitType, summary })); } catch (e) { /* ignore */ }
-    set("plate", summary);
-    refresh();
+    renderScanActions(host, v, {
+      equipment: () => (document.getElementById("equipment") || {}).value,
+      onAdd: (vals) => {
+        const fill = callCardFill(vals);
+        Object.entries(fill).forEach(([k, val]) => set(k, val));
+        saveScan(vals); // after set("plate"): the stored summary now matches the Data plate box
+        refresh();
+      },
+    });
   });
   ["plate", "equipment"].forEach((id) => {
     const el = document.getElementById(id);

@@ -155,6 +155,18 @@ function mount(tool) {
         const notes = form.querySelector('[data-field="notes"]');
         if (amps && notes) notes.value = (notes.value ? notes.value + "\n" : "") + "Plate: " + amps;
         run();
+        // "Add to call card" (writes the call draft, then opens the call card) + "Start troubleshooting".
+        import("./call-card.js?v=12").then(({ renderScanActions, mergeIntoDraft, saveScan, DRAFT_KEY }) => {
+          renderScanActions(scanHost, v, {
+            onAdd: (vals) => {
+              let d = {};
+              try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}"); } catch (e) { /* ignore */ }
+              try { localStorage.setItem(DRAFT_KEY, JSON.stringify(mergeIntoDraft(d, vals))); } catch (e) { /* ignore */ }
+              saveScan(vals);
+              location.href = "call.html";
+            },
+          });
+        }).catch(console.error);
         // Manual links for the scanned brand/model.
         import("./manuals.js?v=11").then(async ({ loadManualsIndex, findManuals, renderManuals }) => {
           let host = document.getElementById("manuals-host");
