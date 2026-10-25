@@ -176,3 +176,12 @@ textarea { min-height: 96px; resize: vertical; }
 .offline-indicator[hidden] { display: none; }
 .offline-indicator[data-state="ready"] { color: #4ade80; border-color: #166534; }
 .offline-indicator[data-state="offline"] { color: #fb923c; border-color: #9a3412; }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.plate-scan { margin: 4px 0 14px; }
+.plate-scan-btn { display: block; text-align: center; cursor: pointer; }
+.plate-scan-btn.disabled { opacity: 0.6; pointer-events: none; }
+.plate-confirm { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-top: 10px; }
+.plate-confirm h2 { font-size: 1.05rem; margin: 0 0 6px; }
+.plate-confirm .conf { color: var(--muted); font-weight: 400; }
+.plate-confirm .conf.low { color: #fb923c; font-weight: 600; }
+.plate-confirm input.low-conf { border-color: #fb923c; box-shadow: 0 0 0 1px #fb923c; }

@@ -1,6 +1,6 @@
 /** Mount interactive tool UI from ?id= */
 import { getTool } from "./registry.js";
-import { runTool } from "./logic.js?v=4";
+import { runTool } from "./logic.js?v=5";
 
 function $(sel, el) { return (el || document).querySelector(sel); }
 
@@ -97,6 +97,8 @@ function mount(tool) {
 
   const root = $("#tool-root");
   root.innerHTML = "";
+  const scanHost = document.createElement("div");
+  root.appendChild(scanHost);
   const form = document.createElement("div");
   form.id = "tool-form";
   tool.fields.forEach((f) => form.appendChild(renderField(f)));
@@ -133,6 +135,27 @@ function mount(tool) {
   copyBtn.addEventListener("click", () => {
     if (out.dataset.copy) copyText(out.dataset.copy);
   });
+
+  if (tool.id === "nameplate-faults") {
+    import("./plate-scan.js?v=5").then(({ mountPlateScan, plateSummary }) => {
+      mountPlateScan(scanHost, (v) => {
+        const set = (k, val) => {
+          const el = form.querySelector('[data-field="' + k + '"]');
+          if (el && val != null && val !== "") el.value = val;
+        };
+        set("model", v.model);
+        set("serial", v.serial);
+        set("refrigerant", v.refrigerant);
+        set("chargeLbs", v.charge);
+        set("voltage", [v.voltage, v.phase && v.phase + "ph", v.hz && v.hz + "Hz"].filter(Boolean).join(" "));
+        const amps = [["rla", "RLA"], ["lra", "LRA"], ["fanFla", "Fan FLA"], ["mca", "MCA"], ["mop", "MOP"]]
+          .filter(([k]) => v[k]).map(([k, l]) => l + " " + v[k]).join(", ");
+        const notes = form.querySelector('[data-field="notes"]');
+        if (amps && notes) notes.value = (notes.value ? notes.value + "\n" : "") + "Plate: " + amps;
+        run();
+      });
+    }).catch(console.error);
+  }
 
   // Auto-run checklists on load (and when selects change)
   if (tool.kind === "checklist") {

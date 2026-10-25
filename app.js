@@ -70,7 +70,7 @@
   function defaultDraft() {
     return {
       step: "open",
-      site: "", equipment: "cooler", symptom: "", refrigerant: "", photosReady: false,
+      site: "", equipment: "cooler", symptom: "", refrigerant: "", plate: "", photosReady: false,
       suctionPsig: "", suctionTemp: "", liquidPsig: "", liquidTemp: "",
       supplyTemp: "", returnTemp: "", amps: "", fla: "", voltage: "",
       did: "", found: "", stillSeeing: "",
@@ -84,7 +84,7 @@
 
   function readFormIntoDraft(d) {
     const map = {
-      site: "site", equipment: "equipment", symptom: "symptom", refrigerant: "refrigerant",
+      site: "site", equipment: "equipment", symptom: "symptom", refrigerant: "refrigerant", plate: "plate",
       photosReady: "photosReady",
       suctionPsig: "suctionPsig", suctionTemp: "suctionTemp",
       liquidPsig: "liquidPsig", liquidTemp: "liquidTemp",
@@ -125,6 +125,7 @@
       line("Equipment", d.equipment),
       line("Symptom", d.symptom),
       line("Refrigerant", d.refrigerant),
+      line("Data plate", d.plate),
       line("Photos ready", d.photosReady ? "yes" : "no"),
     ];
     if (idx >= 1) {
