@@ -1,0 +1,18 @@
+|       |         FUJiTSU        |
+~ SPLIT TYPE AIR CONDITIONER |
+MODEL No.     ASUG15LZAS |
+SERIALNo. WWB 015057 |
+ETL LISTED         ;
+CONFORMS TO      |
+qr       UL STD.
+60335-2-40,
+ EE———     CSA STD.
+Intertek cz:
+91987                 NO.60335-2-40,
+60335-1
+SOURCE         2081230 V |
+|                      60Hz 1-PH |
+        INDOOR FAN MOTOR LOAD
+0.35 A |   |
+APPLICABLE OUTDOOR UNIT  |
+AOUG15LZAS1 | AOUG15LZAH1

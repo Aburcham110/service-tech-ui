@@ -1,0 +1,19 @@
+1:     * FufiTsu.
+SPLIT TYPE AIR CONDITIONER
+~~ MODEL No. #5 ASUG15L.ZAS
+| SERIALNo. WAWB 015057
+         ETL LISTED
+1          CONFORMS TO
+3          UL STD.
+|    oi   €m  60335-240,
+FRAN rents
+i   8 CSA STD.
+© | Intertek  c222
+|      91987     NO.60335-2-40,    :
+.          60335-1     4
+ | SOURCE 208/230 V/ |
+| sme 60Hz p1-PH
+    {
+1  INDOOR FAN MOTOR LOAD
+* APPLICABLE OUTDOOR UNIT
+AOUG15LZAS1 / AOUG15LZAH1

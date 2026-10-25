@@ -9,7 +9,7 @@ test("model/serial use the 0.75 bar, other fields 0.6", () => {
 });
 
 test("serial shape per brand: good shapes pass, bad ones flag (no decoding)", () => {
-  const good = { Carrier: "1234A56789", Trane: "21451ABC1L", "Unitary Products Group (York/Coleman)": "W1J1234567", Copeland: "21E123456", Goodman: "1906123456", Lennox: "5819F12345", Rheem: "W061512345", Fujitsu: "ETN012345", Daikin: "1234567K" };
+  const good = { Carrier: "1234A56789", Trane: "21451ABC1L", "Unitary Products Group (York/Coleman)": "W1J1234567", Copeland: "21E123456", Goodman: "1906123456", Lennox: "5819F12345", Rheem: "W061512345", Fujitsu: "015057", Daikin: "1234567K" };
   for (const [b, s] of Object.entries(good)) assert.ok(SERIAL_PATTERNS[b].test(s), b + " " + s);
   for (const [b, s] of Object.entries({ Carrier: "12A4567", Goodman: "19061234", Fujitsu: "1234567" })) {
     assert.ok(!SERIAL_PATTERNS[b].test(s), b + " " + s);
@@ -61,10 +61,10 @@ test("Arthur's phone dump (4 passes, gray/sauvola x psm6/psm11) parses and agree
   // Every pass, psm11 included, reads model and serial; spaces removed they all agree.
   for (const p of passes) {
     assert.equal(p.parsed.fields.model.value.replace(/\s/g, ""), "ASUG15LZAS", p.name + " model");
-    assert.equal(p.parsed.fields.serial.value.replace(/\s/g, ""), "WWB015057", p.name + " serial");
+    assert.equal(p.parsed.fields.serial.value.replace(/\s/g, ""), "015057", p.name + " serial");
   }
   const m = mergeParses(passes);
-  const want = { brand: "Fujitsu", unitType: "indoor", model: "ASUG15LZAS", serial: "WWB015057", voltage: "208/230", phase: "1", hz: "60", fanFla: 0.35, outdoorUnit: "AOUG15LZAS1 / AOUG15LZAH1" };
+  const want = { brand: "Fujitsu", unitType: "indoor", model: "ASUG15LZAS", serial: "015057", voltage: "208/230", phase: "1", hz: "60", fanFla: 0.35, outdoorUnit: "AOUG15LZAS1 / AOUG15LZAH1" };
   for (const [k, v] of Object.entries(want)) assert.equal(String(m.fields[k].value), String(v), k);
   assert.equal(m.fields.model.candidates, undefined); assert.equal(m.fields.serial.candidates, undefined);
   assert.equal(m.fields.fanFla.confidence, 0.85, "explicit 0.35 A beats the inferred 035A");

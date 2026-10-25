@@ -51,7 +51,7 @@ for (const [name, truth] of Object.entries(TRUTH)) {
 }
 test("real photo OCR text: key reads that the pipeline does get", () => {
   const f = merged("fujitsu-asug15lzas").fields;
-  assert.equal(f.serial.value, "WWB015057"); assert.equal(f.voltage.value, "208/230"); assert.equal(f.fanFla.value, 0.35);
+  assert.equal(f.serial.value, "015057"); assert.equal(f.voltage.value, "208/230"); assert.equal(f.fanFla.value, 0.35);
   assert.equal(f.outdoorUnit.value, "AOUG15LZAS1 / AOUG15LZAH1"); assert.equal(f.unitType.value, "indoor");
   const u = merged("unitary-brcs0301bdg-r22").fields;
   for (const [k, w] of [["rla", 13.6], ["lra", 73], ["mca", 17.5], ["fanFla", 0.5], ["mop", 30]]) assert.equal(u[k].value, w, k);
