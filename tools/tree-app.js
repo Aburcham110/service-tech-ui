@@ -1,5 +1,5 @@
 /** tree.html: walks a troubleshooting tree (tools/trees.js) one step at a time. */
-import { TREES, toolHref, treeHref } from "./trees.js?v=10";
+import { TREES, toolHref, treeHref } from "./trees.js?v=11";
 import { getTool } from "./registry.js";
 
 const params = new URLSearchParams(location.search);

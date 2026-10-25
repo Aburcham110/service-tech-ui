@@ -7,9 +7,9 @@
  * Nothing is stored (not even localStorage) until the user taps Confirm, and
  * then only the onConfirm callback decides what to keep.
  */
-import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=10";
-import { cropStep } from "./plate-crop.js?v=10";
-import { findLabelBox, deglare, clahe } from "./plate-image.js?v=10";
+import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=11";
+import { cropStep } from "./plate-crop.js?v=11";
+import { findLabelBox, deglare, clahe } from "./plate-image.js?v=11";
 
 const VENDOR = "vendor/tesseract/";
 const DECODE_SIDE = 4000;   // decode cap (keeps the label's detail before cropping)
