@@ -1,0 +1,102 @@
+/**
+ * Manual links for a scanned/typed brand + model, from the bundled data/manuals-index.json
+ * (generated from Arthur's Notion pages by tools/gen-manuals-index.mjs; official OEM URLs only).
+ *
+ * findManuals(index, { brand, model, family }) ->
+ *   { status: "match", brand, docs: [...], oem: [...] }   an index entry matched by model prefix, family or brand-wide doc
+ *   { status: "oem",   brand, docs: [],    oem: [...] }   nothing on file: the brand's official OEM literature pages
+ *   { status: "none",  brand, docs: [],    oem: [] }      neither ("No manual on file")
+ */
+const norm = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+/** Canonical brand key in the index for a parser/typed brand name, or null. */
+export function brandKey(index, brand) {
+  if (!brand || !index) return null;
+  const b = norm(brand);
+  for (const [key, v] of Object.entries(index.brands || {})) {
+    if ((v.aliases || [key]).some((a) => norm(a) === b)) return key;
+  }
+  // "Emerson / Copeland" etc.: any alias as a whole word of the given name
+  const words = String(brand).toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+  for (const [key, v] of Object.entries(index.brands || {})) {
+    if ((v.aliases || [key]).some((a) => words.includes(norm(a)))) return key;
+  }
+  // Index entries can name a brand that has no OEM map section.
+  const e = (index.entries || []).find((x) => norm(x.brand) === b);
+  return e ? e.brand : null;
+}
+
+function entryMatches(e, key, model, family) {
+  if (key && norm(e.brand) !== norm(key)) return false;
+  const m = norm(model);
+  if (m && (e.prefixes || []).some((p) => p && m.startsWith(norm(p)))) return "prefix";
+  const fam = norm(family);
+  if (fam && (e.families || []).some((f) => norm(f) === fam)) return "family";
+  if (m && (e.families || []).some((f) => norm(f).length >= 3 && m.startsWith(norm(f)))) return "family";
+  if (key && e.brandWide) return "brand";
+  return false;
+}
+
+export function findManuals(index, { brand, model, family } = {}) {
+  const key = brandKey(index, brand);
+  const docs = [];
+  for (const e of (index && index.entries) || []) {
+    if (!key && !(e.prefixes || []).length) continue; // without a brand only an exact model prefix can match
+    const how = entryMatches(e, key, model, family);
+    if (how) docs.push({ ...e, matchedBy: how });
+  }
+  // Model-specific first, brand-wide handbooks last.
+  const rank = { prefix: 0, family: 1, brand: 2 };
+  docs.sort((a, b) => rank[a.matchedBy] - rank[b.matchedBy]);
+  const docBrand = key || (docs[0] && docs[0].brand) || null;
+  const oem = (docBrand && index.brands && index.brands[docBrand] && index.brands[docBrand].oem) || [];
+  if (docs.length) return { status: "match", brand: docBrand, docs, oem };
+  if (oem.length) return { status: "oem", brand: docBrand, docs: [], oem };
+  return { status: "none", brand: brand || null, docs: [], oem: [] };
+}
+
+let cached = null;
+/** Loads the bundled index (precached by sw.js, so it works offline). */
+export function loadManualsIndex(url = new URL("../data/manuals-index.json?v=10", import.meta.url).href) {
+  if (!cached) cached = fetch(url).then((r) => { if (!r.ok) throw new Error("manuals index " + r.status); return r.json(); }).catch((e) => { cached = null; throw e; });
+  return cached;
+}
+
+/** Renders the result of findManuals into host (DOM). */
+export function renderManuals(host, res, { brand, model } = {}) {
+  host.innerHTML = "";
+  host.className = "manuals";
+  const h = document.createElement("div");
+  h.className = "manuals-head";
+  h.textContent = "Manuals" + (brand || model ? " — " + [brand, model].filter(Boolean).join(" ") : "");
+  host.appendChild(h);
+  const list = document.createElement("ul");
+  const add = (title, url, note) => {
+    const li = document.createElement("li");
+    const a = document.createElement("a");
+    a.href = url; a.target = "_blank"; a.rel = "noopener"; a.textContent = title;
+    li.appendChild(a);
+    if (note) { const s = document.createElement("small"); s.textContent = " " + note; li.appendChild(s); }
+    list.appendChild(li);
+  };
+  if (res.status === "none") {
+    const p = document.createElement("p");
+    p.className = "manuals-none";
+    p.textContent = "No manual on file" + (brand ? " for " + brand : "") + ".";
+    host.appendChild(p);
+    return;
+  }
+  res.docs.forEach((d) => add(d.title, d.url, d.note ? "(" + d.note + ")" : ""));
+  if (res.status === "oem") {
+    const p = document.createElement("p");
+    p.className = "manuals-note";
+    p.textContent = "No manual on file for this model. Official " + res.brand + " literature:";
+    host.appendChild(p);
+  }
+  res.oem.forEach((o) => add(res.brand + ": " + o.title, o.url, ""));
+  host.appendChild(list);
+  const n = document.createElement("small");
+  n.className = "online-only";
+  n.textContent = "Links open the OEM site (online only).";
+  host.appendChild(n);
+}
