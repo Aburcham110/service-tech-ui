@@ -7,16 +7,23 @@
  * Nothing is stored (not even localStorage) until the user taps Confirm, and
  * then only the onConfirm callback decides what to keep.
  */
-import { parsePlate, LOW_CONFIDENCE } from "./plate-parse.js?v=5";
+import { parsePlate, mergeParses, LOW_CONFIDENCE } from "./plate-parse.js?v=6";
+import { findLabelBox } from "./plate-image.js?v=6";
 
 const VENDOR = "vendor/tesseract/";
-const MAX_SIDE = 1600;
+const DECODE_SIDE = 4000;   // decode cap (keeps the label's detail before cropping)
+const MAX_SIDE = 1800;      // full-resolution OCR long edge (of the cropped label)
+const PROBE_SIDE = 900;     // cheap orientation probe long edge
+const FIND_SIDE = 600;      // label-finder working size
 
 export const FIELDS = [
-  ["model", "Model"], ["serial", "Serial"], ["refrigerant", "Refrigerant"],
-  ["charge", "Factory charge (lb)"], ["voltage", "Voltage"], ["phase", "Phase"], ["hz", "Hz"],
-  ["rla", "Compressor RLA"], ["lra", "Compressor LRA"], ["fanFla", "Fan FLA"],
-  ["mca", "MCA"], ["mop", "MOP / max fuse"],
+  ["brand", "Brand"], ["unitType", "Unit type"],
+  ["model", "Model"], ["serial", "Serial"], ["outdoorUnit", "Matching outdoor unit"], ["indoorUnit", "Matching indoor unit"],
+  ["refrigerant", "Refrigerant"], ["charge", "Factory charge (lb)"],
+  ["voltage", "Voltage"], ["phase", "Phase"], ["hz", "Hz"],
+  ["rla", "Compressor RLA"], ["lra", "Compressor LRA"], ["compA", "Compressor A (cool/heat)"],
+  ["fanFla", "Fan FLA"], ["mca", "MCA"], ["mop", "MOP / max fuse"],
+  ["designHigh", "Design pressure high (psig)"], ["designLow", "Design pressure low (psig)"], ["oil", "Oil (as printed)"],
 ];
 
 function abs(rel) { return new URL(rel, document.baseURI).href; }
@@ -36,46 +43,141 @@ function loadTesseract() {
   return tesseractLoading;
 }
 
-/** Decode -> downscale to <= MAX_SIDE -> grayscale -> 2-98% contrast stretch. */
-export async function preprocess(file) {
-  const url = URL.createObjectURL(file);
-  let img;
+/** EXIF orientation (1-8) from a JPEG's APP1 segment; 1 when absent/unreadable. */
+export async function readExifOrientation(file) {
   try {
-    img = new Image();
-    img.decoding = "async";
-    img.src = url;
-    await img.decode();
-  } finally {
-    URL.revokeObjectURL(url);
+    const buf = new DataView(await file.slice(0, 131072).arrayBuffer());
+    if (buf.getUint16(0) !== 0xffd8) return 1;
+    let off = 2;
+    while (off + 4 < buf.byteLength) {
+      const marker = buf.getUint16(off), len = buf.getUint16(off + 2);
+      if (marker === 0xffe1 && buf.getUint32(off + 4) === 0x45786966) {
+        const t = off + 10, le = buf.getUint16(t) === 0x4949;
+        const ifd = t + buf.getUint32(t + 4, le), n = buf.getUint16(ifd, le);
+        for (let i = 0; i < n; i++) {
+          const e = ifd + 2 + i * 12;
+          if (buf.getUint16(e, le) === 0x0112) return buf.getUint16(e + 8, le) || 1;
+        }
+        return 1;
+      }
+      if ((marker & 0xff00) !== 0xff00) return 1;
+      off += 2 + len;
+    }
+  } catch (e) { /* not a JPEG / truncated */ }
+  return 1;
+}
+
+function browserAppliesExif() {
+  // Safari < 13.1 (old iOS) ignored EXIF orientation when decoding into <img>/canvas.
+  return !!(window.CSS && CSS.supports && CSS.supports("image-orientation", "from-image"));
+}
+
+/**
+ * Decode the photo upright. Prefers createImageBitmap(imageOrientation:'from-image');
+ * falls back to <img> plus manual EXIF rotation on browsers that don't apply it.
+ * Returns a canvas with long edge <= MAX_SIDE.
+ */
+export async function decodeUpright(file, maxSide = DECODE_SIDE) {
+  const orient = await readExifOrientation(file);
+  let src = null, manual = 1;
+  if (window.createImageBitmap) {
+    try { src = await createImageBitmap(file, { imageOrientation: "from-image" }); } catch (e) { src = null; }
   }
-  const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
-  const w = Math.max(1, Math.round(img.naturalWidth * scale));
-  const h = Math.max(1, Math.round(img.naturalHeight * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  ctx.drawImage(img, 0, 0, w, h);
-  img.src = "";
-  const data = ctx.getImageData(0, 0, w, h);
-  const px = data.data;
+  if (!src) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = url;
+      await img.decode();
+      src = img;
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+    if (orient > 1 && !browserAppliesExif()) manual = orient;
+  }
+  const sw = src.naturalWidth || src.width, sh = src.naturalHeight || src.height;
+  const swap = manual >= 5;
+  const scale = Math.min(1, maxSide / Math.max(sw, sh));
+  const dw = Math.max(1, Math.round(sw * scale)), dh = Math.max(1, Math.round(sh * scale));
+  const c = document.createElement("canvas");
+  c.width = swap ? dh : dw; c.height = swap ? dw : dh;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  // EXIF orientation transforms (only used on the manual path).
+  const T = { 2: [-1, 0, 0, 1, dw, 0], 3: [-1, 0, 0, -1, dw, dh], 4: [1, 0, 0, -1, 0, dh],
+    5: [0, 1, 1, 0, 0, 0], 6: [0, 1, -1, 0, dh, 0], 7: [0, -1, -1, 0, dh, dw], 8: [0, -1, 1, 0, 0, dw] }[manual];
+  if (T) ctx.setTransform(...T);
+  ctx.drawImage(src, 0, 0, dw, dh);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (src.close) src.close(); else src.src = "";
+  return { canvas: c, orientation: orient, manualExif: manual > 1 };
+}
+
+/** Rotate (0/90/180/270) and scale to long edge <= maxSide; returns a grayscale Uint8 array + dims. */
+function rotatedGray(srcCanvas, deg, maxSide) {
+  const s = Math.min(1, maxSide / Math.max(srcCanvas.width, srcCanvas.height));
+  const w = Math.round(srcCanvas.width * s), h = Math.round(srcCanvas.height * s);
+  const swap = deg === 90 || deg === 270;
+  const c = document.createElement("canvas");
+  c.width = swap ? h : w; c.height = swap ? w : h;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.translate(c.width / 2, c.height / 2);
+  ctx.rotate((deg * Math.PI) / 180);
+  ctx.drawImage(srcCanvas, -w / 2, -h / 2, w, h);
+  const px = ctx.getImageData(0, 0, c.width, c.height).data;
+  const gray = new Uint8ClampedArray(c.width * c.height);
+  for (let i = 0, j = 0; i < px.length; i += 4, j++) gray[j] = (px[i] * 299 + px[i + 1] * 587 + px[i + 2] * 114) / 1000;
+  c.width = c.height = 0;
+  return { gray, w: swap ? h : w, h: swap ? w : h };
+}
+
+/** 2-98% contrast stretch, in place. */
+function stretch(gray) {
   const hist = new Uint32Array(256);
-  const gray = new Uint8ClampedArray(w * h);
-  for (let i = 0, j = 0; i < px.length; i += 4, j++) {
-    const g = (px[i] * 299 + px[i + 1] * 587 + px[i + 2] * 114) / 1000;
-    gray[j] = g; hist[gray[j]]++;
-  }
-  const n = w * h;
+  for (let i = 0; i < gray.length; i++) hist[gray[i]]++;
+  const n = gray.length;
   let lo = 0, hi = 255, acc = 0;
   for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= n * 0.02) { lo = v; break; } }
   acc = 0;
   for (let v = 255; v >= 0; v--) { acc += hist[v]; if (acc >= n * 0.02) { hi = v; break; } }
   const range = Math.max(1, hi - lo);
-  for (let i = 0, j = 0; i < px.length; i += 4, j++) {
-    const v = ((gray[j] - lo) * 255) / range;
-    px[i] = px[i + 1] = px[i + 2] = v; px[i + 3] = 255;
+  for (let i = 0; i < n; i++) gray[i] = ((gray[i] - lo) * 255) / range;
+  return gray;
+}
+
+/** Sauvola adaptive threshold (integral images): copes with glare and uneven light. */
+export function sauvola(gray, w, h, k = 0.25, R = 128) {
+  const win = Math.max(15, Math.round(Math.max(w, h) / 45)) | 1, r = win >> 1;
+  const W = w + 1, S = new Float64Array(W * (h + 1)), S2 = new Float64Array(W * (h + 1));
+  for (let y = 0; y < h; y++) {
+    let rs = 0, rs2 = 0;
+    for (let x = 0; x < w; x++) {
+      const v = gray[y * w + x]; rs += v; rs2 += v * v;
+      S[(y + 1) * W + x + 1] = S[y * W + x + 1] + rs; S2[(y + 1) * W + x + 1] = S2[y * W + x + 1] + rs2;
+    }
   }
-  ctx.putImageData(data, 0, 0);
-  return canvas;
+  const out = new Uint8ClampedArray(w * h);
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.max(0, y - r), y1 = Math.min(h, y + r + 1);
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.max(0, x - r), x1 = Math.min(w, x + r + 1), n = (y1 - y0) * (x1 - x0);
+      const sum = S[y1 * W + x1] - S[y0 * W + x1] - S[y1 * W + x0] + S[y0 * W + x0];
+      const sum2 = S2[y1 * W + x1] - S2[y0 * W + x1] - S2[y1 * W + x0] + S2[y0 * W + x0];
+      const m = sum / n, sd = Math.sqrt(Math.max(0, sum2 / n - m * m));
+      out[y * w + x] = gray[y * w + x] > m * (1 + k * (sd / R - 1)) ? 255 : 0;
+    }
+  }
+  return out;
+}
+
+function toCanvas(gray, w, h) {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const ctx = c.getContext("2d");
+  const img = ctx.createImageData(w, h);
+  for (let i = 0, j = 0; j < gray.length; i += 4, j++) { img.data[i] = img.data[i + 1] = img.data[i + 2] = gray[j]; img.data[i + 3] = 255; }
+  ctx.putImageData(img, 0, 0);
+  return c;
 }
 
 function flattenWords(blocks) {
@@ -85,23 +187,118 @@ function flattenWords(blocks) {
   return out;
 }
 
-export async function ocrCanvas(canvas, onProgress) {
+const KEYWORDS = /^(?:MODEL|SERIAL|VOLTS?|PH|HZ|RLA|LRA|FLA|AMPS?|CHARGE|REFRIGERANT|MAX|MIN|FAN|MOTOR|COMPRESSOR|FUSE|SOURCE|LBS?|OZ|KG|COOL|HEAT|CIRCUIT|AMPACITY|PRESSURE|UNIT|PSIG|MPA|OUTDOOR|INDOOR|NO)\.?:?$/i;
+
+/** Orientation score from a probe OCR: confident real words + label keywords. */
+export function orientationScore(words) {
+  const good = words.filter((w) => /[A-Za-z0-9]{2,}/.test(w.text));
+  if (!good.length) return 0;
+  const mean = good.reduce((a, w) => a + w.confidence, 0) / good.length;
+  const strong = good.filter((w) => w.confidence >= 70).length;
+  const kw = good.filter((w) => KEYWORDS.test(w.text) && w.confidence >= 50).length;
+  return mean * Math.min(1, strong / 8) + kw * 12;
+}
+
+/** Confident (>=70) alphanumeric words: how much legible text a probe found. */
+export function strongWords(words) {
+  return words.filter((w) => /[A-Za-z0-9]{2,}/.test(w.text) && w.confidence >= 70).length;
+}
+
+async function makeWorker(onProgress) {
   const T = await loadTesseract();
-  const worker = await T.createWorker("eng", 1, {
+  return T.createWorker("eng", 1, {
     workerPath: abs(VENDOR + "worker.min.js"),
     corePath: abs(VENDOR + "core"),
     langPath: abs(VENDOR + "lang"),
     workerBlobURL: false,
     gzip: true,
     cacheMethod: "none", // the service worker caches the model; don't also write it to IndexedDB
-    logger: (m) => onProgress && m && typeof m.progress === "number" && onProgress(m.status, m.progress),
+    logger: (m) => onProgress && m && m.status === "recognizing text" && onProgress(m.progress),
   });
+}
+
+async function recognize(worker, canvas, psm) {
+  await worker.setParameters({ tessedit_pageseg_mode: String(psm), preserve_interword_spaces: "1" });
+  const { data } = await worker.recognize(canvas, {}, { text: true, blocks: true });
+  return { text: data.text || "", words: flattenWords(data.blocks), confidence: data.confidence };
+}
+
+/**
+ * Full on-device pipeline: EXIF-upright decode -> orientation probe (0/90/180/270
+ * at ~800px) -> full-res OCR on the winner: grayscale and Sauvola-thresholded,
+ * PSM 11 (sparse) and PSM 6 (block) -> parse every pass and merge per field.
+ * progress(stageText, fraction0to1)
+ */
+export async function scanPlate(file, progress = () => {}) {
+  progress("Preparing photo…", 0.02);
+  const { canvas: full, orientation } = await decodeUpright(file);
+  // Crop to the plate so its text keeps as many pixels as possible.
+  progress("Finding the plate…", 0.04);
+  const small = rotatedGray(full, 0, FIND_SIDE);
+  const box = findLabelBox(small.gray, small.w, small.h);
+  let upright = full, crop = null;
+  if (box) {
+    const k = full.width / small.w, pad = 0.03 * Math.max(full.width, full.height);
+    const x = Math.max(0, box.x * k - pad), y = Math.max(0, box.y * k - pad);
+    const w = Math.min(full.width - x, box.w * k + 2 * pad), h = Math.min(full.height - y, box.h * k + 2 * pad);
+    upright = document.createElement("canvas");
+    upright.width = Math.round(w); upright.height = Math.round(h);
+    upright.getContext("2d").drawImage(full, x, y, w, h, 0, 0, upright.width, upright.height);
+    crop = { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h), frac: box.frac };
+  }
+  const worker = await makeWorker();
+  const passes = [];
   try {
-    const { data } = await worker.recognize(canvas, {}, { text: true, blocks: true });
-    return { text: data.text || "", words: flattenWords(data.blocks), confidence: data.confidence };
+    const angles = [0, 90, 180, 270], probes = [];
+    for (let i = 0; i < angles.length; i++) {
+      progress("Finding orientation " + (i + 1) + "/4…", 0.05 + 0.25 * (i / 4));
+      const g = rotatedGray(upright, angles[i], PROBE_SIDE);
+      const c = toCanvas(stretch(g.gray), g.w, g.h);
+      const r = await recognize(worker, c, 11);
+      c.width = c.height = 0;
+      probes.push({ angle: angles[i], score: orientationScore(r.words), strong: strongWords(r.words) });
+    }
+    probes.sort((a, b) => b.score - a.score);
+    const angle = probes[0].angle;
+    if (crop) {
+      // Guard against a crop that caught only part of the plate (e.g. the plate fills the
+      // frame): probe the uncropped photo at the winning angle and keep whichever reads better.
+      progress("Checking the crop…", 0.3);
+      const g0 = rotatedGray(full, angle, PROBE_SIDE);
+      const c0 = toCanvas(stretch(g0.gray), g0.w, g0.h);
+      const w0 = (await recognize(worker, c0, 11)).words;
+      c0.width = c0.height = 0;
+      const s0 = orientationScore(w0), n0 = strongWords(w0);
+      crop.fullScore = Math.round(s0); crop.cropScore = Math.round(probes[0].score);
+      crop.fullWords = n0; crop.cropWords = probes[0].strong;
+      // The score saturates, so also compare how many confident words each one reads.
+      if (s0 > probes[0].score * 1.15 || n0 > probes[0].strong * 1.3 + 2) { upright.width = upright.height = 0; upright = full; crop.used = false; }
+      else { full.width = full.height = 0; crop.used = true; }
+    }
+    const g = rotatedGray(upright, angle, MAX_SIDE);
+    upright.width = upright.height = 0;
+    const plain = stretch(g.gray);
+    const variants = [["gray", toCanvas(plain, g.w, g.h)], ["sauvola", toCanvas(sauvola(plain, g.w, g.h), g.w, g.h)]];
+    const plan = [["gray", 11], ["sauvola", 11], ["gray", 6], ["sauvola", 6]];
+    for (let i = 0; i < plan.length; i++) {
+      const [vname, psm] = plan[i];
+      progress("Reading plate, pass " + (i + 1) + "/" + plan.length + "…", 0.32 + 0.66 * (i / plan.length));
+      const r = await recognize(worker, variants.find((v) => v[0] === vname)[1], psm);
+      passes.push({ name: vname + " psm" + psm, ...r, parsed: parsePlate(r) });
+    }
+    variants.forEach((v) => { v[1].width = v[1].height = 0; });
+    progress("Done", 1);
+    const merged = mergeParses(passes.map((p) => ({ name: p.name, parsed: p.parsed })));
+    return { merged, passes: passes.map(({ name, text, confidence, words }) => ({ name, text, confidence, words })), angle, probes, orientation, crop };
   } finally {
     await worker.terminate();
   }
+}
+
+/** Back-compat helper: single plain OCR of a canvas. */
+export async function ocrCanvas(canvas) {
+  const worker = await makeWorker();
+  try { return await recognize(worker, canvas, 11); } finally { await worker.terminate(); }
 }
 
 function fmt(name, f) {
@@ -110,37 +307,60 @@ function fmt(name, f) {
   return String(f.value);
 }
 
-function buildConfirm(parsed, onConfirm, onCancel) {
-  const wrap = document.createElement("div");
-  wrap.className = "plate-confirm";
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+/** Collapsible raw OCR text with a Copy button. Local only: nothing is sent anywhere. */
+function rawPanel(passes, chosen) {
+  const d = el("details", "plate-raw");
+  d.appendChild(el("summary", null, "Show raw OCR text"));
+  const order = passes.slice().sort((a, b) => (b.name === chosen) - (a.name === chosen));
+  const txt = order.map((p) => "--- " + p.name + " (mean conf " + Math.round(p.confidence || 0) + ") ---\n" + p.text.trim()).join("\n\n");
+  const pre = el("pre", "plate-raw-text", txt);
+  pre.tabIndex = 0;
+  const copy = el("button", "btn btn-secondary btn-small", "Copy");
+  copy.type = "button";
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(txt);
+      copy.textContent = "Copied";
+    } catch (e) {
+      const r = document.createRange(); r.selectNodeContents(pre);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      copy.textContent = document.execCommand && document.execCommand("copy") ? "Copied" : "Selected — copy manually";
+    }
+  });
+  d.append(copy, pre);
+  return d;
+}
+
+function buildConfirm(parsed, onConfirm, onCancel, passes) {
+  const wrap = el("div", "plate-confirm");
   wrap.setAttribute("role", "dialog");
   wrap.setAttribute("aria-label", "Confirm data plate");
-  const h = document.createElement("h2");
-  h.textContent = "Confirm data plate";
-  wrap.appendChild(h);
-  const p = document.createElement("p");
-  p.className = "footer-note";
+  wrap.appendChild(el("h2", null, "Confirm data plate"));
   const nLow = parsed.lowConfidence.length;
-  p.textContent = "Check every value against the plate. Blank = not read. " +
-    (nLow ? nLow + " field(s) flagged as low confidence." : "");
-  wrap.appendChild(p);
-  const form = document.createElement("form");
-  form.className = "plate-form";
+  wrap.appendChild(el("p", "footer-note", "Check every value against the plate. Blank = not read. " +
+    (nLow ? nLow + " field(s) flagged as low confidence." : "")));
+  (parsed.hints || []).forEach((h) => wrap.appendChild(el("p", "plate-hint", h)));
+  const form = el("form", "plate-form");
   FIELDS.forEach(([name, label]) => {
     const f = parsed.fields[name];
-    const lab = document.createElement("label");
-    lab.className = "field";
-    const span = document.createElement("span");
-    span.textContent = label;
+    // Optional/rare fields only appear when the plate has them.
+    if (!f && ["brand", "unitType", "outdoorUnit", "indoorUnit", "compA", "designHigh", "designLow", "oil"].includes(name)) return;
+    const lab = el("label", "field");
+    const span = el("span", null, label);
     const low = f && f.confidence < LOW_CONFIDENCE;
     if (f) {
-      const c = document.createElement("small");
-      c.className = "conf" + (low ? " low" : "");
-      c.textContent = " " + Math.round(f.confidence * 100) + "%" + (low ? " — check" : "") + (f.note ? " (" + f.note + ")" : "");
-      span.appendChild(c);
+      span.appendChild(el("small", "conf" + (low ? " low" : ""),
+        " " + Math.round(f.confidence * 100) + "%" + (low ? " — check" : "") + (f.note ? " (" + f.note + ")" : "")));
     }
     lab.appendChild(span);
-    const input = document.createElement("input");
+    const input = el("input");
     input.name = name;
     input.dataset.plate = name;
     input.autocomplete = "off";
@@ -148,38 +368,41 @@ function buildConfirm(parsed, onConfirm, onCancel) {
     if (low) { input.classList.add("low-conf"); input.setAttribute("aria-invalid", "true"); }
     if (name === "charge" && f) input.title = f.value.display;
     lab.appendChild(input);
+    if (f && f.display) lab.appendChild(el("small", "footer-note", f.display));
+    else if (name === "charge" && f) lab.appendChild(el("small", "footer-note", f.value.display));
     form.appendChild(lab);
   });
-  const actions = document.createElement("div");
-  actions.className = "tool-actions";
-  const ok = document.createElement("button");
-  ok.type = "submit"; ok.className = "btn btn-primary"; ok.textContent = "Confirm";
-  const cancel = document.createElement("button");
-  cancel.type = "button"; cancel.className = "btn btn-secondary"; cancel.textContent = "Discard";
+  const actions = el("div", "tool-actions");
+  const ok = el("button", "btn btn-primary", "Confirm"); ok.type = "submit";
+  const cancel = el("button", "btn btn-secondary", "Discard"); cancel.type = "button";
   actions.append(ok, cancel);
   form.appendChild(actions);
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const values = {};
-    FIELDS.forEach(([name]) => { const v = form.elements[name].value.trim(); if (v) values[name] = v; });
+    FIELDS.forEach(([name]) => { const i = form.elements[name]; const v = i && i.value.trim(); if (v) values[name] = v; });
     wrap.remove();
     onConfirm(values);
   });
   cancel.addEventListener("click", () => { wrap.remove(); onCancel && onCancel(); });
   wrap.appendChild(form);
+  if (passes && passes.length) wrap.appendChild(rawPanel(passes, parsed.bestPass));
   return wrap;
 }
 
 /** Plain-text summary of confirmed plate values (for notes fields). */
 export function plateSummary(v) {
   const parts = [];
+  if (v.brand) parts.push(v.brand + (v.unitType ? " " + v.unitType : ""));
   if (v.model) parts.push("Model " + v.model);
   if (v.serial) parts.push("S/N " + v.serial);
   if (v.refrigerant) parts.push(v.refrigerant + (v.charge ? " " + v.charge + " lb" : ""));
   else if (v.charge) parts.push("Charge " + v.charge + " lb");
   const elec = [v.voltage && v.voltage + "V", v.phase && v.phase + "ph", v.hz && v.hz + "Hz"].filter(Boolean).join(" ");
   if (elec) parts.push(elec);
-  [["rla", "RLA"], ["lra", "LRA"], ["fanFla", "Fan FLA"], ["mca", "MCA"], ["mop", "MOP"]].forEach(([k, l]) => { if (v[k]) parts.push(l + " " + v[k]); });
+  [["rla", "RLA"], ["lra", "LRA"], ["compA", "Comp A"], ["fanFla", "Fan FLA"], ["mca", "MCA"], ["mop", "MOP"],
+    ["designHigh", "DP high"], ["designLow", "DP low"], ["oil", "Oil"], ["outdoorUnit", "OD unit"], ["indoorUnit", "ID unit"]]
+    .forEach(([k, l]) => { if (v[k]) parts.push(l + " " + v[k]); });
   return parts.join(" | ");
 }
 
@@ -188,22 +411,19 @@ export function plateSummary(v) {
  * onConfirm(values) is called only after the user confirms the (possibly edited) form.
  */
 export function mountPlateScan(container, onConfirm) {
-  const box = document.createElement("div");
-  box.className = "plate-scan";
-  const label = document.createElement("label");
-  label.className = "btn btn-secondary plate-scan-btn";
-  label.textContent = "📷 Scan data plate";
-  const input = document.createElement("input");
+  const box = el("div", "plate-scan");
+  const label = el("label", "btn btn-secondary plate-scan-btn", "📷 Scan data plate");
+  const input = el("input", "visually-hidden");
   input.type = "file";
   input.accept = "image/*";
   input.setAttribute("capture", "environment");
-  input.className = "visually-hidden";
   input.id = "plate-file-" + Math.random().toString(36).slice(2, 8);
   label.htmlFor = input.id;
-  const status = document.createElement("p");
-  status.className = "plate-status footer-note";
+  const status = el("p", "plate-status footer-note");
   status.setAttribute("aria-live", "polite");
-  box.append(label, input, status);
+  const bar = el("progress", "plate-progress");
+  bar.max = 1; bar.value = 0; bar.hidden = true;
+  box.append(label, input, status, bar);
   container.appendChild(box);
 
   input.addEventListener("change", async () => {
@@ -212,24 +432,25 @@ export function mountPlateScan(container, onConfirm) {
     if (!file) return;
     box.querySelector(".plate-confirm")?.remove();
     label.classList.add("disabled");
+    bar.hidden = false;
     status.textContent = "Reading plate on this phone…";
     try {
-      const canvas = await preprocess(file);
-      const ocr = await ocrCanvas(canvas, (s, pr) => { status.textContent = "Reading plate on this phone… " + Math.round(pr * 100) + "%"; });
-      canvas.width = canvas.height = 0;
-      const parsed = parsePlate(ocr);
+      const res = await scanPlate(file, (stage, frac) => { status.textContent = stage + " " + Math.round(frac * 100) + "%"; bar.value = frac; });
+      const parsed = res.merged;
       box.__lastParse = parsed; // for debugging/tests only, in memory
+      box.__lastScan = { crop: res.crop, angle: res.angle, probes: res.probes, orientation: res.orientation, passes: res.passes.map((p) => ({ name: p.name, text: p.text, confidence: p.confidence })) };
       const found = Object.keys(parsed.fields).length;
       status.textContent = found ? "Found " + found + " field(s). Review below." : "Couldn't read any plate fields. Try again closer, square-on, with less glare.";
       box.appendChild(buildConfirm(parsed, (values) => {
         status.textContent = "Plate values applied.";
         onConfirm(values);
-      }, () => { status.textContent = "Discarded."; }));
+      }, () => { status.textContent = "Discarded."; }, res.passes));
     } catch (e) {
       console.error(e);
       status.textContent = "OCR failed: " + (e && e.message ? e.message : e);
     } finally {
       label.classList.remove("disabled");
+      bar.hidden = true;
     }
   });
   return box;

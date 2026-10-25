@@ -80,7 +80,7 @@ test("split AC: every field from a fully labelled plate", () => {
   assert.equal(v(r, "refrigerant"), "R-410A");
   assert.equal(v(r, "charge").lb, 6.25);
   assert.equal(v(r, "charge").oz, 100);
-  assert.deepEqual(r.lowConfidence, []);
+  assert.deepEqual(r.lowConfidence, ["model"], "3B1 has a B/8 confusable, so it is flagged");
 });
 
 test("RTU: combined V-Ph-Hz, MOCP alias, oz charge normalised to lb", () => {
