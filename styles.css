@@ -195,3 +195,17 @@ textarea { min-height: 96px; resize: vertical; }
 @media (min-width: 760px) { .plate-cols { grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: start; } .plate-raw { position: sticky; top: .5rem; } }
 .plate-raw-text { max-height: 60vh; overflow: auto; white-space: pre-wrap; }
 .plate-crop-stage { margin: .5rem 0; }
+
+/* Manual links + troubleshooting trees */
+.manuals { margin: 8px 0 12px; }
+.manuals:empty { display: none; }
+.manuals-head { font-weight: 600; margin-bottom: 4px; }
+.manuals ul { margin: 4px 0; padding-left: 18px; }
+.manuals li { margin: 4px 0; }
+.manuals-none, .manuals-note { color: var(--muted); margin: 4px 0; }
+.tree-trail { color: var(--muted); font-size: 0.9rem; padding-left: 18px; }
+.tree-step { background: var(--surface2); border-radius: 12px; padding: 12px; margin: 12px 0; }
+.tree-end { border-left: 4px solid var(--accent, #4caf50); }
+.tree-opt { display: block; width: 100%; margin-top: 8px; text-align: left; }
+.tree-tools { margin: 8px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip { display: inline-block; padding: 4px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--muted); font-size: 0.9rem; text-decoration: none; }

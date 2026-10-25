@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="Service Tech" />
   <meta http-equiv="Cache-Control" content="no-cache" />
   <title>New call — Service Tech</title>
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=10" />
 </head>
 <body>
   <div class="app">
@@ -37,6 +37,7 @@
           <option value="freezer">freezer</option>
           <option value="RTU">RTU</option>
           <option value="split">split</option>
+          <option value="mini-split">mini-split</option>
           <option value="rack">rack</option>
           <option value="other">other</option>
         </select>
@@ -45,6 +46,8 @@
       <label class="field"><span>Refrigerant</span><input id="refrigerant" placeholder="R-404A, R-448A, R-410A…" /></label>
       <div id="plate-scan-host"></div>
       <label class="field"><span>Data plate</span><textarea id="plate" placeholder="Model, serial, charge, RLA/LRA, MCA/MOP (scan or type)"></textarea></label>
+      <div id="manuals-host" class="manuals"></div>
+      <a class="btn btn-secondary" id="tree-link" href="tree.html">Troubleshooting steps</a>
       <label class="check"><input type="checkbox" id="photosReady" /> <span>Photos ready</span></label>
     </section>
 
@@ -86,7 +89,7 @@
     </div>
     <p class="footer-note"><button type="button" class="btn btn-secondary" id="btn-reset" style="margin-top:12px">Clear draft</button></p>
   </div>
-  <script src="app.js?v=9"></script>
-  <script type="module" src="tools/call-scan.js?v=9"></script>
+  <script src="app.js?v=10"></script>
+  <script type="module" src="tools/call-scan.js?v=10"></script>
 </body>
 </html>
