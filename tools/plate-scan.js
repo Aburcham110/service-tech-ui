@@ -7,8 +7,8 @@
  * Nothing is stored (not even localStorage) until the user taps Confirm, and
  * then only the onConfirm callback decides what to keep.
  */
-import { parsePlate, mergeParses, LOW_CONFIDENCE } from "./plate-parse.js?v=6";
-import { findLabelBox } from "./plate-image.js?v=6";
+import { parsePlate, mergeParses, LOW_CONFIDENCE } from "./plate-parse.js?v=7";
+import { findLabelBox, deglare, clahe } from "./plate-image.js?v=7";
 
 const VENDOR = "vendor/tesseract/";
 const DECODE_SIDE = 4000;   // decode cap (keeps the label's detail before cropping)
@@ -229,7 +229,16 @@ async function recognize(worker, canvas, psm) {
  * PSM 11 (sparse) and PSM 6 (block) -> parse every pass and merge per field.
  * progress(stageText, fraction0to1)
  */
-export async function scanPlate(file, progress = () => {}) {
+// Default OCR plan. "glare" = flat-field + CLAHE, for reflective/curved labels.
+export const DEFAULT_PLAN = [["gray", 11], ["sauvola", 11], ["glare", 11], ["gray", 6], ["sauvola", 6], ["glare", 6]];
+const MIN_PASSES = 4;
+const PROBE_GOOD = { score: 150, strong: 15 }; // an upright read this good needs no other angles
+
+/** Signature of a merged parse: field -> value. Used to stop once extra passes change nothing. */
+function sig(m) { return Object.fromEntries(Object.entries(m.fields).map(([k, f]) => [k, String(f.value)])); }
+
+export async function scanPlate(file, progress = () => {}, opts = (globalThis.__plateScanOpts || {})) {
+  const t0 = performance.now(), timing = {};
   progress("Preparing photo…", 0.02);
   const { canvas: full, orientation } = await decodeUpright(file);
   // Crop to the plate so its text keeps as many pixels as possible.
@@ -257,7 +266,9 @@ export async function scanPlate(file, progress = () => {}) {
       const r = await recognize(worker, c, 11);
       c.width = c.height = 0;
       probes.push({ angle: angles[i], score: orientationScore(r.words), strong: strongWords(r.words) });
+      if (opts.earlyStop !== false && i === 0 && probes[0].score >= PROBE_GOOD.score && probes[0].strong >= PROBE_GOOD.strong) break;
     }
+    timing.probe = Math.round(performance.now() - t0);
     probes.sort((a, b) => b.score - a.score);
     const angle = probes[0].angle;
     if (crop) {
@@ -277,19 +288,31 @@ export async function scanPlate(file, progress = () => {}) {
     }
     const g = rotatedGray(upright, angle, MAX_SIDE);
     upright.width = upright.height = 0;
+    const raw = Uint8ClampedArray.from(g.gray);
     const plain = stretch(g.gray);
-    const variants = [["gray", toCanvas(plain, g.w, g.h)], ["sauvola", toCanvas(sauvola(plain, g.w, g.h), g.w, g.h)]];
-    const plan = [["gray", 11], ["sauvola", 11], ["gray", 6], ["sauvola", 6]];
+    const plan = opts.plan || DEFAULT_PLAN, earlyStop = opts.earlyStop !== false;
+    const make = { gray: () => plain, sauvola: () => sauvola(plain, g.w, g.h), glare: () => stretch(clahe(deglare(raw, g.w, g.h), g.w, g.h)) };
+    const variants = [];
+    const canvasFor = (n) => { let v = variants.find((x) => x[0] === n); if (!v) variants.push(v = [n, toCanvas(make[n](), g.w, g.h)]); return v[1]; };
+    let prev = null;
+    timing.passes = [];
     for (let i = 0; i < plan.length; i++) {
       const [vname, psm] = plan[i];
       progress("Reading plate, pass " + (i + 1) + "/" + plan.length + "…", 0.32 + 0.66 * (i / plan.length));
-      const r = await recognize(worker, variants.find((v) => v[0] === vname)[1], psm);
+      const ts = performance.now();
+      const r = await recognize(worker, canvasFor(vname), psm);
       passes.push({ name: vname + " psm" + psm, ...r, parsed: parsePlate(r) });
+      timing.passes.push(Math.round(performance.now() - ts));
+      // Early stop: after MIN_PASSES, stop once another pass leaves every merged value unchanged.
+      const cur = JSON.stringify(sig(mergeParses(passes.map((p) => ({ name: p.name, parsed: p.parsed })))));
+      if (earlyStop && i + 1 >= MIN_PASSES && cur === prev) { timing.stoppedAfter = i + 1; break; }
+      prev = cur;
     }
+    timing.total = Math.round(performance.now() - t0);
     variants.forEach((v) => { v[1].width = v[1].height = 0; });
     progress("Done", 1);
     const merged = mergeParses(passes.map((p) => ({ name: p.name, parsed: p.parsed })));
-    return { merged, passes: passes.map(({ name, text, confidence, words }) => ({ name, text, confidence, words })), angle, probes, orientation, crop };
+    return { merged, passes: passes.map(({ name, text, confidence, words }) => ({ name, text, confidence, words })), angle, probes, orientation, crop, timing };
   } finally {
     await worker.terminate();
   }
@@ -423,7 +446,8 @@ export function mountPlateScan(container, onConfirm) {
   status.setAttribute("aria-live", "polite");
   const bar = el("progress", "plate-progress");
   bar.max = 1; bar.value = 0; bar.hidden = true;
-  box.append(label, input, status, bar);
+  const tip = el("p", "plate-tip footer-note", "Tip: fill the frame with the plate, hold the phone square to it, and angle it slightly to kill glare on shiny or curved labels.");
+  box.append(label, input, tip, status, bar);
   container.appendChild(box);
 
   input.addEventListener("change", async () => {
@@ -438,7 +462,7 @@ export function mountPlateScan(container, onConfirm) {
       const res = await scanPlate(file, (stage, frac) => { status.textContent = stage + " " + Math.round(frac * 100) + "%"; bar.value = frac; });
       const parsed = res.merged;
       box.__lastParse = parsed; // for debugging/tests only, in memory
-      box.__lastScan = { crop: res.crop, angle: res.angle, probes: res.probes, orientation: res.orientation, passes: res.passes.map((p) => ({ name: p.name, text: p.text, confidence: p.confidence })) };
+      box.__lastScan = { timing: res.timing, crop: res.crop, angle: res.angle, probes: res.probes, orientation: res.orientation, passes: res.passes.map((p) => ({ name: p.name, text: p.text, confidence: p.confidence })) };
       const found = Object.keys(parsed.fields).length;
       status.textContent = found ? "Found " + found + " field(s). Review below." : "Couldn't read any plate fields. Try again closer, square-on, with less glare.";
       box.appendChild(buildConfirm(parsed, (values) => {

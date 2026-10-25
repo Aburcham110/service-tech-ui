@@ -9,11 +9,11 @@
    - Any other same-origin GET: network-first, falling back to cache.
    - Navigations to pages not in the cache while offline: offline.html.
    - Cross-origin (Notion, GitHub): not handled, network only. */
-const VERSION = "v6";
+const VERSION = "v7";
 const CACHE = "service-tech-" + VERSION;
 const OFFLINE_URL = "./offline.html";
 
-// Exact URLs the pages request (versioned ones include ?v=6).
+// Exact URLs the pages request (versioned ones include ?v=7).
 const ASSETS = [
   "./",
   "./index.html",
@@ -26,24 +26,24 @@ const ASSETS = [
   "./icon-192.png",
   "./icon-512.png",
   "./apple-touch-icon.png",
-  "./styles.css?v=6",
-  "./app.js?v=6",
+  "./styles.css?v=7",
+  "./app.js?v=7",
   // Every tools/*.js module:
-  "./tools/tool-app.js?v=6",
+  "./tools/tool-app.js?v=7",
   "./tools/registry.js",
   "./tools/registry-a.js",
   "./tools/registry-b.js",
-  "./tools/logic.js?v=6",
-  "./tools/logic-1.js?v=6",
+  "./tools/logic.js?v=7",
+  "./tools/logic-1.js?v=7",
   "./tools/logic-1b.js",
   "./tools/logic-2.js",
   "./tools/logic-2a.js",
   "./tools/logic-2b.js",
-  "./tools/pt-tables.js?v=6",
-  "./tools/plate-parse.js?v=6",
-  "./tools/plate-image.js?v=6",
-  "./tools/plate-scan.js?v=6",
-  "./tools/call-scan.js?v=6",
+  "./tools/pt-tables.js?v=7",
+  "./tools/plate-parse.js?v=7",
+  "./tools/plate-image.js?v=7",
+  "./tools/plate-scan.js?v=7",
+  "./tools/call-scan.js?v=7",
   // On-device OCR (vendored Tesseract.js 7.0.0, ~15 MB; see vendor/tesseract/README.md).
   // All three LSTM core builds: the worker picks one from the device's wasm SIMD support.
   "./vendor/tesseract/tesseract.min.js",

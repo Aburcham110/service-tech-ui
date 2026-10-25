@@ -1,5 +1,5 @@
 /** Call card: "Scan data plate" in the Open panel. Writes into the form only on Confirm. */
-import { mountPlateScan, plateSummary } from "./plate-scan.js?v=6";
+import { mountPlateScan, plateSummary } from "./plate-scan.js?v=7";
 
 function set(id, value) {
   const el = document.getElementById(id);

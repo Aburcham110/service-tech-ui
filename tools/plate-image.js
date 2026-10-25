@@ -73,3 +73,62 @@ export function findLabelBox(gray, w, h, cell = 8) {
   if (frac < 0.03 || frac > 0.9) return null;
   return { x, y, w: bw, h: bh, frac: Math.round(frac * 100) / 100 };
 }
+
+function boxBlur(src, w, h, r) {
+  // Separable box blur via running sums (Float32).
+  const tmp = new Float32Array(w * h), out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    let s = 0; const o = y * w;
+    for (let x = -r; x <= r; x++) s += src[o + Math.min(w - 1, Math.max(0, x))];
+    for (let x = 0; x < w; x++) {
+      tmp[o + x] = s / (2 * r + 1);
+      s += src[o + Math.min(w - 1, x + r + 1)] - src[o + Math.max(0, x - r)];
+    }
+  }
+  for (let x = 0; x < w; x++) {
+    let s = 0;
+    for (let y = -r; y <= r; y++) s += tmp[Math.min(h - 1, Math.max(0, y)) * w + x];
+    for (let y = 0; y < h; y++) {
+      out[y * w + x] = s / (2 * r + 1);
+      s += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x];
+    }
+  }
+  return out;
+}
+
+/**
+ * Glare / uneven-light flattening: divide by a heavily blurred background so a hot spot
+ * or a curved label's shading becomes the same paper white; then compress blown highlights.
+ */
+export function deglare(gray, w, h) {
+  const r = Math.max(8, Math.round(Math.max(w, h) / 40));
+  const bg = boxBlur(gray, w, h, r);
+  const out = new Uint8ClampedArray(w * h);
+  for (let i = 0; i < out.length; i++) out[i] = (gray[i] / Math.max(24, bg[i])) * 220;
+  return out;
+}
+
+/** CLAHE: contrast-limited adaptive histogram equalisation over tiles x tiles, bilinear blend. */
+export function clahe(gray, w, h, tiles = 8, clip = 3) {
+  const tw = Math.ceil(w / tiles), th = Math.ceil(h / tiles);
+  const luts = [];
+  for (let ty = 0; ty < tiles; ty++) for (let tx = 0; tx < tiles; tx++) {
+    const hist = new Float32Array(256); let n = 0;
+    for (let y = ty * th; y < Math.min(h, (ty + 1) * th); y++) for (let x = tx * tw; x < Math.min(w, (tx + 1) * tw); x++) { hist[gray[y * w + x] | 0]++; n++; }
+    const lim = Math.max(1, (clip * n) / 256); let excess = 0;
+    for (let v = 0; v < 256; v++) if (hist[v] > lim) { excess += hist[v] - lim; hist[v] = lim; }
+    const lut = new Uint8ClampedArray(256); let acc = 0;
+    for (let v = 0; v < 256; v++) { acc += hist[v] + excess / 256; lut[v] = n ? (acc / n) * 255 : v; }
+    luts.push(lut);
+  }
+  const out = new Uint8ClampedArray(w * h);
+  for (let y = 0; y < h; y++) {
+    const gy = Math.min(tiles - 1, Math.max(0, (y - th / 2) / th)), y0 = Math.floor(gy), y1 = Math.min(tiles - 1, y0 + 1), fy = gy - y0;
+    for (let x = 0; x < w; x++) {
+      const gx = Math.min(tiles - 1, Math.max(0, (x - tw / 2) / tw)), x0 = Math.floor(gx), x1 = Math.min(tiles - 1, x0 + 1), fx = gx - x0;
+      const v = gray[y * w + x] | 0;
+      out[y * w + x] = (1 - fy) * ((1 - fx) * luts[y0 * tiles + x0][v] + fx * luts[y0 * tiles + x1][v]) + fy * ((1 - fx) * luts[y1 * tiles + x0][v] + fx * luts[y1 * tiles + x1][v]);
+    }
+  }
+  return out;
+}
