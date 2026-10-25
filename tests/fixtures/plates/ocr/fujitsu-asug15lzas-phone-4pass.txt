@@ -1,0 +1,180 @@
+--- gray psm6 (mean conf 74) ---
+|                 FUjiTSU
+SPLIT TYPE AIR CONDITIONER
+MODEL No.      ASUG15LZAS
+SERIAL No. WWB 015057
+ETL LISTED
+CONFORMS TO
+UL STD.
+7    60335-2-40,
+€. 60335-1
+(ra         CERTIFIED TO
+ES pee     CSA STD.
+Intertek cx»
+91 987                 NO.60335-2-40,
+60335-1
+= |
+SOURCE         208/230 V
+|                       60Hz 1-PH
+INDOOR FAN MOTOR LOAD
+035A
+APPLICABLE OUTDOOR UNIT
+AOUG15LZAS1 | AOUG15LZAH1
+
+--- gray psm11 (mean conf 80) ---
+FUjiTSU
+
+SPLIT TYPE AR ¢
+
+ONDITIONER
+
+MODEL No,
+
+ASUG
+
+15LZAS
+
+SERIAL No. WWB 0 1 5
+
+057
+
+ETL LISTED
+
+UL STD.
+
+CONFORMS TO
+
+60335-2-40,
+
+(Q))
+
+g 603351
+
+CERTIFIED TO
+
+CSA STD.
+
+Intertek
+
+C22.2
+
+91987
+
+60335-1
+
+NO.60335-2-40,
+
+BE ——— Fo)
+
+SOURCE
+
+208/230 V
+
+60Hz
+
+1-PH
+
+INDOOR FAN MOTOR LOAD
+
+0.35 A
+
+APPLICABLE OUTDOOR UNIT
+
+AOUG15LZAS1 / AOUG15LZAH1
+
+--- sauvola psm11 (mean conf 79) ---
+Fujitsu
+
+SPLIT TYPE AR
+
+MODEL No.
+
+CONDITIONER
+
+ASUG15LZAS
+
+SERIAL No. WwB
+
+015057
+
+ETL LISTED
+
+CONFORMS TO
+
+60335-2-40,
+
+L STD.
+
+(lb.
+
+60335-1
+
+CSA STD.
+
+CERTIFIED TO
+
+Intertek
+
+C22
+
+91987
+
+NO.60335-240,
+
+60335-1
+
+SOURCE
+
+208/230 V
+
+60Hz 1-PH |
+
+INDOOR FAN MOTOR LOAD
+
+|
+
+|
+
+035 A
+
+APPLICABLE OUTDOOR UNIT
+
+AOUG15LZAS1 | AOUG15LZAH1  |
+
+--- sauvola psm6 (mean conf 73) ---
+FUjiTsy
+
+~ SPLIT TYPE AR CONDITIONER
+
+MODEL No,   ASUG15LZAS |
+
+SERIAL No. WWB015057
+
+ETL LISTED
+
+CONFORMS TO |
+
+UL STD.             ;
+
+qr    60335-2-40,      |
+
+@. CRED TO     |
+
+Intertek cz,       |
+
+91987     NO.60335-2-40,    |
+
+60335-1        |
+
+SE ——
+
+SOURCE         208/230 V |
+
+60Hz 1-PH |
+
+INDOOR FAN MOTOR LOAD   |
+035A
+
+APPLICABLE OUTDOOR UNIT
+
+AOUG15LZAS1 / AOUG15LZAH1

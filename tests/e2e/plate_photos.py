@@ -23,6 +23,8 @@ scan_opts = {}
 if "--no-early" in opt: scan_opts["earlyStop"] = False
 if "--plan" in opt: scan_opts["plan"] = [[p.split(":")[0], int(p.split(":")[1])] for p in opt["--plan"].split(",")]
 dump = "--dump" in sys.argv
+_c = [float(x) for x in opt["--crop"].split(",")] if "--crop" in opt else None
+crop_corners = [_c[i:i + 2] for i in range(0, 8, 2)] if _c else None
 imgs = args or sorted(glob.glob(os.path.join(FIX, "*.jpg")))
 R = {"photos": {}, "off_origin": [], "errors": []}
 with sync_playwright() as p:
@@ -33,7 +35,10 @@ with sync_playwright() as p:
             R["off_origin"].append(u); return route.abort()
         route.continue_()
     ctx.route("**/*", rt)
-    if scan_opts: ctx.add_init_script("globalThis.__plateScanOpts = " + json.dumps(scan_opts))
+    # The manual crop step is skipped by default (cropStep:false); --crop=x,y,x,y,x,y,x,y (fractions, TL TR BR BL) applies corners.
+    so = dict({"cropStep": False}, **(scan_opts or {}))
+    if crop_corners: so.pop("cropStep"); ctx.add_init_script("globalThis.__plateCropCorners = " + json.dumps(crop_corners))
+    ctx.add_init_script("globalThis.__plateScanOpts = " + json.dumps(so))
     pg = ctx.new_page()
     pg.on("console", lambda m: m.type == "error" and R["errors"].append(m.text))
     pg.on("pageerror", lambda e: R["errors"].append(str(e)))
