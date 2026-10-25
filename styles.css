@@ -240,3 +240,4 @@ textarea { min-height: 96px; resize: vertical; }
 .mh-best { outline: 2px solid var(--accent, #4caf50); border-radius: 6px; padding: 2px 4px; }
 .mh-best-tag { font-weight: 700; color: var(--accent, #4caf50); }
 .tile-last { border: 2px solid var(--accent, #4caf50); }
+.btn[hidden], .scan-added[hidden], .scanned-summary[hidden], .plate-chars[hidden] { display: none; }

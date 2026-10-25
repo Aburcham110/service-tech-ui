@@ -170,7 +170,21 @@
     return p;
   }
 
-  function initHome() {}
+  /** A saved call draft with anything typed in it (beyond the defaults). */
+  function draftHasContent(d) {
+    const def = defaultDraft();
+    return Object.keys(d || {}).some((k) => k !== "step" && d[k] !== "" && d[k] != null && d[k] !== false && d[k] !== def[k]);
+  }
+
+  function initHome() {
+    const btn = $("#resume-call");
+    if (!btn) return;
+    const d = loadDraft();
+    if (!draftHasContent(d)) return;
+    const what = [d.site, d.equipment, d.symptom && d.symptom.slice(0, 40)].filter(Boolean).join(" · ");
+    btn.querySelector("span").textContent = what ? " — " + what : "";
+    btn.hidden = false;
+  }
 
   function showStep(name) {
     STEPS.forEach((s) => {
@@ -234,6 +248,18 @@
     if (!root) return;
     const q = (filter || "").trim().toLowerCase();
     root.innerHTML = "";
+    // Last tool opened (tool.html stores it) sits at the top, unless a search is active.
+    let last = null;
+    try { last = localStorage.getItem("serviceTechLastTool_v1"); } catch (_) { /* ignore */ }
+    const lastItem = !q && last && TOOLS.flatMap(([, items]) => items).find((it) => it[3] === last);
+    if (lastItem) {
+      const h = document.createElement("div"); h.className = "group-title"; h.textContent = "Last used";
+      const grid = document.createElement("div"); grid.className = "tile-grid";
+      const a = document.createElement("a"); a.className = "tile tile-last"; a.id = "tile-last"; a.href = "tool.html?id=" + lastItem[3];
+      a.innerHTML = "<strong></strong><span></span>";
+      a.querySelector("strong").textContent = lastItem[0]; a.querySelector("span").textContent = "Use when: " + lastItem[1];
+      grid.appendChild(a); root.append(h, grid);
+    }
     TOOLS.forEach(([group, items]) => {
       const filtered = items.filter(([name, use]) => {
         if (!q) return true;
