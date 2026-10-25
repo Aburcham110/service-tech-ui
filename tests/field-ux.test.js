@@ -64,3 +64,28 @@ test("scanner: look-alike characters are marked for emphasis", () => {
   for (const c of "O0I1S5B8Z2") assert.ok(CONFUSABLE_CHARS.includes(c), c);
   assert.deepEqual(confusableMarks(""), []);
 });
+
+import { jobLogHref } from "../tools/trees.js";
+test("trees: new branches reachable, generic only, all next targets exist", () => {
+  const reach = (id, from) => { const t = TREES[id], seen = new Set(), q = [t.start]; while (q.length) { const n = q.shift(); if (seen.has(n)) continue; seen.add(n); (t.nodes[n].options || []).forEach((o) => o.next && q.push(o.next)); } return seen; };
+  for (const [id, t] of Object.entries(TREES)) for (const [nid, n] of Object.entries(t.nodes)) {
+    (n.options || []).forEach((o) => assert.ok(o.tree ? TREES[o.tree] : t.nodes[o.next], id + "/" + nid + " -> " + (o.next || o.tree)));
+    (n.tools || []).forEach((tl) => assert.ok(getTool(tl), tl));
+    assert.ok(n.end ? !(n.options || []).length : (n.options || []).length, id + "/" + nid);
+    assert.doesNotMatch(n.text, /\b(code|error)\s+[A-Z]?\d{1,3}\b|\bE\d{1,3}\b|\b[A-Z]\d-\d\b/, "looks like an OEM code: " + nid);
+  }
+  for (const [tree, ids] of Object.entries({ "mini-split": ["comm-link", "comm-power", "comm-signal"], "split-ac-hp": ["pressures", "high-head", "low-suction", "high-head-charge"], "walk-in": ["warm-coil", "ice-pattern", "warm-noice", "fans-off"] }))
+    ids.forEach((n) => assert.ok(reach(tree).has(n), tree + "/" + n));
+});
+
+test("trees: leaf 'Log this in job notes' pre-fills the job-log tool", () => {
+  const href = jobLogHref("walk-in", ["start", "warm-coil", "fans-off"], { brand: "Heatcraft", unitType: "evaporator", model: "LET090", serial: "S1", refrigerant: "R-448A", charge: "12" });
+  const q = new URLSearchParams(href.split("?")[1]);
+  assert.equal(q.get("id"), "job-log");
+  assert.equal(q.get("equipment"), "Heatcraft evaporator — Commercial walk-in / refrigeration");
+  assert.equal(q.get("model"), "LET090"); assert.equal(q.get("systemCharge"), "12"); assert.equal(q.get("refrigerant"), "R-448A");
+  assert.match(q.get("work"), /Box warm: is the evaporator iced\? → Evaporator fans not running/);
+  const names = getTool("job-log").fields.map((f) => f.name);
+  for (const k of q.keys()) if (k !== "id") assert.ok(names.includes(k), k);
+  assert.equal(new URLSearchParams(jobLogHref("compressor", ["start"], null).split("?")[1]).get("equipment"), "Compressor");
+});

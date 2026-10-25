@@ -1,5 +1,5 @@
 /** tree.html: walks a troubleshooting tree (tools/trees.js) one step at a time. */
-import { TREES, toolHref, treeHref, quickLinks } from "./trees.js?v=12";
+import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=12";
 import { getTool } from "./registry.js";
 import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=13";
 
@@ -35,6 +35,12 @@ function render() {
     const chosen = (n.options || []).find((o) => o.next === path[i + 1]);
     trail.appendChild(el("li", null, n.text.split(/(?<=\?)\s/)[0] + (chosen ? " → " + chosen.label : "")));
   });
+  const scanned = plateLabel(plate);
+  if (scanned) {
+    const b = el("div", "tree-scanned"); b.id = "tree-scanned";
+    b.appendChild(el("strong", null, "Last scanned: ")); b.appendChild(document.createTextNode(scanned));
+    root.appendChild(b);
+  }
   if (path.length > 1) root.appendChild(trail);
   const node = tree.nodes[path[path.length - 1]];
   const card = el("div", "tree-step" + (node.end ? " tree-end" : ""));
@@ -60,6 +66,11 @@ function render() {
     });
     card.appendChild(b);
   });
+  if (node.end) {
+    const log = el("a", "btn btn-secondary tree-log", "Log this in job notes →"); log.id = "tree-log";
+    log.href = jobLogHref(treeId, path, plate || {});
+    card.appendChild(log);
+  }
   root.appendChild(card);
   const nav = el("div", "nav-row");
   const back = el("button", "btn btn-secondary", "Back"); back.type = "button"; back.disabled = path.length < 2;

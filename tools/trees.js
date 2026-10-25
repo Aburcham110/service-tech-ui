@@ -13,6 +13,7 @@ export const TREES = {
       start: { text: "What is the complaint?", options: [
         { label: "Unit dead / won't respond", next: "power" },
         { label: "Error code or blinking LEDs", next: "code" },
+        { label: "Communication error / indoor–outdoor link", next: "comm-link" },
         { label: "Runs but poor cooling / heating", next: "airflow" },
         { label: "Water dripping from the indoor unit", next: "water" },
         { label: "Outdoor coil iced in heat mode", next: "defrost" },
@@ -25,6 +26,15 @@ export const TREES = {
         { label: "Yes", next: "airflow" }, { label: "No", next: "comm" },
       ] },
       comm: { end: true, text: "Suspect the remote/receiver, the indoor board, or the indoor–outdoor connection wiring. Check wire gauge, terminations and terminal order against the OEM installation manual; board diagnostics come from the OEM service literature (see Manuals on the call card).", tools: ["electrical", "nameplate-faults"] },
+      "comm-link": { text: "Power off and locked out: check the indoor–outdoor connection cable. Gauge and cable type as the installation manual specifies, terminals tight, terminal order matched end to end, no splices, nicks or water in the run. Wiring OK?", tools: ["electrical"], options: [
+        { label: "Yes, wiring checks out", next: "comm-power" }, { label: "No, found a problem", next: "comm-fix" },
+      ] },
+      "comm-fix": { end: true, text: "Correct the connection wiring (gauge, terminations, terminal order, damaged sections), then power up and re-check before replacing any board.", tools: ["electrical"] },
+      "comm-power": { text: "Power on. Using the wiring diagram, is the outdoor unit supplying power to the indoor unit on the marked connection terminals?", tools: ["electrical"], options: [
+        { label: "Yes, indoor unit has power", next: "comm-signal" }, { label: "No", next: "comm-od" },
+      ] },
+      "comm-od": { end: true, text: "No power out to the indoor unit: check the outdoor unit's supply, fuses and terminal block, then follow the OEM service procedure for the outdoor board.", tools: ["electrical"] },
+      "comm-signal": { end: true, text: "Power reaches the indoor unit but the units still don't talk: check grounding, induced noise (cable run beside other line-voltage wiring), and that the indoor and outdoor models are a listed match. Record the displayed code exactly and follow the OEM communication diagnostic for that model; this app doesn't carry brand codes.", tools: ["electrical", "nameplate-faults", "job-log"] },
       code: { end: true, text: "Record the code exactly (which LEDs, how many flashes, any remote/controller display) plus indoor and outdoor model/serial. Look the code up only in the OEM service literature for that model (Manuals on the call card). This app doesn't carry brand error codes.", tools: ["nameplate-faults", "job-log"] },
       airflow: { text: "Filters and indoor coil clean, blower wheel clean, and the indoor fan running at the set speed? Measure the return/supply split.", tools: ["airflow-delta-t", "psychrometrics"], options: [
         { label: "Airflow problem found", next: "fix-airflow" }, { label: "Airflow OK", next: "charge" },
@@ -55,6 +65,7 @@ export const TREES = {
       start: { text: "What is the complaint?", options: [
         { label: "Outdoor unit / compressor not running", next: "call" },
         { label: "Runs but poor cooling / heating", next: "airflow" },
+        { label: "No cooling, compressor running: read the pressures", next: "pressures" },
         { label: "Short cycling", next: "short" },
         { label: "Indoor blower not running", next: "blower" },
         { label: "Heat pump iced in heat mode", next: "defrost" },
@@ -85,6 +96,19 @@ export const TREES = {
       leak: { end: true, text: "Undercharge: leak search and repair, evacuate, recharge.", tools: ["leak-rate", "vacuum-coach", "charge-recovery", "a2l-checklist"] },
       metering: { end: true, text: "Restriction or metering: TXV bulb/equalizer, liquid-line drier pressure drop, kinked lines.", tools: ["txv-eev"] },
       overcharge: { end: true, text: "Overcharge or dirty condenser / non-condensables: clean the coil, then recover to the correct charge.", tools: ["charge-recovery"] },
+      pressures: { text: "After 15+ minutes running, read suction and head pressures and convert to saturation temperatures. Which stands out?", tools: ["superheat-subcool"], options: [
+        { label: "High head pressure", next: "high-head" },
+        { label: "Low suction pressure", next: "low-suction" },
+        { label: "Both look normal", next: "comp-check" },
+      ] },
+      "high-head": { text: "Condenser coil clean, nothing recirculating hot air, and the condenser fan running at full speed?", tools: ["electrical"], options: [
+        { label: "No", next: "fix-condenser" }, { label: "Yes", next: "high-head-charge" },
+      ] },
+      "fix-condenser": { end: true, text: "Clean the condenser coil, clear recirculation or obstructions, and repair the condenser fan (capacitor, motor, amps vs nameplate FLA). Re-read head pressure after it stabilizes.", tools: ["electrical"] },
+      "high-head-charge": { end: true, text: "Condenser side is OK: measure subcooling. High subcool points to overcharge; high head without high subcool can point to non-condensables. Recover, evacuate and recharge by weight to the nameplate charge.", tools: ["superheat-subcool", "charge-recovery", "vacuum-coach"] },
+      "low-suction": { text: "Indoor airflow OK: filter, blower, evaporator coil clean and not iced?", tools: ["airflow-delta-t", "duct-static"], options: [
+        { label: "No, airflow problem", next: "fix-airflow" }, { label: "Yes, airflow OK", next: "charge" },
+      ] },
       "comp-check": { end: true, text: "Charge and airflow OK but low capacity: check compressor efficiency (head–suction differential, amps).", tools: ["compressor-diag", "electrical"] },
       short: { end: true, text: "Check thermostat location and wiring, pressure switches tripping (high head: dirty condenser or overcharge; low: low charge or airflow), and the compressor overload.", tools: ["electrical", "superheat-subcool", "compressor-diag"] },
       blower: { end: true, text: "Check the blower motor capacitor or ECM power/signal, motor amps, the board's fan output and the door switch.", tools: ["electrical"] },
@@ -122,6 +146,7 @@ export const TREES = {
     start: "start",
     nodes: {
       start: { text: "What is the complaint?", options: [
+        { label: "Box warm: is the evaporator iced?", next: "warm-coil" },
         { label: "Box warm, condensing unit running", next: "fans" },
         { label: "Box warm, condensing unit off", next: "off" },
         { label: "Evaporator iced", next: "ice" },
@@ -131,6 +156,19 @@ export const TREES = {
       fans: { text: "Evaporator fans running and coil clear of ice?", options: [
         { label: "Yes", next: "sh" }, { label: "No / iced", next: "ice" },
       ] },
+      "warm-coil": { text: "Box is warm. Look at the evaporator coil and fans. What do you see?", options: [
+        { label: "Coil iced", next: "ice-pattern" },
+        { label: "No ice, fans running", next: "warm-noice" },
+        { label: "Evaporator fans not running", next: "fans-off" },
+      ] },
+      "ice-pattern": { text: "Is the whole coil blocked with ice, or only the first passes / one section?", options: [
+        { label: "Whole coil blocked", next: "ice" },
+        { label: "Only the first passes / partial frost", next: "starved" },
+      ] },
+      "warm-noice": { text: "Coil clear and fans running: is the condensing unit running?", options: [
+        { label: "Yes", next: "sh" }, { label: "No", next: "off" },
+      ] },
+      "fans-off": { end: true, text: "Check the evaporator fan motors and supply, the controller fan output, and any fan delay after defrost (it should release once the coil is cold again).", tools: ["electrical", "case-controller"] },
       sh: { text: "Measure evaporator superheat and suction pressure. What do you see?", tools: ["superheat-subcool", "txv-eev"], options: [
         { label: "High superheat", next: "starved" }, { label: "Normal superheat", next: "load" },
       ] },
@@ -174,4 +212,23 @@ export function quickLinks(node, known = {}) {
     q.carries.forEach((k) => { if (known[k]) params.set(k, known[k]); });
     return { tool: q.tool, label: q.label, href: "tool.html?" + params.toString() };
   });
+}
+
+/** "Log this in job notes": job-log tool with the equipment (last scanned plate) and the tree path pre-filled. */
+export function jobLogHref(treeId, path, plate = {}) {
+  const tree = TREES[treeId];
+  if (!tree) return "tool.html?id=job-log";
+  const p = plate || {};
+  const steps = path.map((id, i) => {
+    const n = tree.nodes[id];
+    const chosen = (n.options || []).find((o) => o.next === path[i + 1]);
+    return chosen ? chosen.label : null;
+  }).filter(Boolean);
+  const leaf = tree.nodes[path[path.length - 1]];
+  const params = new URLSearchParams({ id: "job-log" });
+  const equip = [p.brand, p.unitType].filter(Boolean).join(" ");
+  params.set("equipment", (equip ? equip + " — " : "") + tree.title);
+  [["model", "model"], ["serial", "serial"], ["refrigerant", "refrigerant"], ["charge", "systemCharge"]].forEach(([k, f]) => { if (p[k]) params.set(f, p[k]); });
+  params.set("work", ("Troubleshooting (" + tree.title + "): " + steps.join(" → ") + (leaf ? "\nNext step: " + leaf.text : "")).slice(0, 500));
+  return "tool.html?" + params.toString();
 }
