@@ -56,3 +56,11 @@ test("call card: scanned-equipment summary rows and when the plate is on the car
   assert.ok(!plateOnCard(p, ""));
   assert.deepEqual(summaryRows(null), []);
 });
+
+import { confusableMarks, CONFUSABLE_CHARS } from "../tools/plate-scan.js";
+test("scanner: look-alike characters are marked for emphasis", () => {
+  const m = confusableMarks("A0B1x");
+  assert.deepEqual(m.map((x) => x.confusable), [false, true, true, true, false]);
+  for (const c of "O0I1S5B8Z2") assert.ok(CONFUSABLE_CHARS.includes(c), c);
+  assert.deepEqual(confusableMarks(""), []);
+});

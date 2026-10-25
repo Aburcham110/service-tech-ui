@@ -213,9 +213,30 @@ textarea { min-height: 96px; resize: vertical; }
 .tree-quick-link { text-align: center; text-decoration: none; }
 .scan-actions { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
 .scan-actions .btn { text-align: center; text-decoration: none; }
-.plate-retake-btn { display: block; width: 100%; margin-top: 8px; }
+.plate-retake-btn { display: block; width: 100%; margin: 0 0 8px; font-size: 1.1rem; }
 .mh-terms, .mh-links { padding-left: 18px; }
 .mh-terms li { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
 .mh-terms code { flex: 1; word-break: break-word; }
 .mh-copy { padding: 4px 10px; min-height: 0; }
 .mh-label { margin-top: 12px; }
+
+/* Field UX round */
+.plate-crop { border: 2px solid #09f; border-radius: 12px; padding: 10px; margin: 10px 0; background: rgba(0,153,255,.06); }
+.plate-crop-head h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.plate-crop-head p { margin: 0; }
+.plate-crop .tool-actions .btn { flex: 1; font-size: 1.05rem; }
+.plate-chars { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.35rem; letter-spacing: .12em; margin-top: 4px; }
+.plate-chars .cf { color: #111; background: #fde047; border-radius: 3px; font-weight: 700; padding: 0 1px; box-shadow: 0 0 0 1px #ca8a04; }
+.plate-candidates .plate-candidate { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1rem; }
+.scan-added { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px; border-radius: 8px; background: rgba(76,175,80,.14); }
+.scan-added-link { font-weight: 700; }
+.scan-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.scanned-summary { border: 1px solid var(--muted); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
+.scanned-summary dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 6px 0; }
+.scanned-summary dt { color: var(--muted); }
+.scanned-summary dd { margin: 0; word-break: break-word; }
+.tree-scanned { font-size: .95rem; padding: 6px 10px; border-radius: 8px; background: var(--surface2); margin: 8px 0; }
+.tree-log { display: block; text-align: center; text-decoration: none; margin-top: 10px; }
+.mh-best { outline: 2px solid var(--accent, #4caf50); border-radius: 6px; padding: 2px 4px; }
+.mh-best-tag { font-weight: 700; color: var(--accent, #4caf50); }
+.tile-last { border: 2px solid var(--accent, #4caf50); }

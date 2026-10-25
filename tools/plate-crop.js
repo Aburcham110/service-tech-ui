@@ -61,9 +61,13 @@ export function cropStep(container, photo, initial) {
     wrap.className = "plate-crop";
     wrap.setAttribute("role", "dialog");
     wrap.setAttribute("aria-label", "Straighten the plate");
-    const h = document.createElement("p");
-    h.className = "footer-note";
-    h.textContent = "Drag the 4 corners onto the plate's corners to straighten it, or skip.";
+    // Prominent step: the single biggest accuracy win on angled/curved plates.
+    const h = document.createElement("div");
+    h.className = "plate-crop-head";
+    const t = document.createElement("h2"); t.textContent = "Step 1 of 2 — Straighten the plate";
+    const hp = document.createElement("p");
+    hp.textContent = "Drag the 4 blue corners onto the plate's corners. Straightening first gives the best read on angled or curved labels.";
+    h.append(t, hp);
     const stage = document.createElement("div");
     stage.className = "plate-crop-stage";
     stage.style.cssText = "position:relative;touch-action:none;user-select:none;max-width:100%";
@@ -113,11 +117,12 @@ export function cropStep(container, photo, initial) {
     draw();
     const actions = document.createElement("div");
     actions.className = "tool-actions";
-    const use = document.createElement("button"); use.type = "button"; use.className = "btn btn-primary"; use.textContent = "Use crop";
-    const skip = document.createElement("button"); skip.type = "button"; skip.className = "btn btn-secondary"; skip.textContent = "Skip";
+    const use = document.createElement("button"); use.type = "button"; use.className = "btn btn-primary plate-crop-use"; use.textContent = "Straighten & read";
+    const skip = document.createElement("button"); skip.type = "button"; skip.className = "btn btn-secondary plate-crop-skip"; skip.textContent = "Skip — read as is";
     actions.append(use, skip);
     wrap.append(h, stage, actions);
     container.appendChild(wrap);
+    if (wrap.scrollIntoView) wrap.scrollIntoView({ block: "start", behavior: "smooth" });
     const done = (v) => { view.width = view.height = 0; wrap.remove(); resolve(v); };
     use.addEventListener("click", () => done(warpQuad(photo, pts.map(([x, y]) => [x * photo.width, y * photo.height]))));
     skip.addEventListener("click", () => done(null));

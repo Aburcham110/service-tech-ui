@@ -364,6 +364,21 @@ function rawPanel(passes, chosen) {
   return d;
 }
 
+/** Look-alike characters on plates (O/0, I/1/l, S/5, B/8, Z/2, G/6, D/0, Q/0). */
+export const CONFUSABLE_CHARS = "O0QDI1LS5B8Z2G6";
+
+/** Splits a value into runs, marking look-alike characters so the form can emphasize them. */
+export function confusableMarks(value) {
+  return Array.from(String(value || "")).map((ch) => ({ ch, confusable: CONFUSABLE_CHARS.includes(ch.toUpperCase()) }));
+}
+
+function renderChars(host, value) {
+  host.innerHTML = "";
+  const marks = confusableMarks(value);
+  host.hidden = !marks.some((m) => m.confusable);
+  marks.forEach((m) => { const s = el("span", m.confusable ? "cf" : null, m.ch); if (m.confusable) s.title = "Look-alike: check on the plate"; host.appendChild(s); });
+}
+
 /** Overall read quality is low: an ID field (model/serial) under 0.5 or an OCR hint about glare/blur. */
 export function needsRetake(parsed) {
   const idConf = ID_FIELDS.map((n) => parsed.fields[n] ? parsed.fields[n].confidence : 0);
@@ -374,10 +389,12 @@ function buildConfirm(parsed, onConfirm, onCancel, passes, onRetake) {
   const wrap = el("div", "plate-confirm");
   wrap.setAttribute("role", "dialog");
   wrap.setAttribute("aria-label", "Confirm data plate");
-  wrap.appendChild(el("h2", null, "Confirm data plate"));
+  const retake = needsRetake(parsed);
+  // Low confidence: lead with Retake (banner + button before the heading and the form).
+  if (!retake) wrap.appendChild(el("h2", null, "Confirm data plate"));
   const nLow = parsed.lowConfidence.length;
   const brand = parsed.fields.brand && parsed.fields.brand.value;
-  if (needsRetake(parsed)) {
+  if (retake) {
     const rb = el("div", "plate-retake", "");
     rb.setAttribute("role", "alert");
     rb.appendChild(el("strong", null, "Low confidence read. "));
@@ -387,9 +404,10 @@ function buildConfirm(parsed, onConfirm, onCancel, passes, onRetake) {
       rt.type = "button";
       // One tap: drop this read and reopen the camera (same file input, so it stays a user gesture).
       rt.addEventListener("click", () => { wrap.remove(); onRetake(); });
-      rb.appendChild(rt);
+      rb.prepend(rt);
     }
     wrap.appendChild(rb);
+    wrap.appendChild(el("h2", null, "Confirm data plate"));
   }
   wrap.appendChild(el("p", "footer-note", "Check every value against the plate. Blank = not read. " +
     (nLow ? nLow + " field(s) flagged as low confidence." : "")));
@@ -423,7 +441,7 @@ function buildConfirm(parsed, onConfirm, onCancel, passes, onRetake) {
     }
     if (f && f.candidates && f.candidates.length > 1) {
       const chips = el("div", "plate-candidates");
-      chips.appendChild(el("small", null, "Pick: "));
+      chips.appendChild(el("small", null, ID_FIELDS.includes(name) ? "OCR passes disagree — candidates: " : "Pick: "));
       f.candidates.forEach((c) => {
         const cv = fmt(name, { value: c.value });
         const b = el("button", "btn btn-secondary btn-small plate-candidate", cv + " (" + c.votes + ")");
@@ -434,6 +452,11 @@ function buildConfirm(parsed, onConfirm, onCancel, passes, onRetake) {
       lab.appendChild(chips);
     }
     if (ID_FIELDS.includes(name)) {
+      const chars = el("div", "plate-chars");
+      chars.setAttribute("aria-hidden", "true"); // visual aid; the input stays the source of truth
+      renderChars(chars, input.value);
+      input.addEventListener("input", () => renderChars(chars, input.value));
+      lab.appendChild(chars);
       const ck = el("label", "plate-looks-right");
       const cb = el("input"); cb.type = "checkbox"; cb.name = name + "-ok"; cb.dataset.looksRight = name;
       ck.append(cb, document.createTextNode(" Looks right (checked against the plate)"));
@@ -446,8 +469,13 @@ function buildConfirm(parsed, onConfirm, onCancel, passes, onRetake) {
     form.appendChild(lab);
   });
   const actions = el("div", "tool-actions");
-  const ok = el("button", "btn btn-primary", "Confirm"); ok.type = "submit";
+  const ok = el("button", retake && onRetake ? "btn btn-secondary" : "btn btn-primary", "Confirm"); ok.type = "submit";
   const cancel = el("button", "btn btn-secondary", "Discard"); cancel.type = "button";
+  if (retake && onRetake) {
+    const rt2 = el("button", "btn btn-primary plate-retake-btn2", "📷 Retake"); rt2.type = "button";
+    rt2.addEventListener("click", () => { wrap.remove(); onRetake(); });
+    actions.append(rt2);
+  }
   actions.append(ok, cancel);
   const gateNote = el("p", "footer-note plate-gate-note");
   function gate() {
