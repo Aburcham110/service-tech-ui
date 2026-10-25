@@ -7,8 +7,9 @@
  * Nothing is stored (not even localStorage) until the user taps Confirm, and
  * then only the onConfirm callback decides what to keep.
  */
-import { parsePlate, mergeParses, LOW_CONFIDENCE } from "./plate-parse.js?v=7";
-import { findLabelBox, deglare, clahe } from "./plate-image.js?v=7";
+import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=8";
+import { cropStep } from "./plate-crop.js?v=8";
+import { findLabelBox, deglare, clahe } from "./plate-image.js?v=8";
 
 const VENDOR = "vendor/tesseract/";
 const DECODE_SIDE = 4000;   // decode cap (keeps the label's detail before cropping)
@@ -183,7 +184,7 @@ function toCanvas(gray, w, h) {
 function flattenWords(blocks) {
   const out = [];
   (blocks || []).forEach((b) => (b.paragraphs || []).forEach((p) => (p.lines || []).forEach((l) =>
-    (l.words || []).forEach((w) => out.push({ text: w.text, confidence: w.confidence })))));
+    (l.words || []).forEach((w) => out.push({ text: w.text, confidence: w.confidence, bbox: w.bbox })))));
   return out;
 }
 
@@ -240,11 +241,12 @@ function sig(m) { return Object.fromEntries(Object.entries(m.fields).map(([k, f]
 export async function scanPlate(file, progress = () => {}, opts = (globalThis.__plateScanOpts || {})) {
   const t0 = performance.now(), timing = {};
   progress("Preparing photo…", 0.02);
-  const { canvas: full, orientation } = await decodeUpright(file);
+  // opts.canvas: the user already straightened/cropped the photo, so skip the auto crop.
+  const { canvas: full, orientation } = opts.canvas ? { canvas: opts.canvas, orientation: "manual-crop" } : await decodeUpright(file);
   // Crop to the plate so its text keeps as many pixels as possible.
   progress("Finding the plate…", 0.04);
   const small = rotatedGray(full, 0, FIND_SIDE);
-  const box = findLabelBox(small.gray, small.w, small.h);
+  const box = opts.canvas ? null : findLabelBox(small.gray, small.w, small.h);
   let upright = full, crop = null;
   if (box) {
     const k = full.width / small.w, pad = 0.03 * Math.max(full.width, full.height);
@@ -301,7 +303,7 @@ export async function scanPlate(file, progress = () => {}, opts = (globalThis.__
       progress("Reading plate, pass " + (i + 1) + "/" + plan.length + "…", 0.32 + 0.66 * (i / plan.length));
       const ts = performance.now();
       const r = await recognize(worker, canvasFor(vname), psm);
-      passes.push({ name: vname + " psm" + psm, ...r, parsed: parsePlate(r) });
+      passes.push({ name: vname + " psm" + psm, ...r, parsed: parsePlate({ ...r, psm }) });
       timing.passes.push(Math.round(performance.now() - ts));
       // Early stop: after MIN_PASSES, stop once another pass leaves every merged value unchanged.
       const cur = JSON.stringify(sig(mergeParses(passes.map((p) => ({ name: p.name, parsed: p.parsed })))));
@@ -340,12 +342,13 @@ function el(tag, cls, text) {
 /** Collapsible raw OCR text with a Copy button. Local only: nothing is sent anywhere. */
 function rawPanel(passes, chosen) {
   const d = el("details", "plate-raw");
+  d.open = true; // shown beside the fields so values can be checked against what OCR saw
   d.appendChild(el("summary", null, "Show raw OCR text"));
   const order = passes.slice().sort((a, b) => (b.name === chosen) - (a.name === chosen));
   const txt = order.map((p) => "--- " + p.name + " (mean conf " + Math.round(p.confidence || 0) + ") ---\n" + p.text.trim()).join("\n\n");
   const pre = el("pre", "plate-raw-text", txt);
   pre.tabIndex = 0;
-  const copy = el("button", "btn btn-secondary btn-small", "Copy");
+  const copy = el("button", "btn btn-secondary btn-small plate-copy-raw", "Copy raw OCR");
   copy.type = "button";
   copy.addEventListener("click", async () => {
     try {
@@ -367,6 +370,15 @@ function buildConfirm(parsed, onConfirm, onCancel, passes) {
   wrap.setAttribute("aria-label", "Confirm data plate");
   wrap.appendChild(el("h2", null, "Confirm data plate"));
   const nLow = parsed.lowConfidence.length;
+  const brand = parsed.fields.brand && parsed.fields.brand.value;
+  const idConf = ID_FIELDS.map((n) => parsed.fields[n] ? parsed.fields[n].confidence : 0);
+  if (Math.min(...idConf) < 0.5 || (parsed.hints || []).some((h) => /glare|blur|retake/i.test(h))) {
+    const rb = el("div", "plate-retake", "");
+    rb.setAttribute("role", "alert");
+    rb.appendChild(el("strong", null, "Low confidence read. "));
+    rb.appendChild(document.createTextNode("Retake closer and square-on, tilt slightly to kill glare, or straighten with the crop step — then check model and serial character by character."));
+    wrap.appendChild(rb);
+  }
   wrap.appendChild(el("p", "footer-note", "Check every value against the plate. Blank = not read. " +
     (nLow ? nLow + " field(s) flagged as low confidence." : "")));
   (parsed.hints || []).forEach((h) => wrap.appendChild(el("p", "plate-hint", h)));
@@ -377,7 +389,8 @@ function buildConfirm(parsed, onConfirm, onCancel, passes) {
     if (!f && ["brand", "unitType", "outdoorUnit", "indoorUnit", "compA", "designHigh", "designLow", "oil"].includes(name)) return;
     const lab = el("label", "field");
     const span = el("span", null, label);
-    const low = f && f.confidence < LOW_CONFIDENCE;
+    const reasons = reviewReasons(name, f, brand);
+    const low = f && (f.confidence < lowBar(name) || reasons.length > 0);
     if (f) {
       span.appendChild(el("small", "conf" + (low ? " low" : ""),
         " " + Math.round(f.confidence * 100) + "%" + (low ? " — check" : "") + (f.note ? " (" + f.note + ")" : "")));
@@ -391,6 +404,31 @@ function buildConfirm(parsed, onConfirm, onCancel, passes) {
     if (low) { input.classList.add("low-conf"); input.setAttribute("aria-invalid", "true"); }
     if (name === "charge" && f) input.title = f.value.display;
     lab.appendChild(input);
+    if (reasons.length) {
+      const ul = el("ul", "plate-review");
+      reasons.forEach((r) => ul.appendChild(el("li", null, r)));
+      lab.appendChild(ul);
+    }
+    if (f && f.candidates && f.candidates.length > 1) {
+      const chips = el("div", "plate-candidates");
+      chips.appendChild(el("small", null, "Pick: "));
+      f.candidates.forEach((c) => {
+        const cv = fmt(name, { value: c.value });
+        const b = el("button", "btn btn-secondary btn-small plate-candidate", cv + " (" + c.votes + ")");
+        b.type = "button";
+        b.addEventListener("click", () => { input.value = cv; input.dispatchEvent(new Event("input")); chips.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); });
+        chips.appendChild(b);
+      });
+      lab.appendChild(chips);
+    }
+    if (ID_FIELDS.includes(name)) {
+      const ck = el("label", "plate-looks-right");
+      const cb = el("input"); cb.type = "checkbox"; cb.name = name + "-ok"; cb.dataset.looksRight = name;
+      ck.append(cb, document.createTextNode(" Looks right (checked against the plate)"));
+      input.addEventListener("input", () => { cb.checked = false; gate(); });
+      cb.addEventListener("change", () => gate());
+      lab.appendChild(ck);
+    }
     if (f && f.display) lab.appendChild(el("small", "footer-note", f.display));
     else if (name === "charge" && f) lab.appendChild(el("small", "footer-note", f.value.display));
     form.appendChild(lab);
@@ -399,17 +437,29 @@ function buildConfirm(parsed, onConfirm, onCancel, passes) {
   const ok = el("button", "btn btn-primary", "Confirm"); ok.type = "submit";
   const cancel = el("button", "btn btn-secondary", "Discard"); cancel.type = "button";
   actions.append(ok, cancel);
+  const gateNote = el("p", "footer-note plate-gate-note");
+  function gate() {
+    const pending = ID_FIELDS.filter((n) => { const i = form.elements[n], c = form.elements[n + "-ok"]; return i && i.value.trim() && c && !c.checked; });
+    ok.disabled = pending.length > 0;
+    gateNote.textContent = pending.length ? "Tick “Looks right” for " + pending.join(" and ") + " to confirm." : "";
+  }
+  form.appendChild(gateNote);
   form.appendChild(actions);
   form.addEventListener("submit", (e) => {
     e.preventDefault();
+    gate();
+    if (ok.disabled) return;
     const values = {};
     FIELDS.forEach(([name]) => { const i = form.elements[name]; const v = i && i.value.trim(); if (v) values[name] = v; });
     wrap.remove();
     onConfirm(values);
   });
   cancel.addEventListener("click", () => { wrap.remove(); onCancel && onCancel(); });
-  wrap.appendChild(form);
-  if (passes && passes.length) wrap.appendChild(rawPanel(passes, parsed.bestPass));
+  const cols = el("div", "plate-cols");
+  cols.appendChild(form);
+  if (passes && passes.length) cols.appendChild(rawPanel(passes, parsed.bestPass));
+  wrap.appendChild(cols);
+  queueMicrotask(gate);
   return wrap;
 }
 
@@ -459,7 +509,15 @@ export function mountPlateScan(container, onConfirm) {
     bar.hidden = false;
     status.textContent = "Reading plate on this phone…";
     try {
-      const res = await scanPlate(file, (stage, frac) => { status.textContent = stage + " " + Math.round(frac * 100) + "%"; bar.value = frac; });
+      const opts = Object.assign({}, globalThis.__plateScanOpts || {});
+      if (opts.cropStep !== false) {
+        status.textContent = "Straighten the plate (optional)…";
+        const { canvas: photo } = await decodeUpright(file);
+        const warped = await cropStep(box, photo);
+        if (warped) { opts.canvas = warped; photo.width = photo.height = 0; }
+        status.textContent = "Reading plate on this phone…";
+      }
+      const res = await scanPlate(file, (stage, frac) => { status.textContent = stage + " " + Math.round(frac * 100) + "%"; bar.value = frac; }, opts);
       const parsed = res.merged;
       box.__lastParse = parsed; // for debugging/tests only, in memory
       box.__lastScan = { timing: res.timing, crop: res.crop, angle: res.angle, probes: res.probes, orientation: res.orientation, passes: res.passes.map((p) => ({ name: p.name, text: p.text, confidence: p.confidence })) };

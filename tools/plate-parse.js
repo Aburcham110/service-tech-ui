@@ -12,6 +12,10 @@
  */
 
 export const LOW_CONFIDENCE = 0.6;
+/** Stricter bar for identifiers: a wrong model/serial costs a wrong part or warranty lookup. */
+export const LOW_CONFIDENCE_ID = 0.75;
+export const ID_FIELDS = ["model", "serial"];
+export const lowBar = (name) => (ID_FIELDS.includes(name) ? LOW_CONFIDENCE_ID : LOW_CONFIDENCE);
 
 export const REFRIGERANTS = [
   "410A", "22", "32", "454B", "134A", "404A", "407C", "407A", "407F", "448A", "449A",
@@ -219,7 +223,33 @@ function takeIdent(rest) {
   return { value, raw, joined };
 }
 
-function parseIdent(rawLines, labelRe, otherLabelRe, which) {
+// Lines that end an identifier continuation in sparse (PSM 11) output: any known label.
+const STOP_LINE = /\b(?:MODEL|SERIAL|SER|VOLTS?|SOURCE|PHASE|HZ|RLA|LRA|FLA|MCA|MOP|REFRIG\w*|CHARGE|COMP\w*|FAN|DESIGN|PRESS\w*|ETL|UL|CSA|LISTED|CONFORMS|CERTIFIED|INDOOR|OUTDOOR|APPLICABLE|MIN|MAX|MFG|DATE)\b/i;
+
+/**
+ * PSM 11 (sparse) splits one printed value over several "lines" ("ASUG" / "15LZAS",
+ * "WWB 0 1 5" / "057"). Join short alphanumeric chunks after the label until the next
+ * known label. Leading junk words (e.g. "CONDITIONER" from a neighbouring line) are skipped.
+ */
+function sparseIdent(rawLines, i, restBefore) {
+  let value = restBefore.replace(/^[\s:#.,\-]+/, "").replace(/[\s|]+/g, "").toUpperCase(), raw = restBefore.trim(), used = 0;
+  if (value && !/^[A-Z0-9-]{1,14}$/.test(value)) return null;
+  for (let k = i + 1; k < rawLines.length && k <= i + 4; k++) {
+    const l = rawLines[k].replace(/[|]/g, " ").trim();
+    if (STOP_LINE.test(l)) break;
+    const toks = l.split(/\s+/).filter(Boolean);
+    if (!toks.length) continue;
+    const chunk = toks.join("").toUpperCase();
+    if (!value && /^[A-Z]{5,}$/.test(chunk)) continue; // junk word before the value
+    if (toks.length > 4 || !/^[A-Z0-9-]{1,14}$/.test(chunk) || value.length + chunk.length > 14) break;
+    if (value && /\d/.test(value) && /^[A-Z]{4,}$/.test(chunk)) break;
+    value += chunk; raw += " / " + l; used++;
+  }
+  if (!used || value.length < 6 || (value.match(/\d/g) || []).length < 2) return null;
+  return { value, raw, joined: true, sparse: true };
+}
+
+function parseIdent(rawLines, labelRe, otherLabelRe, which, sparse) {
   for (let i = 0; i < rawLines.length; i++) {
     const line = rawLines[i];
     const m = line.match(labelRe);
@@ -229,6 +259,10 @@ function parseIdent(rawLines, labelRe, otherLabelRe, which) {
     const nxt = rest.match(otherLabelRe);
     const restBefore = nxt ? rest.slice(0, nxt.index) : rest;
     let r = takeIdent(restBefore), quality = 1, notes = [];
+    if (sparse && !nxt) {
+      const s2 = sparseIdent(rawLines, i, restBefore);
+      if (s2 && (!r || s2.value.length > r.value.length)) { r = s2; quality = 0.9; notes.push("joined across sparse-OCR lines"); }
+    }
     if (!r && !restBefore.trim()) {
       // Header row "MODEL NO.   SERIAL NO." with values on the next line, or label alone.
       const next = rawLines[i + 1];
@@ -241,8 +275,9 @@ function parseIdent(rawLines, labelRe, otherLabelRe, which) {
     }
     if (!r) continue;
     if ((r.value.match(/\d/g) || []).length < 2) continue;
-    if (r.joined) { quality *= 0.9; notes.push("joined split characters"); }
-    if (CONFUSABLE.test(r.value) || CONFUSABLE3B.test(r.value)) { quality *= 0.55; notes.push("check O/0, I/1, S/5, B/8, Z/2"); }
+    if (r.joined && !r.sparse) { quality *= 0.9; notes.push("joined split characters"); }
+    const confusable = CONFUSABLE.test(r.value) || CONFUSABLE3B.test(r.value);
+    if (confusable) { quality *= 0.55; notes.push("check O/0, I/1, S/5, B/8, Z/2"); }
     if (which === "second") {
       // Barcode caption "S<serial>" elsewhere on the plate confirms the reading.
       const canon = (x) => x.toUpperCase().replace(/O/g, "0").replace(/[Il]/g, "1");
@@ -251,7 +286,7 @@ function parseIdent(rawLines, labelRe, otherLabelRe, which) {
         quality = Math.min(1, quality / 0.55 * 0.8); notes.push("matches barcode caption");
       }
     }
-    return { value: r.value, raw: r.raw, quality, note: notes.join("; ") || undefined };
+    return { value: r.value, raw: r.raw, quality, note: notes.join("; ") || undefined, labelText: m[0].trim(), lineIndex: i, sameLine: quality !== 0.85 || !!restBefore.trim() };
   }
   return null;
 }
@@ -417,6 +452,63 @@ function checkModel(f, brand, lines) {
   f.note = notes.join("; ") || undefined;
 }
 
+// Serial shapes per brand: length/shape only (no date decoding). A mismatch is flagged, never fixed.
+export const SERIAL_PATTERNS = {
+  Carrier: /^\d{4}[A-Z]\d{5}$/, Bryant: /^\d{4}[A-Z]\d{5}$/, Payne: /^\d{4}[A-Z]\d{5}$/,
+  Trane: /^(?=[A-Z0-9]*\d{5})[A-Z0-9]{8,10}$/, "American Standard": /^(?=[A-Z0-9]*\d{5})[A-Z0-9]{8,10}$/,
+  York: /^[A-Z]\d[A-Z]\d{7}$|^[A-Z]{4}\d{6}$/, "Unitary Products Group (York/Coleman)": /^[A-Z]\d[A-Z]\d{7}$|^[A-Z]{4}\d{6}$/,
+  "Emerson / Copeland": /^\d{2}[A-Z]\d{5,6}[A-Z]?$/, Copeland: /^\d{2}[A-Z]\d{5,6}[A-Z]?$/,
+  Goodman: /^\d{10}$/, Amana: /^\d{10}$/,
+  Lennox: /^\d{4}[A-Z]\d{5}$/,
+  Rheem: /^[A-Z]{1,2}\d{8,10}[A-Z]?$/, Ruud: /^[A-Z]{1,2}\d{8,10}[A-Z]?$/,
+  Fujitsu: /^[A-Z]{2,4}\d{6}$/,
+  Daikin: /^(?=[A-Z0-9]*\d{6})[A-Z0-9]{7,11}$/,
+};
+
+/**
+ * Why a model/serial needs a closer look (empty = none). Used by the confirm UI to highlight
+ * the field; the user must still tick "Looks right" for model and serial regardless.
+ */
+export function reviewReasons(name, f, brand) {
+  if (!f || !ID_FIELDS.includes(name)) return [];
+  const v = String(f.value).toUpperCase(), out = [];
+  if (CONFUSABLE.test(v) || CONFUSABLE3B.test(v)) out.push("has look-alike characters (O/0, I/1, S/5, B/8/3, Z/2)");
+  const pat = brand && (name === "model" ? MODEL_PATTERNS : SERIAL_PATTERNS)[brand];
+  if (pat && !pat.test(v)) out.push("doesn't fit the usual " + brand + " " + name + " format");
+  if (f.confidence < LOW_CONFIDENCE_ID) out.push("confidence " + Math.round(f.confidence * 100) + "% (< 75%)");
+  if (f.candidates && f.candidates.length > 1) out.push("OCR passes disagree: pick one");
+  if (f.spatial === false) out.push("value isn't right of or below its label on the photo");
+  return out;
+}
+
+function checkSerial(f, brand) {
+  const pat = brand && SERIAL_PATTERNS[brand];
+  if (pat && !pat.test(String(f.value).toUpperCase())) {
+    f.confidence = round(Math.min(f.confidence, 0.5), 2);
+    f.note = (f.note ? f.note + "; " : "") + "doesn't fit the usual " + brand + " serial format";
+  }
+}
+
+/**
+ * Spatial check with Tesseract word boxes: the value should sit right of its label on the same
+ * text row, or directly below it (overlapping columns). Returns true/false, or null if unknown.
+ */
+export function spatialCheck(words, labelText, value) {
+  if (!words || !words.some((w) => w.bbox)) return null;
+  const nw = (t) => String(t).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const lab0 = nw(String(labelText).split(/\s+/)[0]);
+  const labels = words.filter((w) => w.bbox && lab0.length >= 3 && nw(w.text).startsWith(lab0.slice(0, 4)));
+  const vals = words.filter((w) => w.bbox && nw(w.text).length >= 3 && (nw(value).startsWith(nw(w.text)) || nw(w.text).includes(nw(value).slice(0, 5))));
+  if (!labels.length || !vals.length) return null;
+  for (const L of labels) for (const V of vals) {
+    const lh = L.bbox.y1 - L.bbox.y0, lcy = (L.bbox.y0 + L.bbox.y1) / 2, vcy = (V.bbox.y0 + V.bbox.y1) / 2;
+    const right = V.bbox.x0 >= L.bbox.x0 && Math.abs(vcy - lcy) < lh * 0.8;
+    const below = V.bbox.y0 >= L.bbox.y1 - lh * 0.3 && V.bbox.y0 - L.bbox.y1 < lh * 2.5 && V.bbox.x0 < L.bbox.x1 + lh * 3 && V.bbox.x1 > L.bbox.x0 - lh;
+    if (right || below) return true;
+  }
+  return false;
+}
+
 // ---------- brand / unit type / matching unit ----------
 
 function parseBrand(lines) {
@@ -545,6 +637,7 @@ function parseCoolHeat(lines, labelRe, lo, hi) {
 export function parsePlate(input) {
   const text = typeof input === "string" ? input : (input && input.text) || "";
   const words = typeof input === "string" ? null : (input && input.words) || null;
+  const sparse = typeof input === "object" && input && input.psm === 11;
   // rawLines: whitespace-normalised, certification text removed (identifiers keep their letters).
   const rawLines = text.replace(/[\u2010-\u2014]/g, "-").split(/\r?\n/)
     .map((l) => stripCerts(l.replace(/\s+/g, " ").trim())).filter(Boolean);
@@ -557,9 +650,19 @@ export function parsePlate(input) {
   put("brand", parseBrand(rawLines));
   const ut = parseUnitType(rawLines.join("\n"));
   if (ut) fields.unitType = { value: ut.value, confidence: ut.quality, quality: ut.quality, ocr: null, raw: ut.raw };
-  put("model", parseIdent(rawLines, MODEL_LABEL, SERIAL_LABEL, "first"));
-  put("serial", parseIdent(rawLines, SERIAL_LABEL, MODEL_LABEL, "second"));
-  if (fields.model) checkModel(fields.model, fields.brand && fields.brand.value, rawLines);
+  const identRaw = { model: parseIdent(rawLines, MODEL_LABEL, SERIAL_LABEL, "first", sparse), serial: parseIdent(rawLines, SERIAL_LABEL, MODEL_LABEL, "second", sparse) };
+  put("model", identRaw.model);
+  put("serial", identRaw.serial);
+  const brandName = fields.brand && fields.brand.value;
+  if (fields.model) checkModel(fields.model, brandName, rawLines);
+  if (fields.serial) checkSerial(fields.serial, brandName);
+  for (const [k, r] of [["model", identRaw.model], ["serial", identRaw.serial]]) {
+    const f = fields[k];
+    if (!f || !r) continue;
+    const sp = spatialCheck(words, r.labelText, f.value);
+    if (sp !== null) f.spatial = sp;
+    if (sp === false) { f.confidence = round(Math.min(f.confidence, 0.5), 2); f.note = (f.note ? f.note + "; " : "") + "not beside/below its label on the photo"; }
+  }
   const od = parseMatchedUnits(rawLines, /APPLICABLE\s+OUTDOOR\s+UNITS?|MATCHING\s+OUTDOOR\s+UNITS?|OUTDOOR\s+UNIT\s+MODEL\s*(?:NO\.?)?/i);
   put("outdoorUnit", od);
   const idu = parseMatchedUnits(rawLines, /(?:APPLICABLE|ABLE)\s+INDOOR\s+UNITS?|MATCHING\s+INDOOR\s+UNITS?|INDOOR\s+UNIT\s+MODEL\s*(?:NO\.?)?/i);
@@ -633,7 +736,7 @@ export function parsePlate(input) {
     const od1 = od && od.list[0];
     hints.push("Indoor unit: refrigerant/charge/MCA/MOP are on the outdoor unit plate" + (od1 ? " (" + od1 + ")" : "") + ". Scan that plate.");
   }
-  const lowConfidence = Object.keys(fields).filter((k) => fields[k].confidence < LOW_CONFIDENCE);
+  const lowConfidence = Object.keys(fields).filter((k) => fields[k].confidence < lowBar(k));
   return { fields, lowConfidence, hints, text };
 }
 
@@ -644,27 +747,45 @@ export function parsePlate(input) {
  * a wrong value is worse than a blank.
  * @param {Array<{name:string, parsed:ReturnType<typeof parsePlate>}>} list
  */
+const AMP_FIELDS = ["rla", "lra", "fanFla", "mca", "mop", "compA", "totalA"];
+const INFERRED = /decimal point inferred/;
 export function mergeParses(list) {
   const fields = {};
-  const key = (f) => JSON.stringify(f.value && f.value.lb != null ? f.value.lb : typeof f.value === "string" ? f.value.toUpperCase().replace(/O/g, "0") : f.value);
+  // Identifiers compare with spaces/dashes removed ("WWB 015057" = "WWB015057").
+  const key = (f, n) => JSON.stringify(f.value && f.value.lb != null ? f.value.lb : typeof f.value === "string" ? f.value.toUpperCase().replace(/O/g, "0").replace(ID_FIELDS.includes(n) ? /[\s-]/g : /$^/, "") : f.value);
+  const isPsm6 = (name) => /psm\s*6\b|psm6/i.test(name || "");
   const names = new Set(list.flatMap((p) => Object.keys(p.parsed.fields)));
   for (const n of names) {
-    const got = list.map((p) => p.parsed.fields[n]).filter(Boolean);
-    got.sort((a, b) => b.confidence - a.confidence);
+    let got = list.map((p) => p.parsed.fields[n] && { ...p.parsed.fields[n], pass: p.name }).filter(Boolean);
+    // Amps: a pass that printed the decimal point beats one where it was inferred ("035A" -> 0.35).
+    if (AMP_FIELDS.includes(n) && got.some((f) => !INFERRED.test(f.note || ""))) {
+      const explicit = got.filter((f) => !INFERRED.test(f.note || ""));
+      if (explicit.length < got.length) got = explicit;
+    }
+    // Most confident first; ties go to PSM 6 (block layout keeps label and value on one line).
+    got.sort((a, b) => b.confidence - a.confidence || isPsm6(b.pass) - isPsm6(a.pass));
     // Majority value wins (ties: most confident); a lone confident misread loses to agreement.
     const tally = new Map();
-    got.forEach((f) => { const k = key(f); tally.set(k, (tally.get(k) || 0) + 1); });
+    got.forEach((f) => { const k = key(f, n); tally.set(k, (tally.get(k) || 0) + 1); });
     const top = Math.max(...tally.values());
-    const best = { ...got.find((f) => tally.get(key(f)) === top) };
-    const distinct = [...new Set(got.map(key))];
+    const best = { ...got.find((f) => tally.get(key(f, n)) === top) };
+    const distinct = [...new Set(got.map((f) => key(f, n)))];
     if (distinct.length > 1) {
-      const votes = got.filter((f) => key(f) === key(best)).length;
+      const votes = got.filter((f) => key(f, n) === key(best, n)).length;
       if (votes * 2 <= got.length) {
         best.confidence = round(best.confidence * 0.55, 2);
         best.note = (best.note ? best.note + "; " : "") + "passes disagree: " + distinct.map((d) => JSON.parse(d)).join(" vs ");
       }
     }
     best.passes = got.length;
+    if (distinct.length > 1) {
+      // Never merge silently: offer every distinct reading, most votes first, for the user to pick.
+      best.candidates = distinct.map((d) => ({ value: got.find((f) => key(f, n) === d).value, votes: got.filter((f) => key(f, n) === d).length }))
+        .sort((a, b) => b.votes - a.votes);
+    }
+    if (distinct.length > 1 && ID_FIELDS.includes(n)) {
+      best.confidence = round(Math.min(best.confidence, LOW_CONFIDENCE_ID - 0.01), 2);
+    }
     fields[n] = best;
   }
   // Best pass = most total field confidence (shown first in the raw text panel).
@@ -673,6 +794,6 @@ export function mergeParses(list) {
   const hints = [...new Set(list.flatMap((p) => p.parsed.hints || []))];
   // Keep only the hint that matches the merged unit type.
   const ut = fields.unitType && fields.unitType.value;
-  const lowConfidence = Object.keys(fields).filter((k) => fields[k].confidence < LOW_CONFIDENCE);
+  const lowConfidence = Object.keys(fields).filter((k) => fields[k].confidence < lowBar(k));
   return { fields, lowConfidence, hints: ut === "indoor" ? hints.slice(0, 1) : [], bestPass, text: list.length ? list.find((p) => p.name === bestPass).parsed.text : "" };
 }
