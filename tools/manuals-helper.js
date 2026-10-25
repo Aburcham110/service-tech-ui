@@ -4,6 +4,8 @@
  * URLs are only the ones already in the index; nothing is added here. No PDFs.
  * The Notion OEM map / Manuals pages stay the online source of truth.
  */
+import { findManuals } from "./manuals.js?v=13";
+
 export const LABEL = "Search terms only — verify with OEM";
 
 // Doc types every OEM publishes in some form.
@@ -51,3 +53,17 @@ export function helperModel(index) {
     brand, aliases: index.brands[brand].aliases || [brand], terms: searchTerms(index, brand), links: portalLinks(index, brand),
   }));
 }
+
+/** Best portal link to highlight for a model: a model-family doc from the index when the model matches one,
+ *  else the brand's first official portal. null without a model (nothing to match). */
+export function bestLink(index, brandKey, model = "") {
+  const m = String(model || "").trim();
+  const links = portalLinks(index, brandKey);
+  if (!m || !links.length) return null;
+  const urls = new Set(links.map((l) => l.url));
+  const hit = findManuals(index, { brand: brandKey, model: m }).docs.find((d) => d.matchedBy !== "brand" && urls.has(d.url));
+  return hit ? { url: hit.url, why: "matches model " + m } : { url: links[0].url, why: "brand portal (no model-specific doc in the index)" };
+}
+
+/** All search terms as one copyable block (one per line, label first). */
+export const allTermsText = (terms) => [LABEL + ":", ...terms].join("\n");

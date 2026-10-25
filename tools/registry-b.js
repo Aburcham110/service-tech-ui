@@ -81,6 +81,7 @@ export const PART = [
       { name: "ratedMfd", label: "Rated µF", type: "number", step: "0.1" },
       { name: "measuredMfd", label: "Measured µF", type: "number", step: "0.1" },
       { name: "phases", label: "Phases", type: "select", options: [["1","1φ"],["3","3φ"]], value: "3" },
+      { name: "nominalV", label: "Nameplate voltage (V)", type: "number", step: "1" },
       { name: "v1", label: "Voltage 1 / Vab", type: "number", step: "0.1" },
       { name: "v2", label: "Voltage 2 / Vbc", type: "number", step: "0.1" },
       { name: "v3", label: "Voltage 3 / Vca", type: "number", step: "0.1" },
