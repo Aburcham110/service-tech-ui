@@ -7,7 +7,7 @@ export const PART = [
     repo: "hvac-superheat-subcool",
     group: "Diagnostics",
     kind: "compute",
-    disclaimer: "Educational PT tables (approx). Real jobs need a manufacturer PT chart / rated manifold. Verify with OEM / AHJ.",
+    disclaimer: "PT tables: dew for superheat, bubble for subcooling. Verify against the OEM PT chart / rated manifold. Verify with OEM / AHJ.",
     fields: [
       { name: "mode", label: "Mode", type: "select", options: [["both","Both"],["superheat","Superheat"],["subcooling","Subcooling"]], value: "both" },
       { name: "refrigerant", label: "Refrigerant", type: "select", options: [["R-410A","R-410A"],["R-22","R-22"],["R-134a","R-134a"],["R-404A","R-404A"],["R-407C","R-407C"],["R-32","R-32"],["R-454B","R-454B"]], value: "R-410A" },
