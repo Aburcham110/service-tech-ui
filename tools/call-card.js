@@ -2,7 +2,8 @@
 import { plateSummary } from "./plate-scan.js?v=12";
 import { chooseTree, treeHref } from "./trees.js?v=12";
 
-export const SCAN_KEY = "serviceTechLastScan_v1";
+import { saveLastPlate, nominalVoltage, SCAN_KEY } from "./last-plate.js?v=13";
+export { SCAN_KEY };
 export const DRAFT_KEY = "serviceTechCallDraft_v1"; // app.js STORAGE_KEY
 
 /** Call-card fields for confirmed plate values: the Data plate line carries brand, model, serial,
@@ -28,28 +29,57 @@ export function troubleshootHref(v, equipment) {
   return treeHref(t) + (v && v.refrigerant ? "&refrigerant=" + encodeURIComponent(v.refrigerant) : "");
 }
 
-export function saveScan(v) {
-  try {
-    localStorage.setItem(SCAN_KEY, JSON.stringify({ brand: v.brand, model: v.model, serial: v.serial, unitType: v.unitType,
-      refrigerant: v.refrigerant, charge: v.charge, summary: plateSummary(v) }));
-  } catch (e) { /* private mode: ignore */ }
+/** Stores the confirmed plate as the last scanned plate (see last-plate.js). */
+export function saveScan(v) { saveLastPlate(v); }
+
+/** Tool links for a confirmed plate: SH/SC with the refrigerant, electrical with nameplate voltage + RLA. */
+export function scanToolLinks(v) {
+  const out = [];
+  const sh = new URLSearchParams({ id: "superheat-subcool" });
+  if (v && v.refrigerant) sh.set("refrigerant", v.refrigerant);
+  out.push({ tool: "superheat-subcool", label: "Check superheat/subcool", href: "tool.html?" + sh });
+  const el = new URLSearchParams({ id: "electrical" });
+  const nv = nominalVoltage(v && v.voltage);
+  if (nv) el.set("nominalV", String(nv));
+  if (v && v.rla) el.set("rla", v.rla);
+  out.push({ tool: "electrical", label: "Check amps vs FLA", href: "tool.html?" + el });
+  return out;
 }
 
-/** Buttons shown after a confirmed scan. onAdd() does the fill; returns the container. */
-export function renderScanActions(host, v, { onAdd, equipment } = {}) {
+/**
+ * Actions shown after a confirmed scan (both primary): "Add to call card" and "Start troubleshooting for
+ * this equipment", then one-tap tool links. The plate is stored as the last scanned plate on confirm.
+ * After Add: "Added — open call card" (link) and, when onReadings is given, "Go to Readings".
+ */
+export function renderScanActions(host, v, { onAdd, equipment, onReadings, callHref = "call.html" } = {}) {
+  saveLastPlate(v);
   host.querySelector(".scan-actions")?.remove();
-  const box = document.createElement("div");
-  box.className = "scan-actions";
-  const add = document.createElement("button");
-  add.type = "button"; add.className = "btn btn-primary"; add.id = "btn-add-to-call";
-  add.textContent = "Add to call card";
-  add.addEventListener("click", () => { onAdd(v); add.textContent = "Added to call card ✓"; });
-  const go = document.createElement("a");
-  go.className = "btn btn-secondary"; go.id = "btn-start-troubleshooting";
+  const mk = (tag, cls, text) => { const e = document.createElement(tag); e.className = cls; e.textContent = text; return e; };
+  const box = mk("div", "scan-actions", "");
+  const add = mk("button", "btn btn-primary", "Add to call card");
+  add.type = "button"; add.id = "btn-add-to-call";
+  const go = mk("a", "btn btn-primary", "Start troubleshooting for this equipment");
+  go.id = "btn-start-troubleshooting";
   go.href = troubleshootHref(v, typeof equipment === "function" ? equipment() : equipment);
-  go.textContent = "Start troubleshooting for this equipment";
   if (typeof equipment === "function") go.addEventListener("click", () => { go.href = troubleshootHref(v, equipment()); });
-  box.append(add, go);
+  const done = mk("div", "scan-added", "");
+  done.hidden = true; done.setAttribute("role", "status");
+  add.addEventListener("click", () => {
+    onAdd && onAdd(v);
+    add.textContent = "Added to call card ✓"; add.disabled = true;
+    done.innerHTML = "";
+    const link = mk("a", "scan-added-link", "Added — open call card"); link.id = "link-open-call"; link.href = callHref;
+    done.appendChild(link);
+    if (onReadings) {
+      const r = mk("button", "btn btn-secondary", "Go to Readings →"); r.type = "button"; r.id = "btn-go-readings";
+      r.addEventListener("click", onReadings);
+      done.appendChild(r);
+    }
+    done.hidden = false;
+  });
+  const tools = mk("div", "scan-tools", "");
+  scanToolLinks(v).forEach((q) => { const a = mk("a", "chip scan-tool-link", q.label + " →"); a.href = q.href; a.dataset.tool = q.tool; tools.appendChild(a); });
+  box.append(add, go, done, tools);
   host.appendChild(box);
   return box;
 }

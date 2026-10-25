@@ -155,7 +155,7 @@ function mount(tool) {
         const notes = form.querySelector('[data-field="notes"]');
         if (amps && notes) notes.value = (notes.value ? notes.value + "\n" : "") + "Plate: " + amps;
         run();
-        // "Add to call card" (writes the call draft, then opens the call card) + "Start troubleshooting".
+        // "Add to call card" (writes the call draft; then "Added — open call card" / "Go to Readings") + "Start troubleshooting".
         import("./call-card.js?v=12").then(({ renderScanActions, mergeIntoDraft, saveScan, DRAFT_KEY }) => {
           renderScanActions(scanHost, v, {
             onAdd: (vals) => {
@@ -163,6 +163,11 @@ function mount(tool) {
               try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}"); } catch (e) { /* ignore */ }
               try { localStorage.setItem(DRAFT_KEY, JSON.stringify(mergeIntoDraft(d, vals))); } catch (e) { /* ignore */ }
               saveScan(vals);
+            },
+            // Opens the call card on its Readings step (app.js restores draft.step).
+            onReadings: () => {
+              let d = {};
+              try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}"); d.step = "readings"; localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); } catch (e) { /* ignore */ }
               location.href = "call.html";
             },
           });
@@ -188,6 +193,7 @@ function mount(tool) {
 document.addEventListener("DOMContentLoaded", () => {
   const id = qsId();
   const tool = getTool(id);
+  if (tool) { try { localStorage.setItem("serviceTechLastTool_v1", tool.id); } catch (e) { /* ignore */ } }
   if (!tool) {
     $("#tool-title").textContent = "Tool not found";
     $("#tool-disclaimer").textContent = "Unknown tool id. Go back to the toolkit.";
