@@ -89,3 +89,20 @@ test("trees: leaf 'Log this in job notes' pre-fills the job-log tool", () => {
   for (const k of q.keys()) if (k !== "id") assert.ok(names.includes(k), k);
   assert.equal(new URLSearchParams(jobLogHref("compressor", ["start"], null).split("?")[1]).get("equipment"), "Compressor");
 });
+
+import { readFileSync } from "node:fs";
+import { bestLink, allTermsText, portalLinks, LABEL } from "../tools/manuals-helper.js";
+const INDEX = JSON.parse(readFileSync(new URL("../data/manuals-index.json", import.meta.url), "utf8"));
+test("manuals helper: best-match link for a scanned model, copy-all block keeps the label", () => {
+  const trane = INDEX.entries.find((e) => e.brand === "Trane" && (e.prefixes || []).length && e.kind === "oem");
+  if (trane) {
+    const b = bestLink(INDEX, "Trane", trane.prefixes[0] + "036");
+    assert.equal(b.url, trane.url); assert.match(b.why, /matches model/);
+  }
+  const c = bestLink(INDEX, "Carrier", "24ACC636");
+  assert.ok(portalLinks(INDEX, "Carrier").some((l) => l.url === c.url));
+  assert.equal(bestLink(INDEX, "Carrier", ""), null);
+  assert.equal(bestLink(INDEX, "Nope", "X"), null);
+  const t = allTermsText(["a", "b"]);
+  assert.equal(t.split("\n")[0], LABEL + ":"); assert.equal(t.split("\n").length, 3);
+});
