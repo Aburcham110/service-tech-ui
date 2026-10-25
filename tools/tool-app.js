@@ -1,6 +1,7 @@
 /** Mount interactive tool UI from ?id= */
 import { getTool } from "./registry.js";
 import { runTool } from "./logic.js?v=11";
+import { applyPrefill } from "./prefill.js?v=12";
 
 function $(sel, el) { return (el || document).querySelector(sel); }
 
@@ -103,6 +104,7 @@ function mount(tool) {
   form.id = "tool-form";
   tool.fields.forEach((f) => form.appendChild(renderField(f)));
   root.appendChild(form);
+  applyPrefill(form, tool.fields, new URLSearchParams(location.search)); // e.g. refrigerant from a scan via a tree step
 
   const actions = document.createElement("div");
   actions.className = "tool-actions";

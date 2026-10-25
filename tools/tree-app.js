@@ -1,11 +1,18 @@
 /** tree.html: walks a troubleshooting tree (tools/trees.js) one step at a time. */
-import { TREES, toolHref, treeHref } from "./trees.js?v=11";
+import { TREES, toolHref, treeHref, quickLinks } from "./trees.js?v=12";
 import { getTool } from "./registry.js";
 
 const params = new URLSearchParams(location.search);
+const TYPE_KEY = "serviceTechTreeType_v1"; // last equipment type picked here
+const SCAN_KEY = "serviceTechLastScan_v1"; // last confirmed plate scan (call card / nameplate tool)
+const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) { /* ignore */ } } };
+let known = {};
+try { known = JSON.parse(store.get(SCAN_KEY) || "{}") || {}; } catch (e) { /* ignore */ }
+if (params.get("refrigerant")) known.refrigerant = params.get("refrigerant");
 const pick = document.getElementById("tree-pick");
 const root = document.getElementById("tree-root");
-let treeId = TREES[params.get("type")] ? params.get("type") : null;
+let treeId = TREES[params.get("type")] ? params.get("type") : (TREES[store.get(TYPE_KEY)] ? store.get(TYPE_KEY) : null);
+if (treeId) store.set(TYPE_KEY, treeId);
 let path = [];
 
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -13,7 +20,7 @@ const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls)
 pick.appendChild(new Option("Choose…", ""));
 Object.entries(TREES).forEach(([id, t]) => pick.appendChild(new Option(t.title, id)));
 pick.value = treeId || "";
-pick.addEventListener("change", () => { treeId = pick.value || null; path = treeId ? [TREES[treeId].start] : []; history.replaceState(null, "", treeId ? treeHref(treeId) : "tree.html"); render(); });
+pick.addEventListener("change", () => { treeId = pick.value || null; store.set(TYPE_KEY, treeId); path = treeId ? [TREES[treeId].start] : []; history.replaceState(null, "", treeId ? treeHref(treeId) : "tree.html"); render(); });
 if (treeId) path = [TREES[treeId].start];
 
 function render() {
@@ -32,6 +39,12 @@ function render() {
   const node = tree.nodes[path[path.length - 1]];
   const card = el("div", "tree-step" + (node.end ? " tree-end" : ""));
   card.appendChild(el("p", null, node.text));
+  const quick = quickLinks(node, known);
+  if (quick.length) {
+    const ql = el("div", "tree-quick");
+    quick.forEach((q) => { const a = el("a", "btn btn-primary tree-quick-link", q.label + " →"); a.href = q.href; a.dataset.tool = q.tool; ql.appendChild(a); });
+    card.appendChild(ql);
+  }
   if (node.tools && node.tools.length) {
     const tl = el("div", "tree-tools");
     tl.appendChild(el("span", null, "Tools: "));
