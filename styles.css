@@ -165,3 +165,14 @@ textarea { min-height: 96px; resize: vertical; }
 }
 .check-row span { color: var(--text); font-size: 0.95rem; }
 .use-when { color: var(--muted); font-size: 0.9rem; margin: -6px 0 14px; }
+.online-only { color: var(--muted); font-weight: 400; font-size: 0.8em; }
+.offline-indicator {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  padding: 4px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 600;
+  background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+  z-index: 50; pointer-events: none;
+}
+.offline-indicator[hidden] { display: none; }
+.offline-indicator[data-state="ready"] { color: #4ade80; border-color: #166534; }
+.offline-indicator[data-state="offline"] { color: #fb923c; border-color: #9a3412; }

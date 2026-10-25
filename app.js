@@ -269,11 +269,71 @@
     if (!root) return;
     root.innerHTML = DOCS.map((d) =>
       '<a class="tile" href="' + d.href + '" target="_blank" rel="noopener">' +
-      "<strong>" + d.title + "</strong><span>" + d.blurb + "</span></a>"
+      "<strong>" + d.title + ' <small class="online-only">(online only)</small></strong><span>' + d.blurb + "</span></a>"
     ).join("");
   }
 
+  /* ---- PWA: service worker registration + offline indicator ----
+     Registered here (app.js loads on every page) instead of inline scripts.
+     register() is idempotent for the same script URL/scope, and the guard
+     below keeps it to one call per page load. */
+  let cacheComplete = false;
+
+  function indicator() {
+    let el = document.getElementById("offline-indicator");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "offline-indicator";
+      el.className = "offline-indicator";
+      el.setAttribute("role", "status");
+      el.setAttribute("aria-live", "polite");
+      el.hidden = true;
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+
+  function updateIndicator() {
+    const el = indicator();
+    if (!navigator.onLine) {
+      el.textContent = "Offline";
+      el.dataset.state = "offline";
+      el.hidden = false;
+    } else if (cacheComplete && navigator.serviceWorker && navigator.serviceWorker.controller) {
+      el.textContent = "Available offline";
+      el.dataset.state = "ready";
+      el.hidden = false;
+    } else {
+      el.textContent = "";
+      el.dataset.state = "pending";
+      el.hidden = true;
+    }
+  }
+
+  function askCacheStatus() {
+    const ctl = navigator.serviceWorker && navigator.serviceWorker.controller;
+    if (!ctl) { updateIndicator(); return; }
+    const ch = new MessageChannel();
+    ch.port1.onmessage = (e) => {
+      cacheComplete = !!(e.data && e.data.complete);
+      updateIndicator();
+    };
+    ctl.postMessage({ type: "cache-status" }, [ch.port2]);
+  }
+
+  function initPwa() {
+    window.addEventListener("online", updateIndicator);
+    window.addEventListener("offline", updateIndicator);
+    updateIndicator();
+    if (!("serviceWorker" in navigator) || window.__stSwRegistered) return;
+    window.__stSwRegistered = true;
+    navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(console.error);
+    navigator.serviceWorker.addEventListener("controllerchange", askCacheStatus);
+    navigator.serviceWorker.ready.then(askCacheStatus);
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
+    initPwa();
     const p = page();
     if (p.includes("call")) initCall();
     else if (p.includes("toolkit")) initToolkit();

@@ -2,11 +2,18 @@
    Paths are relative to this file so it works at the GitHub Pages project
    path (/service-tech-ui/) and at a root domain alike.
    When you bump the ?v= cache-bust in the HTML/JS imports, bump VERSION here
-   too (and update the versioned URLs below) so clients get a fresh cache. */
-const VERSION = "v3";
-const CACHE = "service-tech-" + VERSION;
+   too (and update the versioned URLs below) so clients get a fresh cache.
 
-// Exact URLs the pages request (versioned ones include ?v=3).
+   Strategy:
+   - App files (ASSETS below): cache-first.
+   - Any other same-origin GET: network-first, falling back to cache.
+   - Navigations to pages not in the cache while offline: offline.html.
+   - Cross-origin (Notion, GitHub): not handled, network only. */
+const VERSION = "v4";
+const CACHE = "service-tech-" + VERSION;
+const OFFLINE_URL = "./offline.html";
+
+// Exact URLs the pages request (versioned ones include ?v=4).
 const ASSETS = [
   "./",
   "./index.html",
@@ -14,23 +21,30 @@ const ASSETS = [
   "./toolkit.html",
   "./tool.html",
   "./docs.html",
+  OFFLINE_URL,
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
-  "./styles.css?v=3",
-  "./app.js?v=3",
-  "./tools/tool-app.js?v=3",
+  "./apple-touch-icon.png",
+  "./styles.css?v=4",
+  "./app.js?v=4",
+  // Every tools/*.js module:
+  "./tools/tool-app.js?v=4",
   "./tools/registry.js",
   "./tools/registry-a.js",
   "./tools/registry-b.js",
-  "./tools/logic.js?v=3",
-  "./tools/logic-1.js?v=3",
+  "./tools/logic.js?v=4",
+  "./tools/logic-1.js?v=4",
   "./tools/logic-1b.js",
   "./tools/logic-2.js",
   "./tools/logic-2a.js",
   "./tools/logic-2b.js",
-  "./tools/pt-tables.js?v=3",
+  "./tools/pt-tables.js?v=4",
 ];
+const ASSET_URLS = new Set(ASSETS.map((u) => new URL(u, self.location).href));
+const PAGE_PATHS = new Set(
+  ASSETS.filter((u) => u === "./" || u.endsWith(".html")).map((u) => new URL(u, self.location).pathname)
+);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -50,40 +64,60 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Page asks whether every app file is cached (drives the "Available offline" badge).
+self.addEventListener("message", (event) => {
+  if (!event.data || event.data.type !== "cache-status" || !event.ports[0]) return;
+  const port = event.ports[0];
+  event.waitUntil(
+    caches.open(CACHE)
+      .then((c) => Promise.all(ASSETS.map((u) => c.match(u))))
+      .then((hits) => {
+        const missing = ASSETS.filter((_, i) => !hits[i]);
+        port.postMessage({ version: VERSION, complete: missing.length === 0, missing });
+      })
+      .catch(() => port.postMessage({ version: VERSION, complete: false }))
+  );
+});
+
+function putInCache(key, res) {
+  if (res && res.status === 200 && res.type === "basic") {
+    const copy = res.clone();
+    caches.open(CACHE).then((c) => c.put(key, copy));
+  }
+  return res;
+}
+
+function networkFirst(req) {
+  return fetch(req)
+    .then((res) => putInCache(req, res))
+    .catch(() => caches.match(req).then((hit) => hit || Promise.reject(new Error("offline"))));
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  // Cross-origin (e.g. Notion OEM map, GitHub links): network only, not cached.
-  if (url.origin !== self.location.origin) return;
+  if (url.origin !== self.location.origin) return; // network only
 
   if (req.mode === "navigate") {
-    // Pages like tool.html?id=... : match the HTML file regardless of query.
-    event.respondWith(
-      caches.match(req, { ignoreSearch: true }).then((cached) =>
-        cached || fetch(req).then((res) => {
-          if (res && res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(url.pathname, copy));
-          }
-          return res;
-        }).catch(() => caches.match("./index.html"))
-      )
-    );
+    if (PAGE_PATHS.has(url.pathname)) {
+      // App page (e.g. tool.html?id=...): cache-first, query ignored.
+      event.respondWith(
+        caches.match(url.pathname, { ignoreSearch: true })
+          .then((hit) => hit || fetch(req).then((res) => putInCache(url.pathname, res)))
+          .catch(() => caches.match(OFFLINE_URL))
+      );
+    } else {
+      event.respondWith(networkFirst(req).catch(() => caches.match(OFFLINE_URL)));
+    }
     return;
   }
 
-  // Assets: exact match (keeps ?v= versions distinct), then network, caching 200s.
-  event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req).then((res) => {
-        if (res && res.status === 200 && res.type === "basic") {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
-        }
-        return res;
-      });
-    })
-  );
+  if (ASSET_URLS.has(url.href)) {
+    // App files: cache-first (exact match keeps ?v= versions distinct).
+    event.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => putInCache(req, res))));
+    return;
+  }
+
+  event.respondWith(networkFirst(req));
 });
