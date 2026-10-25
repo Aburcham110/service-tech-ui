@@ -1,6 +1,6 @@
 /** Mount interactive tool UI from ?id= */
 import { getTool } from "./registry.js";
-import { runTool } from "./logic.js";
+import { runTool } from "./logic.js?v=3";
 
 function $(sel, el) { return (el || document).querySelector(sel); }
 

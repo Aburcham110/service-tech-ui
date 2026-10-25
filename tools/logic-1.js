@@ -1,29 +1,22 @@
 /** Compute / diagnostic logic (part 1) — educational approximations */
 
-const PT = {
-  "R-410A": [[50,-20],[70,-5],[80,2],[90,8],[100,14],[110,19],[118,23],[125,26],[130,28],[140,33],[150,37],[160,41],[170,45],[180,48],[190,52],[200,55],[210,58],[220,61],[230,64],[240,67],[250,70],[260,72],[270,75],[280,77],[290,80],[300,82],[320,87],[340,91],[360,95],[380,99],[400,103],[420,106],[440,110],[460,113],[480,116],[500,119]],
-  "R-22": [[20,-20],[30,-5],[35,2],[40,8],[45,13],[49,16],[55,22],[60,26],[65,30],[70,33],[75,37],[80,40],[85,43],[90,46],[95,49],[100,52],[105,54],[110,57],[120,62],[130,66],[140,70],[150,74],[160,78],[170,81],[180,84],[190,87],[200,90],[210,93],[220,96],[230,98],[240,101],[250,104],[260,106],[270,109],[280,111],[300,116]],
-  "R-134a": [[10,-10],[15,0],[20,8],[25,15],[30,22],[35,28],[40,34],[45,39],[50,44],[55,48],[60,52],[70,60],[80,66],[90,72],[100,78],[110,83],[120,88],[130,93],[140,97],[150,101],[160,105],[180,112],[200,119]],
-  "R-404A": [[20,-25],[30,-12],[40,-2],[50,7],[60,14],[70,21],[80,27],[90,32],[100,37],[110,42],[120,46],[130,50],[140,54],[150,58],[160,61],[180,68],[200,74],[220,80],[240,85],[260,90],[280,95],[300,99]],
-  "R-407C": [[30,-10],[40,0],[50,8],[60,15],[70,22],[80,28],[90,33],[100,38],[110,43],[120,47],[140,55],[160,62],[180,69],[200,75],[220,80],[240,85],[260,90],[280,95],[300,99],[320,103]],
-  "R-32": [[50,-15],[70,0],[90,10],[110,19],[130,27],[150,34],[170,40],[190,46],[210,51],[230,56],[250,61],[270,65],[290,69],[310,73],[330,77],[350,80],[380,86],[400,89],[450,97],[500,105]],
-  "R-454B": [[50,-18],[70,-3],[90,8],[110,17],[130,25],[150,32],[170,38],[190,44],[210,49],[230,54],[250,59],[270,63],[290,67],[310,71],[330,75],[350,78],[380,84],[400,87],[450,95],[500,102]]
-};
+import { PT } from "./pt-tables.js?v=3";
 
-function satTemp(ref, psig) {
+function satTemp(ref, psig, side = "dew") {
   const t = PT[ref];
   if (!t) throw new Error("Unsupported refrigerant");
-  if (psig < t[0][0] || psig > t[t.length - 1][0]) {
-    throw new Error(`Pressure ${psig} psig outside table (${t[0][0]}–${t[t.length-1][0]}) for ${ref}`);
+  const c = side === "bubble" ? 2 : 1;
+  const lo = t[0][c], hi = t[t.length - 1][c];
+  if (psig < lo || psig > hi) {
+    throw new Error(`Pressure ${psig} psig outside table (${lo}–${hi}) for ${ref}`);
   }
   for (let i = 0; i < t.length - 1; i++) {
-    const [p0, t0] = t[i], [p1, t1] = t[i + 1];
+    const p0 = t[i][c], p1 = t[i + 1][c];
     if (psig >= p0 && psig <= p1) {
-      if (p1 === p0) return t0;
-      return t0 + ((psig - p0) / (p1 - p0)) * (t1 - t0);
+      return t[i][0] + ((psig - p0) / (p1 - p0)) * (t[i + 1][0] - t[i][0]);
     }
   }
-  return t[t.length - 1][1];
+  return t[t.length - 1][0];
 }
 
 function num(v) {
@@ -46,22 +39,22 @@ function scGuide(sc) {
 }
 
 export function runSuperheatSubcool(f) {
-  const lines = ["Refrigerant: " + f.refrigerant, "Note: Sat temps from compact educational PT table.", ""];
+  const lines = ["Refrigerant: " + f.refrigerant, "Note: Sat temps from PT table — dew for superheat, bubble for subcooling.", "Verify against the OEM PT chart for the refrigerant.", ""];
   const mode = f.mode || "both";
   try {
     if (mode === "superheat" || mode === "both") {
       const sp = num(f.suctionPsig), st = num(f.suctionTemp);
       if (sp == null || st == null) return { lines: ["Need suction pressure and suction temp for superheat."] };
-      const tsat = satTemp(f.refrigerant, sp);
+      const tsat = satTemp(f.refrigerant, sp, "dew");
       const sh = st - tsat;
-      lines.push("--- Superheat ---", `Suction: ${sp.toFixed(1)} psig → sat ${tsat.toFixed(1)} °F`, `Line temp: ${st.toFixed(1)} °F`, `Superheat: ${sh.toFixed(1)} °F`, "[APPROX] " + shGuide(sh), "");
+      lines.push("--- Superheat ---", `Suction: ${sp.toFixed(1)} psig → dew sat ${tsat.toFixed(1)} °F`, `Line temp: ${st.toFixed(1)} °F`, `Superheat: ${sh.toFixed(1)} °F`, "[APPROX] " + shGuide(sh), "");
     }
     if (mode === "subcooling" || mode === "both") {
       const lp = num(f.liquidPsig), lt = num(f.liquidTemp);
       if (lp == null || lt == null) return { lines: ["Need liquid pressure and liquid temp for subcooling."] };
-      const tsat = satTemp(f.refrigerant, lp);
+      const tsat = satTemp(f.refrigerant, lp, "bubble");
       const sc = tsat - lt;
-      lines.push("--- Subcooling ---", `Liquid: ${lp.toFixed(1)} psig → sat ${tsat.toFixed(1)} °F`, `Line temp: ${lt.toFixed(1)} °F`, `Subcooling: ${sc.toFixed(1)} °F`, "[APPROX] " + scGuide(sc), "");
+      lines.push("--- Subcooling ---", `Liquid: ${lp.toFixed(1)} psig → bubble sat ${tsat.toFixed(1)} °F`, `Line temp: ${lt.toFixed(1)} °F`, `Subcooling: ${sc.toFixed(1)} °F`, "[APPROX] " + scGuide(sc), "");
     }
   } catch (e) {
     return { lines: ["Error: " + e.message] };
