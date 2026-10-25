@@ -1,6 +1,6 @@
 /** Confirmed plate scan -> call card (Open step), and the scan's follow-up actions. */
-import { plateSummary } from "./plate-scan.js?v=12";
-import { chooseTree, treeHref } from "./trees.js?v=12";
+import { plateSummary } from "./plate-scan.js?v=13";
+import { chooseTree, treeHref } from "./trees.js?v=13";
 
 import { saveLastPlate, nominalVoltage, SCAN_KEY } from "./last-plate.js?v=13";
 export { SCAN_KEY };
