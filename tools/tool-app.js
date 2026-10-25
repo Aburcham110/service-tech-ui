@@ -1,6 +1,6 @@
 /** Mount interactive tool UI from ?id= */
 import { getTool } from "./registry.js";
-import { runTool } from "./logic.js?v=6";
+import { runTool } from "./logic.js?v=7";
 
 function $(sel, el) { return (el || document).querySelector(sel); }
 
@@ -137,7 +137,7 @@ function mount(tool) {
   });
 
   if (tool.id === "nameplate-faults") {
-    import("./plate-scan.js?v=6").then(({ mountPlateScan, plateSummary }) => {
+    import("./plate-scan.js?v=7").then(({ mountPlateScan, plateSummary }) => {
       mountPlateScan(scanHost, (v) => {
         const set = (k, val) => {
           const el = form.querySelector('[data-field="' + k + '"]');

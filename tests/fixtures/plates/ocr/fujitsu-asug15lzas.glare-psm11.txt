@@ -1,0 +1,57 @@
+brufsu
+
+| spur  TYPE
+
+| &
+
+MODEL No, ss
+
+ARR  COMMON
+
+ft
+
+IE ASUG15LZAS
+
+  | SERWL No. WWB 0
+
+ina
+
+kL   irons 10
+
+QP
+
+us 6035-1
+
+Waal  bi]
+
+%
+
+CERTIFIED TO
+
+intertek
+
+C222
+
+CSA sTD,
+
+E
+
+987
+
+NO.60335-240,
+
+60335-1
+
+208/230 V.
+
+=
+
+60Hz 41-PH
+
+jacod FAN MOTOR LOAD
+
+0.35 A
+
+(EAR:  OUTDOOR UNIT
+
+AOUG15LZAS1 / AOUG15LZAH{

@@ -24,9 +24,9 @@ const BRANDS = [
   ["Goodman", /\bGOODMAN\b/], ["Amana", /\bAMANA\b/], ["Daikin", /\bDA[I1l]K[I1l]N\b/],
   ["Lennox", /\bLENNOX\b/], ["Rheem", /\bRHEEM\b/], ["Ruud", /\bRUUD\b/],
   ["Emerson / Copeland", /\bEMERSON\b[\s\S]{0,80}\bCOPELAND\b|\bCOPELAND\b[\s\S]{0,80}\bEMERSON\b/], ["Copeland", /\bCOPELAND\b/],
-  ["Emerson / Copeland", /\bEMERSON\b/], ["Unitary Products (UPG)", /\bUN[I1l]T[AE]RY\s+PRODUCTS\b|\bPRODUCTS\s+GROUP\b/], ["Heatcraft", /\bHEATCRAFT\b/], ["Bohn", /\bBOHN\b/],
+  ["Emerson / Copeland", /\bEMERSON\b/], ["Unitary Products Group (York/Coleman)", /\bUN[I1l]T[AE]RY\s+PRODUCTS\b|\bPRODUCTS\s+GROUP\b|\bNORMAN\s*[,.]?\s*OK(?:LAHOMA)?\b|\d+\s+YORK\s+(?:DR|DRIVE)\b/], ["Heatcraft", /\bHEATCRAFT\b/], ["Bohn", /\bBOHN\b/],
   ["Larkin", /\bLARKIN\b/], ["Mitsubishi Electric", /\bM[I1l]TSUB[I1l]SH[I1l]\b/],
-  ["Fujitsu", /\bFUJ[I1l]TSU\b/], ["York", /\bYORK\b/], ["LG", /\bLG\s+ELECTRONICS\b/],
+  ["Fujitsu", /\bFUJ[I1l]TSU\b/], ["York", /(?<!\d\s{0,3})\bYORK\b(?!\s*(?:,\s*PA|DR\b|DRIVE|NORMAN|ROAD|RD\b|ST\b))/], ["LG", /\bLG\s+ELECTRONICS\b/],
   ["Samsung", /\bSAMSUNG\b/], ["Gree", /\bGREE\b/], ["Bosch", /\bBOSCH\b/],
   ["Heil", /\bHE[I1l]L\b/], ["Tempstar", /\bTEMPSTAR\b/], ["Midea", /\bM[I1l]DEA\b/],
   ["Toshiba", /\bTOSH[I1l]BA\b/], ["Panasonic", /\bPANASON[I1l]C\b/], ["Tecumseh", /\bTECUMSEH\b/],
@@ -198,6 +198,9 @@ const LABEL_WORDS = /^(?:MODEL|MODELE|MODÈLE|SERIAL|SERIE|SÉRIE|NUMBER|NO\.?|V
 const MODEL_LABEL = /\b(?:MODEL|MODE1|M0DEL|MOD|MDL)(?![A-Z])\.?(?:\s*\/\s*MOD[EÈ]LE)?\s*(?:NO\.?|N0\.?|NUMBER|#|N°)?|\bM\s?\/\s?N\b/i;
 const SERIAL_LABEL = /\b(?:SER[I1l|]AL|SER)(?![A-Z])\.?(?:\s*\/\s*S[EÉ]RIE)?\s*(?:NO\.?|N0\.?|NUMBER|#|N°)?|\bS\s?\/\s?N\b/i;
 const IDENT_TOKEN = /^[A-Z0-9][A-Z0-9\-\/.]*[A-Z0-9]$/;
+// Also 3/B at a letter/digit boundary and 0/O, 1/I between letters ("B0A", "C1E").
+// Any letter O or I in a model/serial is ambiguous with 0/1 (many makers never use them).
+const CONFUSABLE3B = /\d[3B8][A-Z]|[A-Z][3B8]\d|[A-Z][01][A-Z]|[OI]/;
 const CONFUSABLE = /\d[OIlSBZQ]\d|[A-Z][0278][A-Z]|[OIl](?=\d{2})|\d{2}[OIl]\b|Q/;
 
 /** Take the identifier tokens after a label: first token + split-digit groups ("WWB 015057"). */
@@ -239,7 +242,7 @@ function parseIdent(rawLines, labelRe, otherLabelRe, which) {
     if (!r) continue;
     if ((r.value.match(/\d/g) || []).length < 2) continue;
     if (r.joined) { quality *= 0.9; notes.push("joined split characters"); }
-    if (CONFUSABLE.test(r.value)) { quality *= 0.55; notes.push("check O/0, I/1, S/5, B/8, Z/2"); }
+    if (CONFUSABLE.test(r.value) || CONFUSABLE3B.test(r.value)) { quality *= 0.55; notes.push("check O/0, I/1, S/5, B/8, Z/2"); }
     if (which === "second") {
       // Barcode caption "S<serial>" elsewhere on the plate confirms the reading.
       const canon = (x) => x.toUpperCase().replace(/O/g, "0").replace(/[Il]/g, "1");
@@ -384,6 +387,36 @@ function parseElectrical(lines) {
   return out;
 }
 
+// ---------- model validation ----------
+
+// Known model-number shapes per brand. A model that doesn't fit is flagged, never "fixed".
+export const MODEL_PATTERNS = {
+  Fujitsu: /^A[SRUBO][UYHE]G\d{2}L[A-Z]{3}\d?$/,
+  "Unitary Products Group (York/Coleman)": /^[A-Z]{4}\d{4}[A-Z]{3}$/,
+  "Emerson / Copeland": /^(?:Z[A-Z]{1,2}\d{2,3}K[A-Z0-9-]+|[A-Z]{3,4}\d{2,3}[A-Z]\d[A-Z](?:-[A-Z0-9]{3}(?:-[A-Z0-9]{3})?)?)$/,
+  Copeland: /^(?:Z[A-Z]{1,2}\d{2,3}K[A-Z0-9-]+|[A-Z]{3,4}\d{2,3}[A-Z]\d[A-Z](?:-[A-Z0-9]{3}(?:-[A-Z0-9]{3})?)?)$/,
+  Carrier: /^\d{2}[A-Z]{2,4}[A-Z0-9]{4,12}$/,
+  Goodman: /^[A-Z]{3,5}\d{2,4}[A-Z0-9]{2,10}$/,
+};
+const CONF_MAP = { O: "0", Q: "0", D: "0", I: "1", L: "1", S: "5", B: "8", "3": "8", Z: "2", G: "6" };
+const confNorm = (x) => x.toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/[OQDILSB3ZG]/g, (c) => CONF_MAP[c]);
+
+function checkModel(f, brand, lines) {
+  const v = String(f.value).toUpperCase();
+  const notes = f.note ? [f.note] : [];
+  const pat = brand && MODEL_PATTERNS[brand];
+  if (pat && !pat.test(v)) { f.confidence = round(Math.min(f.confidence, 0.45), 2); notes.push("doesn't fit the usual " + brand + " model format"); }
+  // Barcode captions often repeat the model with a one-letter prefix (Unitary prints "ZBRCS0301BDG").
+  const target = confNorm(v);
+  for (const l of lines) for (const t0 of l.split(/\s+/)) {
+    const t = t0.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+    if (t === v || t.length < v.length) continue;
+    const cand = [t, t.slice(1)].find((c) => c.length === v.length && confNorm(c) === target);
+    if (cand && cand !== v) { f.confidence = round(Math.min(f.confidence, 0.4), 2); notes.push("barcode caption reads " + t + " (check: " + cand + ")"); return void (f.note = notes.join("; ")); }
+  }
+  f.note = notes.join("; ") || undefined;
+}
+
 // ---------- brand / unit type / matching unit ----------
 
 function parseBrand(lines) {
@@ -526,6 +559,7 @@ export function parsePlate(input) {
   if (ut) fields.unitType = { value: ut.value, confidence: ut.quality, quality: ut.quality, ocr: null, raw: ut.raw };
   put("model", parseIdent(rawLines, MODEL_LABEL, SERIAL_LABEL, "first"));
   put("serial", parseIdent(rawLines, SERIAL_LABEL, MODEL_LABEL, "second"));
+  if (fields.model) checkModel(fields.model, fields.brand && fields.brand.value, rawLines);
   const od = parseMatchedUnits(rawLines, /APPLICABLE\s+OUTDOOR\s+UNITS?|MATCHING\s+OUTDOOR\s+UNITS?|OUTDOOR\s+UNIT\s+MODEL\s*(?:NO\.?)?/i);
   put("outdoorUnit", od);
   const idu = parseMatchedUnits(rawLines, /(?:APPLICABLE|ABLE)\s+INDOOR\s+UNITS?|MATCHING\s+INDOOR\s+UNITS?|INDOOR\s+UNIT\s+MODEL\s*(?:NO\.?)?/i);

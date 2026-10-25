@@ -8,13 +8,20 @@ Loads the app, waits for the service worker to precache, goes OFFLINE, aborts an
 any off-origin request, uploads each photo to the nameplate tool and prints the parsed
 fields as JSON. --dump writes each pass's raw OCR text to tests/fixtures/plates/ocr/.
 """
-import json, os, sys, glob
+import json, os, sys, glob, time
 from playwright.sync_api import sync_playwright
 
 B = os.environ.get("BASE", "http://localhost:8765/service-tech-ui/")
+from urllib.parse import urlsplit
+ORIGIN = "{0.scheme}://{0.netloc}".format(urlsplit(B))
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIX = os.path.join(HERE, "..", "fixtures", "plates")
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
+opt = {a.split("=")[0]: (a.split("=", 1)[1] if "=" in a else "1") for a in sys.argv[1:] if a.startswith("--")}
+throttle = float(opt.get("--throttle", "0"))  # CPU slowdown factor (e.g. 4 = mid-range phone)
+scan_opts = {}
+if "--no-early" in opt: scan_opts["earlyStop"] = False
+if "--plan" in opt: scan_opts["plan"] = [[p.split(":")[0], int(p.split(":")[1])] for p in opt["--plan"].split(",")]
 dump = "--dump" in sys.argv
 imgs = args or sorted(glob.glob(os.path.join(FIX, "*.jpg")))
 R = {"photos": {}, "off_origin": [], "errors": []}
@@ -22,10 +29,11 @@ with sync_playwright() as p:
     br = p.chromium.launch(); ctx = br.new_context()
     def rt(route):
         u = route.request.url
-        if not u.startswith(B.split("/service-tech-ui/")[0] + "/") and not u.startswith(("data:", "blob:")):
+        if not u.startswith(ORIGIN + "/") and not u.startswith(("data:", "blob:")):
             R["off_origin"].append(u); return route.abort()
         route.continue_()
     ctx.route("**/*", rt)
+    if scan_opts: ctx.add_init_script("globalThis.__plateScanOpts = " + json.dumps(scan_opts))
     pg = ctx.new_page()
     pg.on("console", lambda m: m.type == "error" and R["errors"].append(m.text))
     pg.on("pageerror", lambda e: R["errors"].append(str(e)))
@@ -33,18 +41,24 @@ with sync_playwright() as p:
     pg.wait_for_function("document.getElementById('offline-indicator').dataset.state==='ready'", timeout=120000)
     R["cache"] = pg.evaluate("caches.keys()")
     ctx.set_offline(True)
+    if throttle:
+        # NOTE: CDP CPU throttling applies to the page's main thread (preprocessing) only;
+        # Tesseract's Web Worker is NOT slowed by it. Combine with --cores=1 / scale results.
+        pg.context.new_cdp_session(pg).send("Emulation.setCPUThrottlingRate", {"rate": throttle})
     for img in imgs:
         pg.goto(B + "tool.html?id=nameplate-faults")
         pg.wait_for_selector(".plate-scan input[type=file]", state="attached")
         ls0 = pg.evaluate("JSON.stringify(localStorage)")
+        t_start = time.time()
         pg.set_input_files(".plate-scan input[type=file]", img)
         pg.wait_for_selector(".plate-confirm", timeout=300000)
+        wall_ms = round((time.time() - t_start) * 1000)
         scan = pg.evaluate("document.querySelector('.plate-scan').__lastScan")
         parsed = pg.evaluate("document.querySelector('.plate-scan').__lastParse")
         form = pg.eval_on_selector_all(".plate-form input", "es=>Object.fromEntries(es.map(e=>[e.name,e.value+(e.classList.contains('low-conf')?' [LOW]':'')]))")
         name = os.path.splitext(os.path.basename(img))[0]
         R["photos"][name] = {
-            "crop": scan.get("crop"), "angle": scan["angle"], "exif": scan["orientation"], "probes": scan["probes"],
+            "wall_ms": wall_ms, "timing": scan.get("timing"), "fields": parsed["fields"], "crop": scan.get("crop"), "angle": scan["angle"], "exif": scan["orientation"], "probes": scan["probes"],
             "form": form, "hints": parsed.get("hints"),
             "notes": {k: v.get("note") for k, v in parsed["fields"].items() if v.get("note")},
             "raw_panel": pg.eval_on_selector(".plate-raw summary", "e=>e.textContent") if pg.query_selector(".plate-raw") else None,
