@@ -85,6 +85,14 @@ export function runElectrical(f) {
       lines.push("--- 3φ imbalance ---", `Vab=${v1.toFixed(1)} Vbc=${v2.toFixed(1)} Vca=${v3.toFixed(1)}`, `Imbalance: ${imb.toFixed(2)}% (NEMA-style)`);
       lines.push(imb <= 2 ? "[APPROX] Within common ≤2% target" : imb <= 3 ? "[APPROX] Elevated" : "[APPROX] High — motor heating risk");
     }
+    const nv = num(f.nominalV);
+    if (nv) {
+      const vs = [v1, v2, v3].filter((x) => x != null).slice(0, ph === 1 ? 2 : 3);
+      const avg = vs.reduce((a, b) => a + b, 0) / vs.length;
+      const d = pct(avg, nv);
+      lines.push(`Nameplate ${nv.toFixed(0)} V | avg ${avg.toFixed(1)} V | delta ${d.toFixed(1)}%`);
+      lines.push(Math.abs(d) <= 10 ? "[APPROX] Within the common ±10% motor band — verify the OEM range" : "[APPROX] Outside ±10% of nameplate — check supply under load");
+    }
   } else {
     const mode = f.lraMode || "locked-rotor";
     lines.push("--- Locked-rotor vs running notes ---", "LOTO before wiring work.", `Mode: ${mode}`);

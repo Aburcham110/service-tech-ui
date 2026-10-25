@@ -1,13 +1,13 @@
 /** tree.html: walks a troubleshooting tree (tools/trees.js) one step at a time. */
 import { TREES, toolHref, treeHref, quickLinks } from "./trees.js?v=12";
 import { getTool } from "./registry.js";
+import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=13";
 
 const params = new URLSearchParams(location.search);
 const TYPE_KEY = "serviceTechTreeType_v1"; // last equipment type picked here
-const SCAN_KEY = "serviceTechLastScan_v1"; // last confirmed plate scan (call card / nameplate tool)
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) { /* ignore */ } } };
-let known = {};
-try { known = JSON.parse(store.get(SCAN_KEY) || "{}") || {}; } catch (e) { /* ignore */ }
+const plate = getLastPlate(); // last scanned plate (call card / nameplate tool)
+const known = { refrigerant: plate && plate.refrigerant, nominalV: nominalVoltage(plate && plate.voltage), rla: plate && plate.rla };
 if (params.get("refrigerant")) known.refrigerant = params.get("refrigerant");
 const pick = document.getElementById("tree-pick");
 const root = document.getElementById("tree-root");
