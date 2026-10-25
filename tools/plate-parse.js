@@ -200,7 +200,7 @@ const numField = (r, note) => r && { value: r.num, raw: r.raw, quality: r.qualit
 
 const LABEL_WORDS = /^(?:MODEL|MODELE|MODÈLE|SERIAL|SERIE|SÉRIE|NUMBER|NO\.?|VOLTS?|SOURCE|S\/N|M\/N|MFG|DATE|REFRIGERANT|CHARGE|PH|HZ|RLA|LRA|FLA|MCA|MOP|MOCP)$/i;
 const MODEL_LABEL = /\b(?:MODEL|MODE1|M0DEL|MOD|MDL)(?![A-Z])\.?(?:\s*\/\s*MOD[EÈ]LE)?\s*(?:NO\.?|N0\.?|NUMBER|#|N°)?|\bM\s?\/\s?N\b/i;
-const SERIAL_LABEL = /\b(?:SER[I1l|]AL|SER)(?![A-Z])\.?(?:\s*\/\s*S[EÉ]RIE)?\s*(?:NO\.?|N0\.?|NUMBER|#|N°)?|\bS\s?\/\s?N\b/i;
+const SERIAL_LABEL = /\b(?:SER[I1l|]AL|SER)(?:(?![A-Z])|(?=N[O0]\b))\.?(?:\s*\/\s*S[EÉ]RIE)?\s*(?:NO\.?|N0\.?|NUMBER|#|N°)?|\bS\s?\/\s?N\b/i;
 const IDENT_TOKEN = /^[A-Z0-9][A-Z0-9\-\/.]*[A-Z0-9]$/;
 // Also 3/B at a letter/digit boundary and 0/O, 1/I between letters ("B0A", "C1E").
 // Any letter O or I in a model/serial is ambiguous with 0/1 (many makers never use them).
@@ -211,7 +211,8 @@ const CONFUSABLE = /\d[OIlSBZQ]\d|[A-Z][0278][A-Z]|[OIl](?=\d{2})|\d{2}[OIl]\b|Q
 function takeIdent(rest) {
   const toks = rest.replace(/^[\s:#.,\-]+/, "").split(/\s+/).filter(Boolean);
   if (!toks.length) return null;
-  const first = toks[0].replace(/[,;:]+$/, "").toUpperCase();
+  // Stray dots inside an identifier are OCR noise ("ASUG15L.ZAS"); trailing punctuation too.
+  const first = toks[0].replace(/[.,;:]+$/, "").replace(/\.(?=[A-Za-z0-9])/g, "").toUpperCase();
   if (!IDENT_TOKEN.test(first) || first.length < 3 || LABEL_WORDS.test(first)) return null;
   let value = first, raw = toks[0], joined = false;
   for (let i = 1; i < toks.length; i++) {
@@ -249,6 +250,23 @@ function sparseIdent(rawLines, i, restBefore) {
   return { value, raw, joined: true, sparse: true };
 }
 
+// Fujitsu prints "SERIAL No. WWB 015057": the small "WWB"/"WWP" is part of the label, not the
+// serial. OCR variants seen: WwB, WWR, WHB, WW8, WMB.
+const SERIAL_LABEL_SUFFIX = /^[\s:#.,]*W[WHMVNA]{0,2}[BPR8](?=[\s.\d]|$)\.?/i;
+
+/**
+ * Serial written as spaced digit groups after the label ("0 15057", "01 S057", "015057.").
+ * Joins the groups, drops trailing punctuation and maps S/O/I/l read inside the digits.
+ */
+function digitGroups(rest) {
+  const t = rest.replace(/[.,;:|]+\s*$/, "").trim();
+  if (!/^[\dSOIl]+(?:\s+[\dSOIl]+)*$/.test(t)) return null;
+  const joined = t.replace(/\s+/g, "");
+  const fixed = joined.replace(/S/g, "5").replace(/O/g, "0").replace(/[Il]/g, "1");
+  if ((joined.match(/\d/g) || []).length < 4 || fixed.length < 5 || fixed.length > 12) return null;
+  return { value: fixed, raw: t, joined: /\s/.test(t), corrected: fixed !== joined };
+}
+
 function parseIdent(rawLines, labelRe, otherLabelRe, which, sparse) {
   for (let i = 0; i < rawLines.length; i++) {
     const line = rawLines[i];
@@ -257,9 +275,27 @@ function parseIdent(rawLines, labelRe, otherLabelRe, which, sparse) {
     let rest = line.slice(m.index + m[0].length);
     // Stop at the next label on the same line ("MODEL NO. X  SERIAL NO. Y").
     const nxt = rest.match(otherLabelRe);
-    const restBefore = nxt ? rest.slice(0, nxt.index) : rest;
+    let restBefore = nxt ? rest.slice(0, nxt.index) : rest;
+    let labelSuffix = false;
+    let nextIdx = i + 1;
+    // PSM 11 may put the label suffix on its own line: "SERIAL No." / "WWB 0 15057".
+    if (which === "second" && !restBefore.trim() && rawLines[i + 1] && SERIAL_LABEL_SUFFIX.test(rawLines[i + 1])) { restBefore = rawLines[i + 1]; nextIdx = i + 2; }
+    if (which === "second" && SERIAL_LABEL_SUFFIX.test(restBefore)) { restBefore = restBefore.replace(SERIAL_LABEL_SUFFIX, " ").replace(/^[\s\/|]+/, ""); labelSuffix = true; }
     let r = takeIdent(restBefore), quality = 1, notes = [];
-    if (sparse && !nxt) {
+    if (labelSuffix) {
+      // After the label suffix only digits belong to the serial; look on the next line too (PSM 11).
+      let g = digitGroups(restBefore);
+      const next = rawLines[nextIdx];
+      if (next && !STOP_LINE.test(next) && (!g || g.value.length < 6)) {
+        // PSM 11 splits the groups over lines: "WWB 0 1 5" / "057", "WwB" / "015057".
+        const g2 = digitGroups((restBefore + " " + next).trim());
+        if (g2 && (!g || g2.value.length <= 10)) { g = g2; quality = 0.9; }
+      }
+      r = g;
+      if (g && g.corrected) { quality *= 0.6; notes.push("letters read as digits"); }
+      if (!r) continue;
+    }
+    if (sparse && !nxt && !labelSuffix) {
       const s2 = sparseIdent(rawLines, i, restBefore);
       if (s2 && (!r || s2.value.length > r.value.length)) { r = s2; quality = 0.9; notes.push("joined across sparse-OCR lines"); }
     }
@@ -275,7 +311,7 @@ function parseIdent(rawLines, labelRe, otherLabelRe, which, sparse) {
     }
     if (!r) continue;
     if ((r.value.match(/\d/g) || []).length < 2) continue;
-    if (r.joined && !r.sparse) { quality *= 0.9; notes.push("joined split characters"); }
+    if (r.joined && !r.sparse && !labelSuffix) { quality *= 0.9; notes.push("joined split characters"); }
     const confusable = CONFUSABLE.test(r.value) || CONFUSABLE3B.test(r.value);
     if (confusable) { quality *= 0.55; notes.push("check O/0, I/1, S/5, B/8, Z/2"); }
     if (which === "second") {
@@ -461,7 +497,7 @@ export const SERIAL_PATTERNS = {
   Goodman: /^\d{10}$/, Amana: /^\d{10}$/,
   Lennox: /^\d{4}[A-Z]\d{5}$/,
   Rheem: /^[A-Z]{1,2}\d{8,10}[A-Z]?$/, Ruud: /^[A-Z]{1,2}\d{8,10}[A-Z]?$/,
-  Fujitsu: /^[A-Z]{2,4}\d{6}$/,
+  Fujitsu: /^\d{6}$/, // the "WWB"/"WWP" before it is label text, not part of the serial
   Daikin: /^(?=[A-Z0-9]*\d{6})[A-Z0-9]{7,11}$/,
 };
 
@@ -546,7 +582,9 @@ function parseMatchedUnits(rawLines, labelRe) {
     const m = rawLines[i].match(labelRe);
     if (!m) continue;
     const found = [];
-    const scan = [rawLines[i].slice(m.index + m[0].length), rawLines[i + 1] || "", rawLines[i + 2] || ""];
+    // Separators seen in OCR: "/", "|", "I" glued between units, a space; a trailing "{" is a "1".
+    const norm = (l) => l.toUpperCase().replace(/([A-Z0-9])\{(?=\s|$|[|\/])/g, "$11").replace(/(\d)I(?=[A-Z]{3,}\d)/g, "$1 / ").replace(/\|/g, " / ");
+    const scan = [rawLines[i].slice(m.index + m[0].length), rawLines[i + 1] || "", rawLines[i + 2] || ""].map(norm);
     for (let k = 0; k < scan.length; k++) {
       if (k > 0 && found.length && !/^[\s\/,]*[A-Z]{2,}[A-Z0-9]*\d/.test(scan[k].toUpperCase())) break;
       if (k > 0 && /MADE\s+IN|LIMITED|\bLTD\b|IPX/i.test(scan[k])) break;
@@ -747,6 +785,7 @@ export function parsePlate(input) {
  * a wrong value is worse than a blank.
  * @param {Array<{name:string, parsed:ReturnType<typeof parsePlate>}>} list
  */
+const passWeight = (p) => { const c = p.confidence != null ? p.confidence : p.parsed && p.parsed.passConfidence; return c != null ? Math.pow(Math.max(1, c) / 100, 3) : 1; };
 const AMP_FIELDS = ["rla", "lra", "fanFla", "mca", "mop", "compA", "totalA"];
 const INFERRED = /decimal point inferred/;
 export function mergeParses(list) {
@@ -756,7 +795,7 @@ export function mergeParses(list) {
   const isPsm6 = (name) => /psm\s*6\b|psm6/i.test(name || "");
   const names = new Set(list.flatMap((p) => Object.keys(p.parsed.fields)));
   for (const n of names) {
-    let got = list.map((p) => p.parsed.fields[n] && { ...p.parsed.fields[n], pass: p.name }).filter(Boolean);
+    let got = list.map((p) => p.parsed.fields[n] && { ...p.parsed.fields[n], pass: p.name, w: passWeight(p) }).filter(Boolean);
     // Amps: a pass that printed the decimal point beats one where it was inferred ("035A" -> 0.35).
     if (AMP_FIELDS.includes(n) && got.some((f) => !INFERRED.test(f.note || ""))) {
       const explicit = got.filter((f) => !INFERRED.test(f.note || ""));
@@ -766,22 +805,28 @@ export function mergeParses(list) {
     got.sort((a, b) => b.confidence - a.confidence || isPsm6(b.pass) - isPsm6(a.pass));
     // Majority value wins (ties: most confident); a lone confident misread loses to agreement.
     const tally = new Map();
-    got.forEach((f) => { const k = key(f, n); tally.set(k, (tally.get(k) || 0) + 1); });
+    // Votes are weighted by the pass's mean OCR confidence, cubed, so a junk pass (mean 44 -> 0.09)
+    // barely counts against a clean one (mean 80 -> 0.51).
+    got.forEach((f) => { const k = key(f, n); tally.set(k, (tally.get(k) || 0) + f.w); });
     const top = Math.max(...tally.values());
     const best = { ...got.find((f) => tally.get(key(f, n)) === top) };
     const distinct = [...new Set(got.map((f) => key(f, n)))];
     if (distinct.length > 1) {
-      const votes = got.filter((f) => key(f, n) === key(best, n)).length;
-      if (votes * 2 <= got.length) {
+      const total = got.reduce((t, f) => t + f.w, 0);
+      const votesFor = (k) => got.filter((f) => key(f, n) === k).length;
+      const maxVotes = Math.max(...distinct.map(votesFor));
+      // Flag when no weighted majority, or when the weight picked a value fewer passes read.
+      if (top * 2 <= total || votesFor(key(best, n)) < maxVotes) {
         best.confidence = round(best.confidence * 0.55, 2);
         best.note = (best.note ? best.note + "; " : "") + "passes disagree: " + distinct.map((d) => JSON.parse(d)).join(" vs ");
       }
     }
+    delete best.w;
     best.passes = got.length;
     if (distinct.length > 1) {
       // Never merge silently: offer every distinct reading, most votes first, for the user to pick.
-      best.candidates = distinct.map((d) => ({ value: got.find((f) => key(f, n) === d).value, votes: got.filter((f) => key(f, n) === d).length }))
-        .sort((a, b) => b.votes - a.votes);
+      best.candidates = distinct.map((d) => ({ value: got.find((f) => key(f, n) === d).value, votes: got.filter((f) => key(f, n) === d).length, weight: round(tally.get(d), 2) }))
+        .sort((a, b) => b.weight - a.weight || b.votes - a.votes);
     }
     if (distinct.length > 1 && ID_FIELDS.includes(n)) {
       best.confidence = round(Math.min(best.confidence, LOW_CONFIDENCE_ID - 0.01), 2);

@@ -7,9 +7,9 @@
  * Nothing is stored (not even localStorage) until the user taps Confirm, and
  * then only the onConfirm callback decides what to keep.
  */
-import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=8";
-import { cropStep } from "./plate-crop.js?v=8";
-import { findLabelBox, deglare, clahe } from "./plate-image.js?v=8";
+import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=9";
+import { cropStep } from "./plate-crop.js?v=9";
+import { findLabelBox, deglare, clahe } from "./plate-image.js?v=9";
 
 const VENDOR = "vendor/tesseract/";
 const DECODE_SIDE = 4000;   // decode cap (keeps the label's detail before cropping)
@@ -306,14 +306,14 @@ export async function scanPlate(file, progress = () => {}, opts = (globalThis.__
       passes.push({ name: vname + " psm" + psm, ...r, parsed: parsePlate({ ...r, psm }) });
       timing.passes.push(Math.round(performance.now() - ts));
       // Early stop: after MIN_PASSES, stop once another pass leaves every merged value unchanged.
-      const cur = JSON.stringify(sig(mergeParses(passes.map((p) => ({ name: p.name, parsed: p.parsed })))));
+      const cur = JSON.stringify(sig(mergeParses(passes.map((p) => ({ name: p.name, confidence: p.confidence, parsed: p.parsed })))));
       if (earlyStop && i + 1 >= MIN_PASSES && cur === prev) { timing.stoppedAfter = i + 1; break; }
       prev = cur;
     }
     timing.total = Math.round(performance.now() - t0);
     variants.forEach((v) => { v[1].width = v[1].height = 0; });
     progress("Done", 1);
-    const merged = mergeParses(passes.map((p) => ({ name: p.name, parsed: p.parsed })));
+    const merged = mergeParses(passes.map((p) => ({ name: p.name, confidence: p.confidence, parsed: p.parsed })));
     return { merged, passes: passes.map(({ name, text, confidence, words }) => ({ name, text, confidence, words })), angle, probes, orientation, crop, timing };
   } finally {
     await worker.terminate();
