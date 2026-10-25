@@ -213,3 +213,4 @@ textarea { min-height: 96px; resize: vertical; }
 .tree-quick-link { text-align: center; text-decoration: none; }
 .scan-actions { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
 .scan-actions .btn { text-align: center; text-decoration: none; }
+.plate-retake-btn { display: block; width: 100%; margin-top: 8px; }

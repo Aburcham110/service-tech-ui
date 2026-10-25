@@ -364,19 +364,31 @@ function rawPanel(passes, chosen) {
   return d;
 }
 
-function buildConfirm(parsed, onConfirm, onCancel, passes) {
+/** Overall read quality is low: an ID field (model/serial) under 0.5 or an OCR hint about glare/blur. */
+export function needsRetake(parsed) {
+  const idConf = ID_FIELDS.map((n) => parsed.fields[n] ? parsed.fields[n].confidence : 0);
+  return Math.min(...idConf) < 0.5 || (parsed.hints || []).some((h) => /glare|blur|retake/i.test(h));
+}
+
+function buildConfirm(parsed, onConfirm, onCancel, passes, onRetake) {
   const wrap = el("div", "plate-confirm");
   wrap.setAttribute("role", "dialog");
   wrap.setAttribute("aria-label", "Confirm data plate");
   wrap.appendChild(el("h2", null, "Confirm data plate"));
   const nLow = parsed.lowConfidence.length;
   const brand = parsed.fields.brand && parsed.fields.brand.value;
-  const idConf = ID_FIELDS.map((n) => parsed.fields[n] ? parsed.fields[n].confidence : 0);
-  if (Math.min(...idConf) < 0.5 || (parsed.hints || []).some((h) => /glare|blur|retake/i.test(h))) {
+  if (needsRetake(parsed)) {
     const rb = el("div", "plate-retake", "");
     rb.setAttribute("role", "alert");
     rb.appendChild(el("strong", null, "Low confidence read. "));
     rb.appendChild(document.createTextNode("Retake closer and square-on, tilt slightly to kill glare, or straighten with the crop step — then check model and serial character by character."));
+    if (onRetake) {
+      const rt = el("button", "btn btn-primary plate-retake-btn", "📷 Retake");
+      rt.type = "button";
+      // One tap: drop this read and reopen the camera (same file input, so it stays a user gesture).
+      rt.addEventListener("click", () => { wrap.remove(); onRetake(); });
+      rb.appendChild(rt);
+    }
     wrap.appendChild(rb);
   }
   wrap.appendChild(el("p", "footer-note", "Check every value against the plate. Blank = not read. " +
@@ -526,7 +538,7 @@ export function mountPlateScan(container, onConfirm) {
       box.appendChild(buildConfirm(parsed, (values) => {
         status.textContent = "Plate values applied.";
         onConfirm(values);
-      }, () => { status.textContent = "Discarded."; }, res.passes));
+      }, () => { status.textContent = "Discarded."; }, res.passes, () => { status.textContent = "Retake: opening the camera…"; input.click(); }));
     } catch (e) {
       console.error(e);
       status.textContent = "OCR failed: " + (e && e.message ? e.message : e);

@@ -52,3 +52,13 @@ test("Start troubleshooting for this equipment opens the matching tree", () => {
   assert.equal(troubleshootHref({ brand: "Heatcraft" }, "freezer"), "tree.html?type=walk-in");
   assert.equal(troubleshootHref({}, "other"), "tree.html");
 });
+
+import { needsRetake } from "../tools/plate-scan.js";
+
+test("Retake is offered when overall confidence is low", () => {
+  const f = (m, s) => ({ model: { value: "X", confidence: m }, serial: { value: "Y", confidence: s } });
+  assert.equal(needsRetake({ fields: f(0.9, 0.9), hints: [] }), false);
+  assert.equal(needsRetake({ fields: f(0.9, 0.3), hints: [] }), true);
+  assert.equal(needsRetake({ fields: { model: { value: "X", confidence: 0.9 } }, hints: [] }), true); // serial not read
+  assert.equal(needsRetake({ fields: f(0.9, 0.9), hints: ["Glare detected on the plate"] }), true);
+});
