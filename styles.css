@@ -214,3 +214,8 @@ textarea { min-height: 96px; resize: vertical; }
 .scan-actions { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
 .scan-actions .btn { text-align: center; text-decoration: none; }
 .plate-retake-btn { display: block; width: 100%; margin-top: 8px; }
+.mh-terms, .mh-links { padding-left: 18px; }
+.mh-terms li { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.mh-terms code { flex: 1; word-break: break-word; }
+.mh-copy { padding: 4px 10px; min-height: 0; }
+.mh-label { margin-top: 12px; }

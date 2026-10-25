@@ -100,4 +100,11 @@ export function renderManuals(host, res, { brand, model } = {}) {
   n.className = "online-only";
   n.textContent = "Links open the OEM site (online only).";
   host.appendChild(n);
+  if (res.brand) {
+    const h = document.createElement("a");
+    h.className = "manuals-helper-link";
+    h.href = "manuals.html?" + new URLSearchParams({ brand: res.brand, model: model || "" }).toString();
+    h.textContent = " Offline search terms →";
+    host.appendChild(h);
+  }
 }

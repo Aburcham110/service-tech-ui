@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1419" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" type="image/png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Service Tech" />
+  <meta http-equiv="Cache-Control" content="no-cache" />
+  <title>Manuals helper — Service Tech</title>
+  <link rel="stylesheet" href="styles.css?v=11" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <a class="back" href="index.html" aria-label="Back">←</a>
+      <h1>Manuals helper</h1>
+    </header>
+    <div class="disclaimer" role="note">Search terms only — verify with OEM. Works offline: search terms plus the official OEM portal links already in the app. No PDFs.</div>
+    <label class="field"><span>Brand</span><select id="mh-brand"></select></label>
+    <label class="field"><span>Model (optional)</span><input id="mh-model" autocomplete="off" placeholder="From the data plate" /></label>
+    <div id="mh-root"></div>
+    <p class="footer-note">Online source of truth: <a href="https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba" target="_blank" rel="noopener">OEM official sources map</a> and <a href="https://app.notion.com/p/3d3402f833af8106af2ae647a39fcf48" target="_blank" rel="noopener">Manuals</a> in Notion <small class="online-only">(online only)</small>.</p>
+    <p class="footer-note">Educational only — verify with OEM / AHJ.</p>
+  </div>
+  <script src="app.js?v=11"></script>
+  <script type="module" src="tools/manuals-helper-app.js?v=12"></script>
+</body>
+</html>

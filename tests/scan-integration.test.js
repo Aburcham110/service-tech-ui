@@ -62,3 +62,41 @@ test("Retake is offered when overall confidence is low", () => {
   assert.equal(needsRetake({ fields: { model: { value: "X", confidence: 0.9 } }, hints: [] }), true); // serial not read
   assert.equal(needsRetake({ fields: f(0.9, 0.9), hints: ["Glare detected on the plate"] }), true);
 });
+
+import { readFileSync } from "node:fs";
+import { searchTerms, portalLinks, helperModel, LABEL } from "../tools/manuals-helper.js";
+const INDEX = JSON.parse(readFileSync(new URL("../data/manuals-index.json", import.meta.url), "utf8"));
+
+test("offline manuals helper: every brand has search terms and only URLs already in the index", () => {
+  assert.equal(LABEL, "Search terms only — verify with OEM");
+  const indexUrls = new Set([...Object.values(INDEX.brands).flatMap((b) => b.oem.map((o) => o.url)), ...INDEX.entries.map((e) => e.url)]);
+  const model = helperModel(INDEX);
+  assert.equal(model.length, Object.keys(INDEX.brands).length);
+  for (const b of model) {
+    assert.ok(b.terms.length >= 5, b.brand);
+    assert.ok(b.links.length >= 1, b.brand);
+    for (const l of b.links) {
+      assert.ok(indexUrls.has(l.url), "not in index: " + l.url);
+      assert.doesNotMatch(l.url, /notion\.(so|com)/); // Notion stays the online source, not a portal
+      assert.match(l.url, /^https:/);
+    }
+  }
+});
+
+test("offline manuals helper: model-specific terms; Trane families only from the index", () => {
+  assert.ok(searchTerms(INDEX, "Carrier", "24ACC636").includes("Carrier 24ACC636 service manual"));
+  assert.ok(searchTerms(INDEX, "Trane").some((t) => /5TTV \/ 5TTX \/ 5TTR/.test(t)));
+  assert.ok(!searchTerms(INDEX, "Goodman").some((t) => /\b5T/.test(t)));
+  assert.ok(searchTerms(INDEX, "Rheem").includes("Rheem QRD"));
+  assert.deepEqual(searchTerms(INDEX, "Nope"), []);
+  assert.ok(portalLinks(INDEX, "Carrier").find((l) => /hvacpartners/.test(l.url)).note.match(/login/i));
+});
+
+test("manuals.html: label, Notion as online source, no PDFs bundled", () => {
+  const html = readFileSync(new URL("../manuals.html", import.meta.url), "utf8");
+  assert.ok(html.includes("Search terms only — verify with OEM"));
+  assert.ok(html.includes("https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba"));
+  assert.ok(html.includes("Educational only"));
+  const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
+  assert.doesNotMatch(sw, /\.pdf/i);
+});
