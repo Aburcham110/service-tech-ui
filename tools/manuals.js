@@ -58,7 +58,7 @@ export function findManuals(index, { brand, model, family } = {}) {
 
 let cached = null;
 /** Loads the bundled index (precached by sw.js, so it works offline). */
-export function loadManualsIndex(url = new URL("../data/manuals-index.json?v=11", import.meta.url).href) {
+export function loadManualsIndex(url = new URL("../data/manuals-index.json?v=12", import.meta.url).href) {
   if (!cached) cached = fetch(url).then((r) => { if (!r.ok) throw new Error("manuals index " + r.status); return r.json(); }).catch((e) => { cached = null; throw e; });
   return cached;
 }
@@ -100,4 +100,11 @@ export function renderManuals(host, res, { brand, model } = {}) {
   n.className = "online-only";
   n.textContent = "Links open the OEM site (online only).";
   host.appendChild(n);
+  if (res.brand) {
+    const h = document.createElement("a");
+    h.className = "manuals-helper-link";
+    h.href = "manuals.html?" + new URLSearchParams({ brand: res.brand, model: model || "" }).toString();
+    h.textContent = " Offline search terms →";
+    host.appendChild(h);
+  }
 }

@@ -159,3 +159,19 @@ export function chooseTree({ equipment, unitType, brand, model } = {}) {
 
 export const treeHref = (id) => "tree.html?type=" + encodeURIComponent(id);
 export const toolHref = (id) => "tool.html?id=" + encodeURIComponent(id);
+
+/** High-frequency steps get a named one-tap link into a tool (tree.html renders these above the tool chips). */
+export const QUICK_LINKS = [
+  { tool: "superheat-subcool", label: "Check superheat/subcool", carries: ["refrigerant"] },
+  { tool: "electrical", label: "Check amps vs FLA", carries: [] },
+  { tool: "vacuum-coach", label: "Vacuum / decay", carries: [] },
+];
+
+/** Quick links for a node; `known` = { refrigerant } from the last confirmed scan (pre-selects it in the tool). */
+export function quickLinks(node, known = {}) {
+  return QUICK_LINKS.filter((q) => (node.tools || []).includes(q.tool)).map((q) => {
+    const params = new URLSearchParams({ id: q.tool });
+    q.carries.forEach((k) => { if (known[k]) params.set(k, known[k]); });
+    return { tool: q.tool, label: q.label, href: "tool.html?" + params.toString() };
+  });
+}

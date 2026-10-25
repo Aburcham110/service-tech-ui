@@ -9,11 +9,11 @@
    - Any other same-origin GET: network-first, falling back to cache.
    - Navigations to pages not in the cache while offline: offline.html.
    - Cross-origin (Notion, GitHub): not handled, network only. */
-const VERSION = "v11";
+const VERSION = "v12";
 const CACHE = "service-tech-" + VERSION;
 const OFFLINE_URL = "./offline.html";
 
-// Exact URLs the pages request (versioned ones include ?v=11).
+// Exact URLs the pages request (versioned ones include ?v=12).
 const ASSETS = [
   "./",
   "./index.html",
@@ -21,36 +21,41 @@ const ASSETS = [
   "./toolkit.html",
   "./tool.html",
   "./tree.html",
+  "./manuals.html",
   "./docs.html",
   OFFLINE_URL,
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
   "./apple-touch-icon.png",
-  "./styles.css?v=11",
-  "./app.js?v=11",
+  "./styles.css?v=12",
+  "./app.js?v=12",
   // Every tools/*.js module:
-  "./tools/tool-app.js?v=11",
+  "./tools/tool-app.js?v=12",
   "./tools/registry.js",
   "./tools/registry-a.js",
   "./tools/registry-b.js",
-  "./tools/logic.js?v=11",
-  "./tools/logic-1.js?v=11",
+  "./tools/logic.js?v=12",
+  "./tools/logic-1.js?v=12",
   "./tools/logic-1b.js",
   "./tools/logic-2.js",
   "./tools/logic-2a.js",
   "./tools/logic-2b.js",
-  "./tools/pt-tables.js?v=11",
-  "./tools/plate-parse.js?v=11",
-  "./tools/plate-image.js?v=11",
-  "./tools/plate-scan.js?v=11",
-  "./tools/plate-crop.js?v=11",
-  "./tools/call-scan.js?v=11",
-  "./tools/manuals.js?v=11",
-  "./tools/trees.js?v=11",
-  "./tools/tree-app.js?v=11",
+  "./tools/pt-tables.js?v=12",
+  "./tools/plate-parse.js?v=12",
+  "./tools/plate-image.js?v=12",
+  "./tools/plate-scan.js?v=12",
+  "./tools/plate-crop.js?v=12",
+  "./tools/call-scan.js?v=12",
+  "./tools/manuals.js?v=12",
+  "./tools/trees.js?v=12",
+  "./tools/tree-app.js?v=12",
+  "./tools/prefill.js?v=12",
+  "./tools/call-card.js?v=12",
+  "./tools/manuals-helper.js?v=12",
+  "./tools/manuals-helper-app.js?v=12",
   // Manual links index (generated from the Notion Manuals page + OEM sources map).
-  "./data/manuals-index.json?v=11",
+  "./data/manuals-index.json?v=12",
   // On-device OCR (vendored Tesseract.js 7.0.0, ~15 MB; see vendor/tesseract/README.md).
   // All three LSTM core builds: the worker picks one from the device's wasm SIMD support.
   "./vendor/tesseract/tesseract.min.js",
