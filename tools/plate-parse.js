@@ -5,9 +5,10 @@
  * { text, words: [{ text, confidence }] } where confidence is Tesseract's 0-100
  * per-word value.
  *
- * It returns { fields, lowConfidence, text }. fields[name] = { value, confidence (0..1),
- * quality (0..1), ocr (0..100|null), raw, note? } and is present ONLY when the
- * text actually contains a match. Nothing is ever guessed or defaulted.
+ * Returns { fields, lowConfidence, hints, text }. fields[name] = { value,
+ * confidence (0..1), quality (0..1), ocr (0..100|null), raw, note? } and is
+ * present ONLY when the text actually contains a match. Nothing is ever guessed
+ * or defaulted: a field that isn't on the plate stays absent (blank).
  */
 
 export const LOW_CONFIDENCE = 0.6;
@@ -17,42 +18,69 @@ export const REFRIGERANTS = [
   "452B", "513A", "507A", "507", "290", "744", "1234YF", "1234ZE", "466A", "454C", "455A",
 ];
 
-const NUM = "(\\d{1,4}(?:[.,]\\d{1,3})?)";
+const BRANDS = [
+  ["Carrier", /\bCARR[I1l]ER\b/], ["Bryant", /\bBRYANT\b/], ["Payne", /\bPAYNE\b/],
+  ["Trane", /\bTRANE\b/], ["American Standard", /\bAMERICAN\s+STANDARD\b/],
+  ["Goodman", /\bGOODMAN\b/], ["Amana", /\bAMANA\b/], ["Daikin", /\bDA[I1l]K[I1l]N\b/],
+  ["Lennox", /\bLENNOX\b/], ["Rheem", /\bRHEEM\b/], ["Ruud", /\bRUUD\b/],
+  ["Emerson / Copeland", /\bEMERSON\b[\s\S]{0,80}\bCOPELAND\b|\bCOPELAND\b[\s\S]{0,80}\bEMERSON\b/], ["Copeland", /\bCOPELAND\b/],
+  ["Emerson / Copeland", /\bEMERSON\b/], ["Unitary Products (UPG)", /\bUN[I1l]T[AE]RY\s+PRODUCTS\b|\bPRODUCTS\s+GROUP\b/], ["Heatcraft", /\bHEATCRAFT\b/], ["Bohn", /\bBOHN\b/],
+  ["Larkin", /\bLARKIN\b/], ["Mitsubishi Electric", /\bM[I1l]TSUB[I1l]SH[I1l]\b/],
+  ["Fujitsu", /\bFUJ[I1l]TSU\b/], ["York", /\bYORK\b/], ["LG", /\bLG\s+ELECTRONICS\b/],
+  ["Samsung", /\bSAMSUNG\b/], ["Gree", /\bGREE\b/], ["Bosch", /\bBOSCH\b/],
+  ["Heil", /\bHE[I1l]L\b/], ["Tempstar", /\bTEMPSTAR\b/], ["Midea", /\bM[I1l]DEA\b/],
+  ["Toshiba", /\bTOSH[I1l]BA\b/], ["Panasonic", /\bPANASON[I1l]C\b/], ["Tecumseh", /\bTECUMSEH\b/],
+  ["MRCOOL", /\bMRCOOL\b/], ["Frigidaire", /\bFR[I1l]G[I1l]DA[I1l]RE\b/], ["KeepRite", /\bKEEPR[I1l]TE\b/],
+];
 
-/** Fix common OCR slips inside tokens that are mostly digits (O→0, l/I→1). */
-function fixDigits(line) {
-  return line.replace(/\b[0-9OIl.,]*\d[0-9OIl.,]*\b/g, (tok) => tok.replace(/O/g, "0").replace(/[Il]/g, "1"));
+// ---------- helpers ----------
+
+function round(n, d = 2) { const f = 10 ** d; return Math.round(n * f) / f; }
+function toNum(s) { return s == null ? null : parseFloat(String(s).replace(",", ".")); }
+
+/**
+ * Numeric-context OCR repair: inside runs that contain a digit, O/o/Q/D -> 0 and
+ * I/l/|/! -> 1 when touching a digit; S->5, B->8, Z->2 only when sandwiched
+ * between digits (or a decimal point). Units like "OZ" are protected.
+ */
+export function fixDigits(s) {
+  s = s.replace(/(\d)\s*OZ\b/gi, "$1 \u0001");
+  s = s.replace(/[0-9OoQDIl|!SBZ.,]*\d[0-9OoQDIl|!SBZ.,]*/g, (run) => {
+    const ch = run.split("");
+    const isD = (c) => c != null && /[\d.,]/.test(c);
+    for (let i = 0; i < ch.length; i++) {
+      const c = ch[i], p = ch[i - 1], n = ch[i + 1];
+      const nearD = /\d/.test(p || "") || /\d/.test(n || "") || (/[.,]/.test(p || "") && /\d/.test(ch[i - 2] || ""));
+      if (/[OoQD]/.test(c) && nearD) ch[i] = "0";
+      else if (/[Il|!]/.test(c) && nearD) ch[i] = "1";
+      else if (/[SBZ]/.test(c) && isD(p) && isD(n)) ch[i] = { S: "5", B: "8", Z: "2" }[c];
+    }
+    return ch.join("");
+  });
+  return s.replace(/\u0001/g, "OZ");
 }
 
-function toNum(s) {
-  return s == null ? null : parseFloat(String(s).replace(",", "."));
-}
+function normWord(w) { return String(w || "").toUpperCase().replace(/[^A-Z0-9.]/g, ""); }
 
-function round(n, d = 2) {
-  const f = 10 ** d;
-  return Math.round(n * f) / f;
-}
-
-function normWord(w) {
-  return String(w || "").toUpperCase().replace(/[^A-Z0-9.]/g, "");
-}
-
-/** Mean Tesseract confidence of the OCR words that make up `raw`, or null. */
+/** Mean Tesseract confidence of the OCR word(s) that make up `raw`, or null. */
 function ocrConfidence(raw, words) {
   if (!words || !words.length || !raw) return null;
-  const target = normWord(raw);
-  if (!target) return null;
-  // Prefer words that are exactly the value; otherwise words that make up a
-  // large part of it (a stray "6" must not count toward "62.9").
-  let hits = words.filter((w) => normWord(w.text).replace(/\.$/, "") === target.replace(/\.$/, ""));
-  if (!hits.length) {
-    hits = words.filter((w) => {
-      const n = normWord(w.text);
-      return n.length >= 2 && ((target.includes(n) && n.length * 2 >= target.length) || (n.includes(target) && target.length * 2 >= n.length));
-    });
+  const parts = String(raw).split(/\s+/).map((p) => normWord(fixDigits(p)).replace(/\.$/, "")).filter(Boolean);
+  if (!parts.length) return null;
+  const confs = [];
+  for (const target of parts) {
+    let hits = words.filter((w) => normWord(fixDigits(w.text)).replace(/\.$/, "") === target);
+    if (!hits.length) {
+      hits = words.filter((w) => {
+        const n = normWord(fixDigits(w.text));
+        return n.length >= 2 && ((target.includes(n) && n.length * 2 >= target.length) || (n.includes(target) && target.length * 2 >= n.length));
+      });
+    }
+    // Several identical words (e.g. "60" twice): the best-read one is the evidence.
+    if (hits.length) confs.push(Math.max(...hits.map((w) => Number(w.confidence) || 0)));
   }
-  if (!hits.length) return null;
-  return hits.reduce((a, w) => a + (Number(w.confidence) || 0), 0) / hits.length;
+  if (!confs.length) return null;
+  return confs.reduce((a, b) => a + b, 0) / confs.length;
 }
 
 function field(value, quality, raw, words, note) {
@@ -63,136 +91,420 @@ function field(value, quality, raw, words, note) {
   return f;
 }
 
-/** First match across lines. Returns { m, line, index } or null. */
-function findLine(lines, re) {
-  for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(re);
-    if (m) return { m, line: lines[i], index: i };
-  }
-  return null;
+// ---------- certification / regulatory text ----------
+
+const CERT_TOKENS = [
+  /\bCONTAINS\s+FCC\b/gi, /\bFCC\s*[-:]?\s*ID\s*[:.]?\s*[A-Z0-9-]+/gi, /\bFCC\b[^\n]*?(?=$)/gi,
+  /\bIC\s*[-:]?\s*ID\s*[:.]?\s*[A-Z0-9-]+/gi, /\bIC\s*:\s*[0-9A-Z-]+/gi,
+  /\b(?:NO\.?\s*)?(?:UL\s*|CSA\s*|IEC\s*|EN\s*|CAN\/CSA[-\s]*)?60335\s*[-–]\s*\d+(?:\s*[-–]\s*\d+)?\.?/gi,
+  /\bC\s?22\s?\.\s?2(?:\s*NO\.?\s*[\d.-]+)?/gi, /\bUL\s*(?:STD\.?\s*)?(?:NO\.?\s*)?(?:1995|484|250|60335|1563)\b/gi,
+  /\bINTERTEK\b\s*\d*/gi, /\bETL\s*(?:LISTED|CLASSIFIED)?\b/gi, /\bCONFORMS\s+TO\b/gi, /\bCERTIFIED\s+TO\b/gi,
+  /\b(?:UL|CSA)\s+STD\.?/gi, /\bAHRI\b[^\n]*/gi, /\bENERGY\s+STAR\b/gi, /\bIPX\d\b/gi, /\bIP\d{2}\b/gi,
+  /\bLISTED\b/gi, /\bCSA\b/gi, /\b(?:c\s*)?US\b(?=\s*$)/g,
+];
+const CERT_LINE = /\b(?:ETL|INTERTEK|CONFORMS|CERTIFIED|LISTED|FCC|IC\s*[-:]?\s*ID|IC\s*:|60335|C\s?22\s?\.\s?2|UL\s+STD|CSA\s+STD|IPX\d)\b/i;
+const FIELD_LABEL = /\b(?:MODEL|MOD|M\/N|SERIAL|SER[I1l]AL|S\/N|VOLT|SOURCE|POWER|SUPPLY|PH|HZ|RLA|LRA|FLA|FAN|MCA|MOP|MOCP|AMP|FUSE|BKR|REFRIG|CHARGE|COMP)/i;
+
+/** Remove certification marks/standard numbers so their digits never become field values. */
+function stripCerts(line) {
+  if (!CERT_LINE.test(line)) return line;
+  let out = line;
+  for (const re of CERT_TOKENS) out = out.replace(re, " ");
+  out = out.replace(/\s+/g, " ").trim();
+  // A line that was only certification text (e.g. "91987", "NO.") is dropped.
+  if (!FIELD_LABEL.test(out) && !/[A-Z]{3,}/i.test(out.replace(/\bNO\b\.?/gi, ""))) return "";
+  return out;
 }
 
-/** Labelled number: "LABEL ... 12.3" on the same line, or the label alone with the number on the next line. */
-function labelled(lines, labelRe, opts = {}) {
-  const same = new RegExp("(?:" + labelRe.source + ")" + "\\s*(?:\\((?:A|AMPS?)\\))?\\s*[:=.#-]?\\s*" + NUM + "(?!\\s*(?:HZ|V\\b|VOLT|PH|%))", "i");
+// ---------- generic labelled number ----------
+
+const NUMTOK = "([0-9OoQDIl|!SBZ]{0,3}\\d[0-9OoQDIl|!SBZ]{0,3}(?:[.,][0-9OoQDIl|!SBZ]{1,3})?)";
+const AMP_SUFFIX = "(?!\\s*(?:HZ|V\\b|VAC|VOLT|PH|%|KW|W\\b|HP\\b(?!\\s*[:.]?\\s*\\d)|MM|IN\\b|PSI|MPA|KPA|\\/\\d|[-–]\\s*\\d{3}))";
+
+function cleanNum(raw) {
+  const fixed = fixDigits(raw);
+  if (!/^\d+(?:[.,]\d+)?$/.test(fixed)) return null;
+  // "035" on an amps line is "0.35" with the printed decimal point lost.
+  if (/^0\d{1,2}$/.test(fixed)) return { num: toNum("0." + fixed.slice(1)), fixed: "0." + fixed.slice(1), corrected: true, decimal: true };
+  return { num: toNum(fixed), fixed, corrected: fixed !== raw };
+}
+
+/**
+ * Labelled number: "LABEL ... 12.3" on the same line (':' '.' '-' '=' or no
+ * separator), or the label at the end of a line with the number starting one of
+ * the next two lines. Returns all matches in order: [{num, raw, quality, index, line}].
+ */
+function labelledAll(lines, labelRe, opts = {}) {
+  const src = "(?:" + labelRe.source + ")";
+  const unit = "\\s*(?:\\(\\s*(?:A|AMPS?)\\s*\\)|AMPS?\\b)?";
+  const paren = opts.skipParen ? "[.,]?(?:\\s*\\([^)]*\\)?)?" : "";
+  const nextLbl = "(?!\\s*(?:R\\.?L\\.?A|L\\.?R\\.?A|F\\.?L\\.?A)\\b)";
+  const same = new RegExp(src + unit + paren + "\\s*[:=.#\\-]?\\s*" + NUMTOK + "(?![.,]?\\d)" + AMP_SUFFIX.replace("%|", ""), "gi");
+  const before = opts.valueBefore ? new RegExp("(?:^|[\\s:])" + NUMTOK + "\\s*\"?\\s*" + src + "(?![A-Z])", "gi") : null;
+  const alone = new RegExp(src + unit + paren + "\\s*[:=.\\-]?\\s*$", "i");
+  const out = [];
   for (let i = 0; i < lines.length; i++) {
-    if (opts.lineFilter && !opts.lineFilter(lines[i])) continue;
-    const m = lines[i].match(same);
-    if (m) return { num: toNum(m[1]), raw: m[1], quality: 1, line: lines[i] };
-  }
-  // Label on its own at the end of a line, value starts the next line (lower quality).
-  const alone = new RegExp("(?:" + labelRe.source + ")" + "\\s*(?:\\((?:A|AMPS?)\\))?\\s*[:=]?\\s*$", "i");
-  for (let i = 0; i < lines.length - 1; i++) {
-    if (opts.lineFilter && !opts.lineFilter(lines[i])) continue;
+    if (opts.lineFilter && !opts.lineFilter(lines[i], i, lines)) continue;
+    same.lastIndex = 0;
+    let m, found = false;
+    // "13.6 RLA 73 LRA": amps written value-first; the line ends with a label and has no "LABEL:".
+    const firstLbl = lines[i].search(/(?:R\.?L\.?A|L\.?R\.?A|F\.?L\.?A)\b/i);
+    const beforeStyle = before && firstLbl > 0 && /\d\s*["']?\s*$/.test(lines[i].slice(0, firstLbl)) && new RegExp(NUMTOK + "\\s*\"?\\s*(?:R\\.?L\\.?A|L\\.?R\\.?A|F\\.?L\\.?A|AMPS)\\.?(?:\\s+[\\d\\/.]+\\s*HP)?[^A-Z0-9]*$", "i").test(lines[i]) && !/(?:R\.?L\.?A|L\.?R\.?A|F\.?L\.?A)\.?\s*[:=]/i.test(lines[i]);
+    if (!beforeStyle) while ((m = same.exec(lines[i]))) {
+      const c = cleanNum(m[m.length - 1]);
+      if (!c) continue;
+      const tail = lines[i].slice(m.index + m[0].length);
+      if (/^\s*%/.test(tail) && !opts.marks) continue;
+      const r = { num: c.num, raw: c.fixed, quality: c.corrected ? 0.85 : 1, corrected: c.corrected, decimal: c.decimal, index: i, line: lines[i], match: m };
+      if (/^[%°*º]/.test(tail)) { r.quality *= 0.5; r.obscured = true; }
+      out.push(r);
+      found = true;
+    }
+    if (beforeStyle) {
+      before.lastIndex = 0;
+      while ((m = before.exec(lines[i]))) {
+        const c = cleanNum(m[1]);
+        if (!c) continue;
+        out.push({ num: c.num, raw: c.fixed, quality: 0.95 * (c.corrected ? 0.85 : 1), corrected: c.corrected, decimal: c.decimal, index: i, line: lines[i], match: m });
+        found = true;
+      }
+    }
+    if (found) continue;
     if (alone.test(lines[i])) {
-      const m = lines[i + 1].match(new RegExp("^\\s*" + NUM + "\\b"));
-      if (m) return { num: toNum(m[1]), raw: m[1], quality: 0.75, line: lines[i + 1] };
+      for (let k = 1; k <= 2 && i + k < lines.length; k++) {
+        const nm = lines[i + k].match(new RegExp("^\\s*" + NUMTOK + AMP_SUFFIX + "\\s*(?:A|AMPS?)?\\b"));
+        if (nm) {
+          const c = cleanNum(nm[1]);
+          if (c) { out.push({ num: c.num, raw: c.fixed, quality: (k === 1 ? 0.85 : 0.75) * (c.corrected ? 0.85 : 1), corrected: c.corrected, decimal: c.decimal, index: i + k, line: lines[i + k], match: nm, split: true }); break; }
+        }
+        if (FIELD_LABEL.test(lines[i + k])) break;
+      }
+      // Sparse-text layouts sometimes put the value on the line BEFORE the label.
+      if (opts.prevLine && !out.some((r) => r.index > i) && i > 0) {
+        const pm = lines[i - 1].match(new RegExp("^[\\s\\-:=]*" + NUMTOK + "(?![.,]?\\d)([%°*º]?)[\\s.,]*$"));
+        const c = pm && cleanNum(pm[1]);
+        if (c) out.push({ num: c.num, raw: c.fixed, quality: 0.6 * (pm[2] ? 0.8 : 1), corrected: c.corrected, decimal: c.decimal, index: i - 1, line: lines[i - 1], match: pm, obscured: !!pm[2] });
+      }
     }
   }
+  return out;
+}
+
+const numField = (r, note) => r && { value: r.num, raw: r.raw, quality: r.quality * (r.decimal ? 0.6 : 1), note: [r.decimal ? "decimal point inferred (read without it)" : r.corrected ? "OCR letters read as digits" : null, r.obscured ? "partly obscured: check the plate" : null, note].filter(Boolean).join("; ") || undefined };
+
+// ---------- model / serial ----------
+
+const LABEL_WORDS = /^(?:MODEL|MODELE|MODÈLE|SERIAL|SERIE|SÉRIE|NUMBER|NO\.?|VOLTS?|SOURCE|S\/N|M\/N|MFG|DATE|REFRIGERANT|CHARGE|PH|HZ|RLA|LRA|FLA|MCA|MOP|MOCP)$/i;
+const MODEL_LABEL = /\b(?:MODEL|MODE1|M0DEL|MOD|MDL)(?![A-Z])\.?(?:\s*\/\s*MOD[EÈ]LE)?\s*(?:NO\.?|N0\.?|NUMBER|#|N°)?|\bM\s?\/\s?N\b/i;
+const SERIAL_LABEL = /\b(?:SER[I1l|]AL|SER)(?![A-Z])\.?(?:\s*\/\s*S[EÉ]RIE)?\s*(?:NO\.?|N0\.?|NUMBER|#|N°)?|\bS\s?\/\s?N\b/i;
+const IDENT_TOKEN = /^[A-Z0-9][A-Z0-9\-\/.]*[A-Z0-9]$/;
+const CONFUSABLE = /\d[OIlSBZQ]\d|[A-Z][0278][A-Z]|[OIl](?=\d{2})|\d{2}[OIl]\b|Q/;
+
+/** Take the identifier tokens after a label: first token + split-digit groups ("WWB 015057"). */
+function takeIdent(rest) {
+  const toks = rest.replace(/^[\s:#.,\-]+/, "").split(/\s+/).filter(Boolean);
+  if (!toks.length) return null;
+  const first = toks[0].replace(/[,;:]+$/, "").toUpperCase();
+  if (!IDENT_TOKEN.test(first) || first.length < 3 || LABEL_WORDS.test(first)) return null;
+  let value = first, raw = toks[0], joined = false;
+  for (let i = 1; i < toks.length; i++) {
+    const t = toks[i].replace(/[,;]+$/, "").toUpperCase();
+    // Printed letter-spaced digits ("WWB 0 1 5 0 5 7" / "WWB 015057") are one serial.
+    if (/^\d{1,8}$/.test(t) && value.length + t.length <= 20) { value += t; raw += " " + toks[i]; joined = true; }
+    else break;
+  }
+  return { value, raw, joined };
+}
+
+function parseIdent(rawLines, labelRe, otherLabelRe, which) {
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i];
+    const m = line.match(labelRe);
+    if (!m) continue;
+    let rest = line.slice(m.index + m[0].length);
+    // Stop at the next label on the same line ("MODEL NO. X  SERIAL NO. Y").
+    const nxt = rest.match(otherLabelRe);
+    const restBefore = nxt ? rest.slice(0, nxt.index) : rest;
+    let r = takeIdent(restBefore), quality = 1, notes = [];
+    if (!r && !restBefore.trim()) {
+      // Header row "MODEL NO.   SERIAL NO." with values on the next line, or label alone.
+      const next = rawLines[i + 1];
+      if (next && !/^\W*(?:VOLTS?|SOURCE|PH|HZ|RLA|LRA|FLA|MCA|MOP|REFRIG|CHARGE|COMP|FAN|DESIGN|MIN|MAX)\b/i.test(next)) {
+        const toks = next.split(/\s+/).filter((t) => IDENT_TOKEN.test(t.toUpperCase()) && /\d/.test(t));
+        const bothLabels = nxt && labelRe.test(line);
+        const pick = bothLabels ? (which === "first" ? toks[0] : toks[1]) : toks[0];
+        if (pick) { r = { value: pick.toUpperCase(), raw: pick, joined: false }; quality = 0.85; }
+      }
+    }
+    if (!r) continue;
+    if ((r.value.match(/\d/g) || []).length < 2) continue;
+    if (r.joined) { quality *= 0.9; notes.push("joined split characters"); }
+    if (CONFUSABLE.test(r.value)) { quality *= 0.55; notes.push("check O/0, I/1, S/5, B/8, Z/2"); }
+    if (which === "second") {
+      // Barcode caption "S<serial>" elsewhere on the plate confirms the reading.
+      const canon = (x) => x.toUpperCase().replace(/O/g, "0").replace(/[Il]/g, "1");
+      const target = canon(r.value);
+      if (rawLines.some((l, j) => j !== i && l.split(/\s+/).some((t) => { const c = canon(t.replace(/[^A-Za-z0-9]/g, "")); return c === target || c === "S" + target || c === "5" + target; }))) {
+        quality = Math.min(1, quality / 0.55 * 0.8); notes.push("matches barcode caption");
+      }
+    }
+    return { value: r.value, raw: r.raw, quality, note: notes.join("; ") || undefined };
+  }
   return null;
 }
 
-const IDENT = "([A-Z0-9][A-Z0-9\\-\\/.]{3,}[A-Z0-9])";
+// ---------- refrigerant / charge ----------
 
-function parseIdent(lines, labelRe) {
-  const r = findLine(lines, new RegExp("(?:" + labelRe.source + ")" + "\\s*[:#.]?\\s*" + IDENT, "i"));
-  if (!r) return null;
-  let v = r.m[1].toUpperCase();
-  // A label word can't be the value ("MODEL NO SERIAL ...").
-  if (/^(SERIAL|MODEL|NUMBER|VOLTS?)$/.test(v)) return null;
-  // Identifiers have digits; pure words are probably a mis-read label.
-  const q = /\d/.test(v) ? 1 : 0.4;
-  return { value: v, raw: r.m[1], quality: q };
+function normRefrigLine(l) {
+  return l
+    .replace(/REFR[I1l|]G(?:ERANT)?/gi, (m) => m.replace(/[1l|]/g, "I"))
+    .replace(/\b(R|HFC|HFO)(\s?-?\s?)([0-9OIl]{2,4})([A-Z]{0,2})\b/gi, (m, p, sep, d, suf) => p + sep + d.replace(/O/g, "0").replace(/[Il]/g, "1") + suf);
 }
 
 function parseRefrigerant(lines) {
-  // OCR slips inside refrigerant codes: "R-41OA" -> "R-410A", "REFRlGERANT" -> "REFRIGERANT".
-  lines = lines.map((l) => l
-    .replace(/REFR[l1|]GERANT/gi, "REFRIGERANT")
-    .replace(/\bR(\s?-?\s?)([0-9OIl]{2,4})([A-Z]{0,2})\b/g, (m, sep, d, suf) => "R" + sep + d.replace(/O/g, "0").replace(/[Il]/g, "1") + suf));
+  lines = lines.map(normRefrigLine);
   const codes = REFRIGERANTS.map((c) => c.replace(/([A-Z])$/, "$1?")).join("|");
-  // Optional "R" prefix only after a REFRIGERANT label; otherwise require R.
-  const withR = new RegExp("\\bR\\s?[-\\u2010-\\u2014]?\\s?(" + codes + ")\\b", "i");
-  const labelled = new RegExp("REFRIG(?:ERANT)?\\.?\\s*(?:TYPE)?\\s*[:.]?\\s*(?:HFC-?|HFO-?)?R?\\s?[-]?\\s?(" + codes + ")\\b", "i");
-  let r = findLine(lines, labelled), quality = 1;
-  if (!r) { r = findLine(lines, withR); quality = 0.85; }
+  const withR = new RegExp("\\b(?:R|HFC|HFO)\\s?[-\\u2010-\\u2014]?\\s?(" + codes + ")(?![0-9])\\b", "i");
+  const lab = new RegExp("REFRIG(?:ERANT)?\\.?\\s*(?:TYPE)?\\s*[:.\\-]?\\s*(?:HFC|HFO)?\\s?-?\\s?R?\\s?-?\\s?(" + codes + ")(?![0-9])\\b", "i");
+  let r = null, quality = 1;
+  for (const l of lines) { const m = l.match(lab); if (m) { r = m; break; } }
+  if (!r) for (const l of lines) { const m = l.match(withR); if (m) { r = m; quality = 0.85; break; } }
   if (!r) return null;
-  let code = r.m[1].toUpperCase();
-  // OCR often drops the trailing letter. Fill it back in only where the
-  // family has a single common blend, and say so.
-  let note;
-  const exact = REFRIGERANTS.includes(code);
-  if (!exact) {
+  let code = r[1].toUpperCase(), note;
+  if (!REFRIGERANTS.includes(code)) {
     const cand = REFRIGERANTS.filter((c) => c.startsWith(code) && c.length === code.length + 1);
     if (cand.length === 1) { code = cand[0]; quality *= 0.6; note = "suffix letter inferred from OCR text"; }
     else if (cand.length > 1) { quality *= 0.3; note = "ambiguous blend suffix"; }
   }
-  return { value: "R-" + code, raw: r.m[0], quality, note };
+  return { value: "R-" + code, raw: r[0], quality, note };
 }
 
+const NUM = "(\\d{1,5}(?:[.,]\\d{1,3})?)";
+
 function parseCharge(lines) {
-  const label = /(?:FACTORY\s*)?(?:CHARGE|CHG|CHRG)\b|REFRIG(?:ERANT)?\b[^\n]*?\b(?:LBS?|OZ|KG)\b/i;
-  const reLbOz = new RegExp(NUM + "\\s*(?:LBS?\\.?|POUNDS?|#)\\s*[,-]?\\s*(?:" + NUM + "\\s*(?:OZ\\.?|OUNCES?))?", "i");
+  const label = /\b(?:FACTORY\s*)?(?:CHARGE[D]?|CHG|CHRG)\b|\bREFRIG(?:ERANT)?\b|\b(?:R|HFC)\s?-?\s?\d{2,4}[A-Z]?\b/i;
+  const bad = /\bTOTAL\s*CHARGE\b|\b(?:WEIGHT|WT\.?|NET|GROSS|SHIPPING|SHIP\.?|PSI|PSIG|KPA|MPA|FT\.?|IN\.?\s*LBS?|FT\.?\s*LBS?)\b/i;
+  const reLbOz = new RegExp(NUM + "\\s*-?\\s*[\"'“”‘’]?\\s*(?:LBS?\\.?|[I1|]BS\\.?|POUNDS?|#)\\s*[,\\-]?\\s*(?:" + NUM + "\\s*(?:OZ\\.?|OUNCES?))?", "i");
   const reOz = new RegExp(NUM + "\\s*(?:OZ\\.?|OUNCES?)\\b", "i");
-  const reKg = new RegExp(NUM + "\\s*KG\\b", "i");
-  const ordered = lines.map((l, i) => ({ l, i, lab: label.test(l) })).sort((a, b) => b.lab - a.lab);
-  for (const { l, lab } of ordered) {
-    let lb = null, oz = null, kg = null, raw = null;
+  const reKg = new RegExp(NUM + "\\s*KGS?\\b", "i");
+  const reG = new RegExp("(?<![.\\d])(\\d{2,5})\\s*G\\b(?!\\s*[A-Z])", "i");
+  const cands = [];
+  lines.forEach((l, i) => {
+    if (bad.test(l)) return;
+    if (label.test(l)) cands.push({ l, q: 1 });
+    else if (i > 0 && /\b(?:CHARGED?|CHG)\b\s*[:.]?\s*$/i.test(lines[i - 1])) cands.push({ l, q: 0.85 });
+  });
+  for (const { l, q } of cands) {
+    let lb = null, oz = null, kg = null, raw = null, unitNote;
     const m = l.match(reLbOz);
     if (m) { lb = toNum(m[1]); oz = m[2] ? toNum(m[2]) : 0; raw = m[0]; }
-    else {
-      const mo = l.match(reOz);
-      if (mo) { lb = 0; oz = toNum(mo[1]); raw = mo[0]; }
-    }
+    else { const mo = l.match(reOz); if (mo) { lb = 0; oz = toNum(mo[1]); raw = mo[0]; } }
     const mk = l.match(reKg);
     if (mk) kg = toNum(mk[1]);
+    else { const mg = l.match(reG); if (mg) { kg = toNum(mg[1]) / 1000; unitNote = "converted from g"; if (!raw) raw = mg[0]; } }
     if (lb == null && kg == null) continue;
-    let totalLb = lb != null ? lb + oz / 16 : kg * 2.20462;
-    const quality = (lab ? 1 : 0.55) * (lb != null ? 1 : 0.9);
-    if (lb == null) raw = mk[0];
-    totalLb = round(totalLb, 2);
-    const wholeLb = Math.floor(totalLb + 1e-9);
-    const remOz = round((totalLb - wholeLb) * 16, 1);
-    let note = lb == null ? "converted from kg" : undefined;
-    if (lb != null && kg != null && Math.abs(kg * 2.20462 - totalLb) > 0.15 * totalLb) note = "lb and kg on plate disagree";
-    return {
-      value: { lb: totalLb, oz: round(totalLb * 16, 1), display: `${wholeLb} lb ${remOz} oz (${totalLb} lb)` },
-      raw, quality: note === "lb and kg on plate disagree" ? quality * 0.5 : quality, note,
-    };
+    if (lb == null && mk) raw = mk[0];
+    let totalLb = round(lb != null ? lb + oz / 16 : kg * 2.20462, 2);
+    if (!(totalLb > 0 && totalLb < 400)) continue;
+    let quality = q * (lb != null ? 1 : 0.9);
+    if (lb === 0 && oz < 16) quality *= 0.7; // lone "14 oz": the pounds may be unread
+    let note = lb == null ? (unitNote || "converted from kg") : undefined;
+    if (lb != null && kg != null && Math.abs(kg * 2.20462 - totalLb) > 0.15 * totalLb) { note = "lb and kg on plate disagree"; quality *= 0.5; }
+    const exactLb = lb != null ? lb + oz / 16 : kg * 2.20462;
+    const wholeLb = Math.floor(exactLb + 1e-9);
+    const remOz = round((exactLb - wholeLb) * 16, 1);
+    return { value: { lb: totalLb, oz: round(totalLb * 16, 1), display: `${wholeLb} lb ${remOz} oz (${totalLb} lb)` }, raw, quality, note };
   }
   return null;
 }
 
+// ---------- electrical ----------
+
 const STD_VOLTS = [100, 110, 115, 120, 127, 200, 208, 220, 230, 240, 265, 277, 380, 400, 415, 440, 460, 480, 575, 600];
+const VOLT_LABEL = /\b(?:VOLTS?|VOLTAGE|SOURCE|POWER\s*SUPPLY|SUPPLY|RATED\s*VOLTAGE|V[-\/]PH[-\/]HZ|VOLTS?\s*\/\s*PH(?:ASE)?\s*\/\s*HZ|ELEC(?:TRICAL)?\.?\s*(?:DATA|RATING)?|V\.?A\.?C\.?)\b/i;
+
+function normVolt(s) { return s.replace(/\s+/g, "").replace(/[-–]/g, "/").replace(/V$/i, ""); }
+function voltOk(v) { return v.split("/").map(Number).every((p) => STD_VOLTS.includes(p)); }
 
 function parseElectrical(lines) {
   const out = {};
-  // Combined "208/230-1-60" or "460-3-60".
-  const combo = findLine(lines, /\b(\d{3}(?:\s*[\/-]\s*\d{3})?)\s*V?\s*[-\/]\s*([13])\s*[-\/]\s*(50|60)\b/i);
-  if (combo) {
-    out.voltage = { value: combo.m[1].replace(/\s+/g, "").replace(/-/g, "/"), raw: combo.m[1], quality: 0.9 };
-    out.phase = { value: Number(combo.m[2]), raw: combo.m[2], quality: 0.9 };
-    out.hz = { value: Number(combo.m[3]), raw: combo.m[3], quality: 0.9 };
+  const V = "(\\d{3}(?:\\s*[\\/\\-–]\\s*\\d{3})?)";
+  // Combined "208/230-1-60", "460/3/60", "208-230/1/60", "230V-1PH-60HZ".
+  for (const l of lines) {
+    const m = l.match(new RegExp("\\b" + V + "\\s*V?\\s*[-\\/]\\s*([13])\\s*(?:PH|Ø)?\\s*[-\\/]\\s*(50|60)\\s*(?:HZ)?\\b", "i"));
+    if (m && voltOk(normVolt(m[1]))) {
+      out.voltage = { value: normVolt(m[1]), raw: m[1], quality: 0.95 };
+      out.phase = { value: Number(m[2]), raw: m[2], quality: 0.95 };
+      out.hz = { value: Number(m[3]), raw: m[3], quality: 0.95 };
+      break;
+    }
+  }
+  if (!out.voltage) for (const l of lines) {
+    const m = l.match(new RegExp("\\b" + V + "\\s*V(?:AC)?\\s*,?\\s*([13])\\s*(?:PH|Ø|PHASE)\\b\\.?\\s*,?\\s*(50|60)\\s*HZ\\b", "i"));
+    if (m && voltOk(normVolt(m[1]))) {
+      out.voltage = { value: normVolt(m[1]), raw: m[1], quality: 0.95 };
+      out.phase = { value: Number(m[2]), raw: m[2], quality: 0.95 };
+      out.hz = { value: Number(m[3]), raw: m[3], quality: 0.95 };
+      break;
+    }
   }
   if (!out.voltage) {
-    const v = findLine(lines, /\b(?:VOLTS?|VOLTAGE|V)\s*(?:AC)?\s*[:.]?\s*(\d{3}(?:\s*[\/-]\s*\d{3})?)\b/i)
-      || findLine(lines, /\b(\d{3}(?:\s*[\/-]\s*\d{3})?)\s*(?:VAC|V\b|VOLTS?)/i);
-    if (v) out.voltage = { value: v.m[1].replace(/\s+/g, "").replace(/-/g, "/"), raw: v.m[1], quality: 1 };
+    let v = null, q = 1;
+    for (let i = 0; i < lines.length && !v; i++) {
+      const lm = lines[i].match(VOLT_LABEL);
+      if (!lm) continue;
+      const rest = lines[i].slice(lm.index + lm[0].length);
+      let m = rest.match(new RegExp("^\\s*(?:\\(V\\))?\\s*(?:AC)?\\s*[:.\\-]?\\s*" + V + "\\s*(?:V|VAC|VOLTS?)?\\b", "i"));
+      if (!m && !rest.trim() && lines[i + 1]) { m = lines[i + 1].match(new RegExp("^\\s*" + V + "\\s*(?:V|VAC|VOLTS?)?\\b", "i")); q = 0.85; }
+      if (m) v = m;
+    }
+    if (!v) for (const l of lines) {
+      const m = l.match(new RegExp("\\b" + V + "\\s*(?:V\\b|VAC\\b|VOLTS?\\b)", "i"));
+      if (m && voltOk(normVolt(m[1]))) { v = m; q = 0.9; break; }
+    }
+    if (v) {
+      out.voltage = { value: normVolt(v[1]), raw: v[1], quality: q };
+      const after = v.input.slice(v.index + v[0].length, v.index + v[0].length + 8);
+      if (!/[\/-]/.test(v[1]) && /\d{3}/.test(after)) { out.voltage.quality *= 0.5; out.voltage.note = "possibly partial (another voltage follows)"; }
+    }
   }
-  if (out.voltage) {
-    const parts = out.voltage.value.split("/").map(Number);
-    if (!parts.every((p) => STD_VOLTS.includes(p))) { out.voltage.quality *= 0.5; out.voltage.note = "non-standard voltage"; }
-  }
+  if (out.voltage && !voltOk(out.voltage.value)) { out.voltage.quality *= 0.5; out.voltage.note = "non-standard voltage"; }
   if (!out.phase) {
-    const p = findLine(lines, /\b(?:PH(?:ASE)?|Ø|Φ)\s*[:.]?\s*([13])\b/i) || findLine(lines, /\b([13])\s*(?:PH(?:ASE)?|Ø|Φ|~)/i);
-    if (p) out.phase = { value: Number(p.m[1]), raw: p.m[1], quality: 1 };
+    for (const l of lines) {
+      const m = l.match(/\b([13])\s*[-~]?\s*(?:PH(?:ASE)?|Ø|Φ)(?![A-Z])/i) || l.match(/\b(?:PH(?:ASE)?|Ø|Φ)\s*[:.\-]?\s*([13])\b/i);
+      if (m) { out.phase = { value: Number(m[1]), raw: m[1], quality: 1 }; break; }
+    }
   }
   if (!out.hz) {
-    const h = findLine(lines, /\b(50|60)\s*HZ\b/i) || findLine(lines, /\bHZ\s*[:.]?\s*(50|60)\b/i);
-    if (h) out.hz = { value: Number(h.m[1]), raw: h.m[1], quality: 1 };
+    for (const l of lines) {
+      const m = l.match(/\b(50|60)\s*HZ\b/i) || l.match(/\bHZ\s*[:.\-]?\s*(50|60)\b/i);
+      if (m) { out.hz = { value: Number(m[1]), raw: m[1], quality: 1 }; break; }
+    }
   }
   return out;
 }
+
+// ---------- brand / unit type / matching unit ----------
+
+function parseBrand(lines) {
+  const text = lines.join("\n").toUpperCase();
+  for (const [name, re] of BRANDS) {
+    const m = text.match(re);
+    if (m) return { value: name, raw: m[0], quality: 1 };
+  }
+  return null;
+}
+
+function parseUnitType(text) {
+  const t = text.toUpperCase();
+  let indoor = 0, outdoor = 0;
+  const ev = [];
+  const add = (re, side, w) => { const m = t.match(re); if (m) { side === "in" ? (indoor += w) : (outdoor += w); ev.push(m[0]); } };
+  add(/APPLICABLE\s+OUTDOOR\s+UNITS?/, "in", 3);
+  add(/MATCHING\s+OUTDOOR\s+UNITS?|OUTDOOR\s+UNIT\s+MODEL/, "in", 2);
+  add(/^(?![^\n]*ABLE)[^\n]*INDOOR\s+(?:UNIT|FAN|BLOWER)/m, "in", 2);
+  add(/\bOUTDOOR\s+USE\b|UTILISATION\s+A\s+L.?EXT/, "out", 3);
+  add(/\b(?:AIR\s+HANDLER|FAN\s+COIL|EVAPORATOR\s+COIL|UNIT\s+COOLER|WALL[-\s]MOUNTED|CASSETTE|DUCTED\s+INDOOR)\b/, "in", 2);
+  add(/(?:APPLICABLE|ABLE)\s+INDOOR\s+UNITS?|MATCHING\s+INDOOR/, "out", 3);
+  add(/\bOUTDOOR\s+(?:UNIT|SECTION|AIR\s+CONDITIONER|HEAT\s+PUMP)\b(?![^\n]*APPLICABLE)/, "out", 2);
+  add(/\b(?:CONDENSING\s+UNIT|COMPRESSOR|R\.?\s?L\.?\s?A\b|L\.?\s?R\.?\s?A\b|OUTDOOR\s+FAN)\b/, "out", 1);
+  if (/APPLICABLE\s+OUTDOOR/.test(t)) outdoor = Math.max(0, outdoor - 2); // "OUTDOOR UNIT" inside that phrase
+  if (!indoor && !outdoor) return null;
+  if (indoor === outdoor) return null;
+  const value = indoor > outdoor ? "indoor" : "outdoor";
+  return { value, raw: ev[0], quality: Math.abs(indoor - outdoor) >= 2 ? 1 : 0.7 };
+}
+
+function parseMatchedUnits(rawLines, labelRe) {
+  const MODEL_TOK = /\b[A-Z]{2,}[A-Z0-9-]*\d[A-Z0-9\-]{2,}\b/g;
+  for (let i = 0; i < rawLines.length; i++) {
+    const m = rawLines[i].match(labelRe);
+    if (!m) continue;
+    const found = [];
+    const scan = [rawLines[i].slice(m.index + m[0].length), rawLines[i + 1] || "", rawLines[i + 2] || ""];
+    for (let k = 0; k < scan.length; k++) {
+      if (k > 0 && found.length && !/^[\s\/,]*[A-Z]{2,}[A-Z0-9]*\d/.test(scan[k].toUpperCase())) break;
+      if (k > 0 && /MADE\s+IN|LIMITED|\bLTD\b|IPX/i.test(scan[k])) break;
+      const toks = scan[k].toUpperCase().match(MODEL_TOK) || [];
+      toks.forEach((t) => { if (!found.includes(t)) found.push(t); });
+    }
+    if (found.length) return { value: found.join(" / "), raw: found.join(" "), quality: 1, list: found };
+  }
+  return null;
+}
+
+// ---------- pressures / oil / compressor plates / cool-heat rows ----------
+
+const MPA_PSI = 145.038;
+function parsePressures(lines) {
+  const out = {};
+  const ctx = /\b(?:DESIGN|MAX(?:IMUM)?|WORKING|TEST)\b[^\n]*PRESS|PRESS(?:URE)?\b/i;
+  const near = (i) => lines.slice(Math.max(0, i - 3), i + 1).some((l) => ctx.test(l));
+  lines.forEach((l, i) => for_each_pressure(l, i));
+  function for_each_pressure(l, i) {
+    for (const m of l.matchAll(/\b(HIGH|LOW|HI|LO)\s*(?:SIDE)?\b[\s"'.:~\-=]*(\d{1,4}(?:[.,]\d{1,2})?)\s*\.?\s*(PS[I1l]G?|MPA|KPA|BAR)\b/gi)) {
+    if (!near(i)) continue;
+    const side = /^H/i.test(m[1]) ? "designHigh" : "designLow";
+    if (out[side]) continue;
+    const n = toNum(m[2]), unit = m[3].toUpperCase().replace(/[1l]/g, "I");
+    let psig, display;
+    if (unit.startsWith("PS")) { if (n < 50 || n > 1000) continue; psig = n; display = n + " psig"; }
+    else if (unit === "MPA") { if (n < 0.3 || n > 7) continue; psig = Math.round(n * MPA_PSI); display = n + " MPa (≈" + psig + " psig)"; }
+    else if (unit === "KPA") { if (n < 300 || n > 7000) continue; psig = Math.round(n * 0.145038); display = n + " kPa (≈" + psig + " psig)"; }
+    else { if (n < 3 || n > 70) continue; psig = Math.round(n * 14.5038); display = n + " bar (≈" + psig + " psig)"; }
+    out[side] = { value: display, raw: m[0], quality: 0.95 };
+    }
+  }
+  return out;
+}
+
+function parseOil(lines) {
+  for (const l of lines) {
+    const m = l.match(/\b(?:OIL\b[\s.:\-]*)?(\d{1,3}(?:\.\d)?)\s*(POE|PVE|PAG|AB|MO)\b/i);
+    if (m && (/\bOIL\b/i.test(l) || /POE|PVE|PAG/i.test(m[2]))) return { value: m[1] + " " + m[2].toUpperCase(), raw: m[0], quality: 0.9, note: "as printed (unit not stated)" };
+  }
+  return null;
+}
+
+/** Table layout: a header row of labels ("VOLTS PH Hz LRA") with values in the row below. */
+function parseHeaderTable(lines) {
+  const out = {};
+  const COLS = [["voltage", /^VOLTS?$/], ["phase", /^PH(?:ASE)?$/], ["hz", /^HZ$/], ["lra", /^L\.?R\.?A\.?$/], ["rla", /^R\.?L\.?A\.?$/]];
+  for (let i = 0; i + 1 < lines.length; i++) {
+    const heads = lines[i].toUpperCase().split(/[\s|\[\]]+/).map((t) => t.replace(/[^A-Z.]/g, "")).filter(Boolean);
+    const cols = heads.map((h) => (COLS.find(([, re]) => re.test(h)) || [null])[0]).filter(Boolean);
+    if (cols.length < 3) continue;
+    for (let k = 1; k <= 2 && i + k < lines.length; k++) {
+      const vals = lines[i + k].match(/\d{3}\s*[-\/]\s*\d{3}|\d+(?:[.,]\d+)?/g);
+      if (!vals || vals.length !== cols.length) continue;
+      const ok = cols.every((c, j) => {
+        const v = vals[j];
+        if (c === "voltage") return voltOk(normVolt(v));
+        if (c === "phase") return v === "1" || v === "3";
+        if (c === "hz") return v === "50" || v === "60";
+        return toNum(v) > 0 && toNum(v) < 1000;
+      });
+      if (!ok) continue;
+      cols.forEach((c, j) => { out[c] = { value: c === "voltage" ? normVolt(vals[j]) : toNum(vals[j]), raw: vals[j], quality: 0.85, note: "read from table columns" }; });
+      return out;
+    }
+  }
+  return out;
+}
+
+/** "COMPRESSOR A 9.2 12.7" / "TOTAL A 9.9 14.4" / "CAPACITY BTU/h 14500 18000" (cool / heat columns). */
+function parseCoolHeat(lines, labelRe, lo, hi) {
+  for (let i = 0; i < lines.length; i++) {
+    if (!labelRe.test(lines[i])) continue;
+    for (const l of [lines[i], lines[i + 1] || ""]) {
+      const nums = (l.replace(labelRe, " ").match(/(?<![\d.])\d+(?:\.\d+)?(?![\d.])/g) || []).map(Number).filter((n) => n >= lo && n <= hi);
+      if (nums.length === 2) return { value: nums[0] + " / " + nums[1], raw: l, quality: 0.8, note: "cool / heat" };
+    }
+  }
+  return null;
+}
+
+// ---------- main ----------
 
 /**
  * @param {string|{text:string, words?:Array<{text:string,confidence:number}>}} input
@@ -200,46 +512,133 @@ function parseElectrical(lines) {
 export function parsePlate(input) {
   const text = typeof input === "string" ? input : (input && input.text) || "";
   const words = typeof input === "string" ? null : (input && input.words) || null;
-  const lines = text.split(/\r?\n/).map((l) => fixDigits(l.replace(/\s+/g, " ").trim())).filter(Boolean);
+  // rawLines: whitespace-normalised, certification text removed (identifiers keep their letters).
+  const rawLines = text.replace(/[\u2010-\u2014]/g, "-").split(/\r?\n/)
+    .map((l) => stripCerts(l.replace(/\s+/g, " ").trim())).filter(Boolean);
+  // numLines: same lines with numeric-context OCR repair.
+  const lines = rawLines.map(fixDigits);
   const fields = {};
+  const hints = [];
   const put = (name, r) => { if (r) fields[name] = field(r.value, r.quality, r.raw, words, r.note); };
 
-  put("model", parseIdent(lines, /\b(?:MODEL|MOD\.?)(?![A-Z])\s*(?:NO\.?|NUMBER|#)?|\bM\/N/));
-  put("serial", parseIdent(lines, /\b(?:SERIAL|SER\.?)(?![A-Z])\s*(?:NO\.?|NUMBER|#)?|\bS\/N/));
+  put("brand", parseBrand(rawLines));
+  const ut = parseUnitType(rawLines.join("\n"));
+  if (ut) fields.unitType = { value: ut.value, confidence: ut.quality, quality: ut.quality, ocr: null, raw: ut.raw };
+  put("model", parseIdent(rawLines, MODEL_LABEL, SERIAL_LABEL, "first"));
+  put("serial", parseIdent(rawLines, SERIAL_LABEL, MODEL_LABEL, "second"));
+  const od = parseMatchedUnits(rawLines, /APPLICABLE\s+OUTDOOR\s+UNITS?|MATCHING\s+OUTDOOR\s+UNITS?|OUTDOOR\s+UNIT\s+MODEL\s*(?:NO\.?)?/i);
+  put("outdoorUnit", od);
+  const idu = parseMatchedUnits(rawLines, /(?:APPLICABLE|ABLE)\s+INDOOR\s+UNITS?|MATCHING\s+INDOOR\s+UNITS?|INDOOR\s+UNIT\s+MODEL\s*(?:NO\.?)?/i);
+  put("indoorUnit", idu);
   put("refrigerant", parseRefrigerant(lines));
   put("charge", parseCharge(lines));
   const el = parseElectrical(lines);
-  put("voltage", el.voltage); put("phase", el.phase); put("hz", el.hz);
+  const tbl = parseHeaderTable(lines);
+  put("voltage", tbl.voltage || el.voltage); put("phase", tbl.phase || el.phase); put("hz", tbl.hz || el.hz);
+  const pr = parsePressures(lines);
+  put("designHigh", pr.designHigh); put("designLow", pr.designLow);
+  put("oil", parseOil(lines));
+  put("compA", parseCoolHeat(lines, /\bCOMPRESSOR\s*(?:A|AMPS?)\b|\bCOMP\.?\s*A\b/i, 0.5, 80));
+  put("totalA", parseCoolHeat(lines, /\bTOTAL\s*(?:A|AMPS?|CURRENT)\b/i, 0.5, 120));
+  put("capacity", parseCoolHeat(lines, /\bCAPACITY\b|\bBTU\s*\/?\s*H/i, 3000, 200000));
+  if (/THERMALLY\s+PROTECTED/i.test(text)) fields.protection = { value: "thermally protected", confidence: 1, quality: 1, ocr: null, raw: "THERMALLY PROTECTED" };
 
-  const RLA = /\b(?:COMP(?:RESSOR)?\.?\s*)?R\.?\s?L\.?\s?A\.?/;
-  const LRA = /\b(?:COMP(?:RESSOR)?\.?\s*)?L\.?\s?R\.?\s?A\.?/;
+  const COMP = "(?:COMP(?:RESSOR)?\\.?\\s*(?:NO\\.?\\s*|#\\s*)?(?:[1-4]\\s*)?[:.\\-]?\\s*)?";
+  const RLA = new RegExp("\\b" + COMP + "(?:R\\.?\\s?L\\.?\\s?A\\.?(?:\\s*-\\s*C\\b|\\s*\\(?C\\)?(?=\\s))?|RATED\\s+LOAD\\s+AMPS?)");
+  const LRA = new RegExp("\\b" + COMP + "(?:L\\.?\\s?R\\.?\\s?A\\.?(?:\\s*-\\s*C\\b)?|LOCKED\\s+ROTOR\\s+AMPS?)");
   const FLA = /\bF\.?\s?L\.?\s?A\.?/;
-  const isFanLine = (l) => /\b(?:FAN|OFM|IFM|COND(?:ENSER)?\.?\s*FAN|BLOWER|MOTOR)\b/i.test(l);
-  const num = (r) => r && { value: r.num, raw: r.raw, quality: r.quality };
+  const FAN_LBL = /\b(?:(?:O\.?D\.?|OUTDOOR|INDOOR|I\.?D\.?|COND(?:ENSER)?\.?|EVAP(?:ORATOR)?\.?|IND\.?)\s*)?(?:FAN|BLOWER)(?:\s*MOTOR)?\s*(?:F\.?\s?L\.?\s?A\.?|LOAD|RATED\s+CURRENT|CURRENT|AMPS?)|\b(?:OFM|IFM)\s*(?:F\.?\s?L\.?\s?A\.?)?/;
+  const isFanLine = (l) => /\b(?:FAN|OFM|IFM|BLOWER|MOTOR)\b/i.test(l);
+  const compNo = (l) => { const m = l.match(/COMP(?:RESSOR)?\.?\s*(?:NO\.?\s*|#\s*)?([1-4])\b/i); return m ? Number(m[1]) : null; };
 
-  put("rla", num(labelled(lines, RLA)));
-  put("lra", num(labelled(lines, LRA)));
-  let fan = labelled(lines, FLA, { lineFilter: isFanLine });
-  if (!fan) { fan = labelled(lines, FLA); if (fan) fan.quality *= 0.5; }
-  put("fanFla", num(fan));
-  put("mca", num(labelled(lines, /\b(?:MCA|M\.C\.A\.?|MIN(?:IMUM)?\.?\s*(?:CIRCUIT|CIR\.?|CKT\.?)\s*AMP(?:ACITY|S)?\.?)/)));
-  put("mop", num(labelled(lines, /\b(?:MOCP|MOP|M\.O\.C\.?P\.?|M\.O\.P\.?|MAX(?:IMUM)?\.?\s*(?:OVERCURRENT\s*(?:PROT(?:ECTION|\.)?(?:\s*DEVICE)?)?|O\.?C\.?P\.?|FUSE(?:\s*(?:\/|OR)\s*(?:HACR\s*)?(?:CKT\.?\s*)?(?:BKR\.?|BREAKER))?(?:\s*SIZE)?|BKR|BREAKER))/)));
+  // Compressor amps: first compressor wins; others are noted.
+  const multi = (all, name) => {
+    if (!all.length) return null;
+    const first = all[0];
+    const others = all.slice(1).filter((r) => compNo(r.line) && compNo(r.line) !== compNo(first.line));
+    const note = others.length ? "multi-compressor: using COMP " + (compNo(first.line) || 1) + "; also " + others.map((r) => "COMP " + compNo(r.line) + " " + r.num).join(", ") : undefined;
+    return numField(first, note);
+  };
+  const notFan = (l) => !/\b(?:FAN|OFM|IFM|BLOWER)\b/i.test(l) || /\bCOMP/i.test(l);
+  put("rla", multi(labelledAll(lines, RLA, { lineFilter: notFan, valueBefore: true }), "rla"));
+  if (tbl.lra) put("lra", tbl.lra); else put("lra", multi(labelledAll(lines, LRA, { lineFilter: notFan, valueBefore: true }), "lra"));
+  if (tbl.rla) put("rla", tbl.rla);
+
+  let fan = labelledAll(lines, FAN_LBL)[0];
+  if (!fan) fan = labelledAll(lines, FLA, { lineFilter: isFanLine, valueBefore: true })[0];
+  if (!fan) { fan = labelledAll(lines, FLA, { lineFilter: (l) => !/\bCOMP/i.test(l) })[0]; if (fan) fan.quality *= 0.5; }
+  if (!fan) {
+    // "FAN MOTOR 0.4 A": no FLA label, but an explicit amps unit.
+    for (let i = 0; i < lines.length && !fan; i++) {
+      const m = lines[i].match(new RegExp("\\b(?:FAN|BLOWER)\\s*MOTOR\\s*[:.\\-]?\\s*" + NUMTOK + "\\s*A(?:MPS?)?\\b", "i"));
+      const c = m && cleanNum(m[1]);
+      if (c) fan = { num: c.num, raw: c.fixed, quality: 0.9 * (c.corrected ? 0.85 : 1), corrected: c.corrected, decimal: c.decimal, line: lines[i], match: m };
+    }
+  }
+  put("fanFla", numField(fan));
+  put("mca", numField(labelledAll(lines, /\b(?:MCA|M\.\s?C\.\s?A\.?|MIN(?:IMUM)?\.?\s*(?:SUPPLY\s*)?(?:CIRCUIT|CIR\.?|CKT\.?)\s*(?:AMP(?:ACITY|S)?|AMPS?)\.?)/, { prevLine: true })[0]));
+  const STD_OCP = [3, 6, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 110, 125, 150, 175, 200, 225, 250, 300, 350, 400];
+  put("mop", numField(labelledAll(lines, /\b(?:MOCP|MOP|M\.\s?O\.\s?C\.?\s?P\.?|M\.\s?O\.\s?P\.?|MAX(?:IMUM)?\.?\s*(?:OVER\s*CURRENT\s*(?:PROT(?:ECTION|\.)?(?:\s*DEVICE)?)?|O\.?C\.?P\.?|FUSE(?:\s*(?:\/|OR)\s*(?:MAX\.?\s*)?(?:HACR\s*)?(?:TYPE\s*)?(?:CKT[.,]?\s*|CIRCUIT\s*)?(?:BKR[.,]?|BREAKER))?(?:\s*SIZE)?|(?:CKT[.,]?\s*|CIRCUIT\s*)?(?:BKR|BREAKER)))/, { skipParen: true, prevLine: true, marks: true }).filter((r) => STD_OCP.includes(r.num))[0]));
 
   // Cross-checks: implausible combinations lower confidence (values are never changed).
   const chk = (cond, names, note) => {
     if (!cond) return;
-    names.forEach((n) => {
-      const f = fields[n];
-      if (!f) return;
-      f.confidence = round(f.confidence * 0.5, 2);
-      f.note = f.note ? f.note + "; " + note : note;
-    });
+    names.forEach((n) => { const f = fields[n]; if (!f) return; f.confidence = round(f.confidence * 0.5, 2); f.note = f.note ? f.note + "; " + note : note; });
   };
   const g = (n) => fields[n] && fields[n].value;
   chk(g("rla") != null && g("lra") != null && g("lra") <= g("rla"), ["rla", "lra"], "LRA should exceed RLA");
   chk(g("mca") != null && g("mop") != null && g("mop") < g("mca"), ["mca", "mop"], "MOP below MCA");
   chk(g("mca") != null && g("rla") != null && g("mca") < g("rla"), ["mca", "rla"], "MCA below RLA");
 
+  // A bare compressor plate (thermally protected, oil, no fan/MCA/MOP) is a component, not a unit.
+  if (!g("unitType") || g("unitType") === "outdoor") {
+    const compPlate = (fields.protection || fields.oil || /\bCOPELAND|TECUMSEH|DANFOSS|BRISTOL\b/i.test(text)) && !fields.fanFla && !fields.mca && !fields.mop && !fields.charge;
+    if (compPlate) fields.unitType = { value: "compressor", confidence: 0.8, quality: 0.8, ocr: null, raw: "compressor plate", note: "component nameplate" };
+  }
+  if (g("unitType") === "indoor") {
+    const od1 = od && od.list[0];
+    hints.push("Indoor unit: refrigerant/charge/MCA/MOP are on the outdoor unit plate" + (od1 ? " (" + od1 + ")" : "") + ". Scan that plate.");
+  }
   const lowConfidence = Object.keys(fields).filter((k) => fields[k].confidence < LOW_CONFIDENCE);
-  return { fields, lowConfidence, text };
+  return { fields, lowConfidence, hints, text };
+}
+
+/**
+ * Merge several parses of the same plate (different preprocessing / PSM passes).
+ * Per field, the most confident reading wins. If passes read DIFFERENT values for
+ * a field, the winner's confidence is cut and the disagreement is noted, because
+ * a wrong value is worse than a blank.
+ * @param {Array<{name:string, parsed:ReturnType<typeof parsePlate>}>} list
+ */
+export function mergeParses(list) {
+  const fields = {};
+  const key = (f) => JSON.stringify(f.value && f.value.lb != null ? f.value.lb : typeof f.value === "string" ? f.value.toUpperCase().replace(/O/g, "0") : f.value);
+  const names = new Set(list.flatMap((p) => Object.keys(p.parsed.fields)));
+  for (const n of names) {
+    const got = list.map((p) => p.parsed.fields[n]).filter(Boolean);
+    got.sort((a, b) => b.confidence - a.confidence);
+    // Majority value wins (ties: most confident); a lone confident misread loses to agreement.
+    const tally = new Map();
+    got.forEach((f) => { const k = key(f); tally.set(k, (tally.get(k) || 0) + 1); });
+    const top = Math.max(...tally.values());
+    const best = { ...got.find((f) => tally.get(key(f)) === top) };
+    const distinct = [...new Set(got.map(key))];
+    if (distinct.length > 1) {
+      const votes = got.filter((f) => key(f) === key(best)).length;
+      if (votes * 2 <= got.length) {
+        best.confidence = round(best.confidence * 0.55, 2);
+        best.note = (best.note ? best.note + "; " : "") + "passes disagree: " + distinct.map((d) => JSON.parse(d)).join(" vs ");
+      }
+    }
+    best.passes = got.length;
+    fields[n] = best;
+  }
+  // Best pass = most total field confidence (shown first in the raw text panel).
+  const score = (p) => Object.values(p.parsed.fields).reduce((a, f) => a + f.confidence, 0);
+  const bestPass = list.length ? list.slice().sort((a, b) => score(b) - score(a))[0].name : null;
+  const hints = [...new Set(list.flatMap((p) => p.parsed.hints || []))];
+  // Keep only the hint that matches the merged unit type.
+  const ut = fields.unitType && fields.unitType.value;
+  const lowConfidence = Object.keys(fields).filter((k) => fields[k].confidence < LOW_CONFIDENCE);
+  return { fields, lowConfidence, hints: ut === "indoor" ? hints.slice(0, 1) : [], bestPass, text: list.length ? list.find((p) => p.name === bestPass).parsed.text : "" };
 }
