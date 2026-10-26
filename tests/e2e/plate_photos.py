@@ -2,7 +2,7 @@
 
 Usage: serve the repo's PARENT dir so the site is at http://localhost:8765/service-tech-ui/
   python3 -m http.server 8765   (from the parent dir)
-  python tests/e2e/plate_photos.py [--dump] [image ...]
+  python tests/e2e/plate_photos.py [--dump] [--via=camera|upload] [image ...]
 
 Loads the app, waits for the service worker to precache, goes OFFLINE, aborts and logs
 any off-origin request, uploads each photo to the nameplate tool and prints the parsed
@@ -23,10 +23,12 @@ scan_opts = {}
 if "--no-early" in opt: scan_opts["earlyStop"] = False
 if "--plan" in opt: scan_opts["plan"] = [[p.split(":")[0], int(p.split(":")[1])] for p in opt["--plan"].split(",")]
 dump = "--dump" in sys.argv
+via = opt.get("--via", "camera")  # which button's file input to use
+SEL = ".plate-scan input.plate-%s-input" % via
 _c = [float(x) for x in opt["--crop"].split(",")] if "--crop" in opt else None
 crop_corners = [_c[i:i + 2] for i in range(0, 8, 2)] if _c else None
 imgs = args or sorted(glob.glob(os.path.join(FIX, "*.jpg")))
-R = {"photos": {}, "off_origin": [], "errors": []}
+R = {"via": None, "photos": {}, "off_origin": [], "errors": []}
 with sync_playwright() as p:
     br = p.chromium.launch(); ctx = br.new_context()
     def rt(route):
@@ -52,15 +54,16 @@ with sync_playwright() as p:
         pg.context.new_cdp_session(pg).send("Emulation.setCPUThrottlingRate", {"rate": throttle})
     for img in imgs:
         pg.goto(B + "tool.html?id=nameplate-faults")
-        pg.wait_for_selector(".plate-scan input[type=file]", state="attached")
+        pg.wait_for_selector(SEL, state="attached")
         ls0 = pg.evaluate("JSON.stringify(localStorage)")
         t_start = time.time()
-        pg.set_input_files(".plate-scan input[type=file]", img)
+        pg.set_input_files(SEL, img)
         pg.wait_for_selector(".plate-confirm", timeout=300000)
         wall_ms = round((time.time() - t_start) * 1000)
         scan = pg.evaluate("document.querySelector('.plate-scan').__lastScan")
         parsed = pg.evaluate("document.querySelector('.plate-scan').__lastParse")
         form = pg.eval_on_selector_all(".plate-form input", "es=>Object.fromEntries(es.map(e=>[e.name,e.value+(e.classList.contains('low-conf')?' [LOW]':'')]))")
+        R["via"] = pg.evaluate("document.querySelector('.plate-scan').__lastSource")
         name = os.path.splitext(os.path.basename(img))[0]
         R["photos"][name] = {
             "wall_ms": wall_ms, "timing": scan.get("timing"), "fields": parsed["fields"], "crop": scan.get("crop"), "angle": scan["angle"], "exif": scan["orientation"], "probes": scan["probes"],
