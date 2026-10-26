@@ -4,6 +4,7 @@ import { getTool } from "./registry.js";
 import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=19";
 import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=19";
 import { loadManualsIndex } from "./manuals.js?v=19";
+import { findCodeSet, lookupCode, sourceLink, rowLabel, loadErrorCodes } from "./error-codes.js?v=20";
 
 const params = new URLSearchParams(location.search);
 const TYPE_KEY = "serviceTechTreeType_v1"; // last equipment type picked here
@@ -22,6 +23,8 @@ let treeId = TREES[params.get("type")] ? params.get("type") : (TREES[store.get(T
 if (scan && !params.get("type")) treeId = null; // uncertain: ask, don't fall back to the last type
 if (treeId) store.set(TYPE_KEY, treeId);
 let path = [];
+// Error-code step (scan only): "codes" = enter/pick screen, "code" = result screen. One screen at a time.
+let codeSet = null, step = scan && /^codes?$/.test(params.get("step")) ? params.get("step") : null, codeQ = params.get("code") || "", codeRow = params.get("row");
 
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
@@ -45,14 +48,74 @@ function unitHeader() {
     const a = el("a", "tree-manual", manual.label + " →"); a.id = "tree-manual"; a.href = manual.href; a.dataset.kind = manual.kind;
     if (manual.external) { a.target = "_blank"; a.rel = "noopener"; }
     h.appendChild(a);
-    if (manual.kind !== "error-codes" && manual.external) h.appendChild(el("small", "tree-manual-note", "No error-code section is indexed for this model; see the manual."));
+    if (manual.kind !== "error-codes" && manual.external && !codeSet) h.appendChild(el("small", "tree-manual-note", "No error-code section is indexed for this model; see the manual."));
+  }
+  if (codeSet) {
+    const b = el("button", "btn btn-secondary tree-codes-step", step ? "← Back to troubleshooting" : "Error codes →"); b.type = "button"; b.id = "tree-codes-step";
+    b.addEventListener("click", () => go(step ? null : "codes"));
+    h.appendChild(b);
   }
   return h;
+}
+function go(s, q, row) { step = s; codeQ = q || ""; codeRow = row == null ? null : String(row); setUrl(); render(); window.scrollTo(0, 0); }
+
+// Screen 1: enter or pick a code.
+function codesScreen() {
+  const c = el("div", "tree-step tree-codes"); c.id = "tree-codes";
+  if (codeSet.noTable) {
+    c.appendChild(el("p", "tree-no-table", codeSet.noTable.text));
+    const a = el("a", "tree-code-src", "Open the manual →"); a.href = codeSet.noTable.url; a.target = "_blank"; a.rel = "noopener"; c.appendChild(a);
+    return c;
+  }
+  if (codeSet.unavailable || !codeSet.rows.length) { c.appendChild(el("p", null, "No codes transcribed for this model yet; see the manual.")); return c; }
+  c.appendChild(el("p", null, "Enter the code on the display, or pick it below."));
+  const f = el("form", "tree-code-form");
+  const inp = el("input"); inp.id = "tree-code-input"; inp.placeholder = "Code, e.g. 11"; inp.autocomplete = "off"; inp.value = codeQ;
+  const go1 = el("button", "btn btn-primary", "Look up"); go1.type = "submit";
+  f.append(inp, go1);
+  f.addEventListener("submit", (e) => { e.preventDefault(); if (inp.value.trim()) go("code", inp.value.trim()); });
+  c.appendChild(f);
+  const list = el("div", "tree-code-list"); list.id = "tree-code-list";
+  const fill = () => {
+    list.innerHTML = "";
+    const rows = inp.value.trim() ? lookupCode(codeSet, inp.value) : codeSet.rows;
+    rows.forEach((r) => { const b = el("button", "btn btn-secondary tree-opt tree-code-opt", rowLabel(r)); b.type = "button"; b.addEventListener("click", () => go("code", null, codeSet.rows.indexOf(r))); list.appendChild(b); });
+    if (!rows.length) list.appendChild(el("small", "tree-why", "No match in this manual's table."));
+  };
+  inp.addEventListener("input", fill); fill();
+  c.appendChild(list);
+  return c;
+}
+// Screen 2: the meaning(s), OEM remedy if any, and the source page.
+function codeScreen() {
+  const c = el("div", "tree-step tree-code"); c.id = "tree-code";
+  const picked = codeRow != null && codeSet.rows[+codeRow];
+  const rows = picked ? (picked.keys.length ? lookupCode(codeSet, picked.keys[0]) : [picked]) : lookupCode(codeSet, codeQ);
+  c.appendChild(el("p", null, picked ? (picked.keys[0] ? "Code " + picked.keys[0] : picked.pattern) : "Code " + codeQ));
+  if (!rows.length) c.appendChild(el("p", "tree-why", "No match in this manual's table."));
+  if (rows.length > 1) c.appendChild(el("small", "tree-why", rows.length + " meanings in the manual for this code:"));
+  rows.forEach((r) => {
+    const m = el("div", "tree-code-row");
+    if (r.keys.length || !picked) m.appendChild(el("small", "tree-code-pattern", r.pattern));
+    m.appendChild(el("p", "tree-code-meaning", r.meaning));
+    const flags = r.flags || [];
+    if (flags.includes("pattern-blank-in-manual")) m.appendChild(el("small", "tree-flag", "Indicator pattern is blank in the printed table."));
+    if (r.remedy) { m.appendChild(el("strong", null, "OEM remedy")); m.appendChild(el("p", "tree-code-remedy", r.remedy)); }
+    else m.appendChild(el("small", "tree-code-noremedy", flags.includes("remedy-blank-in-manual") ? "Remedy cell is blank in the printed table." : "The manual gives no remedy for this code."));
+    const s = sourceLink(r); const a = el("a", "tree-code-src", s.label + " →"); a.href = s.href; a.target = "_blank"; a.rel = "noopener";
+    m.appendChild(a);
+    c.appendChild(m);
+  });
+  const again = el("button", "btn btn-secondary", "Another code"); again.type = "button"; again.id = "tree-code-again";
+  again.addEventListener("click", () => go("codes"));
+  c.appendChild(again);
+  return c;
 }
 
 function render() {
   root.innerHTML = "";
   if (scan) root.appendChild(unitHeader());
+  if (codeSet && step) { root.appendChild(step === "code" ? codeScreen() : codesScreen()); return; }
   if (!treeId && scan && choices.length) {
     const c = el("div", "tree-step tree-choose"); c.id = "tree-choose";
     c.appendChild(el("p", null, "Which equipment is this?"));
@@ -127,3 +190,4 @@ if (scan) loadManualsIndex().then((index) => {
   }
   render();
 }).catch(() => { /* offline without the index: keep the link's pick and the Manuals helper link */ });
+if (scan) loadErrorCodes().then((data) => { codeSet = findCodeSet(data, scan); if (!codeSet) step = null; render(); }).catch(() => { step = null; render(); });
