@@ -3,6 +3,7 @@ import { plateSummary } from "./plate-scan.js?v=14";
 import { chooseTree, treeHref } from "./trees.js?v=14";
 
 import { saveLastPlate, nominalVoltage, SCAN_KEY } from "./last-plate.js?v=14";
+import { whereItWent } from "./scan-flow.js?v=14";
 export { SCAN_KEY };
 export const DRAFT_KEY = "serviceTechCallDraft_v1"; // app.js STORAGE_KEY
 
@@ -81,5 +82,50 @@ export function renderScanActions(host, v, { onAdd, equipment, onReadings, callH
   scanToolLinks(v).forEach((q) => { const a = mk("a", "chip scan-tool-link", q.label + " →"); a.href = q.href; a.dataset.tool = q.tool; tools.appendChild(a); });
   box.append(add, go, done, tools);
   host.appendChild(box);
+  return box;
+}
+
+/** Manuals page for the plate (the manuals helper shows the model-level match and portals). */
+export function manualHref(v) {
+  const q = new URLSearchParams();
+  if (v && v.brand) q.set("brand", v.brand);
+  if (v && v.model) q.set("model", v.model);
+  return "manuals.html" + (String(q) ? "?" + q : "");
+}
+
+/**
+ * Done screen after "Fill call card": where the data went, one primary action, then links to the
+ * call card, the manual and troubleshooting. primary: { label, onClick } or { label, href }.
+ */
+export function renderDone(host, v, { equipment, primary, onCard = true, callHref = "call.html", onScanAgain } = {}) {
+  saveLastPlate(v);
+  host.querySelector(".scan-done")?.remove();
+  host.querySelector(".scan-actions")?.remove();
+  const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const box = mk("div", "scan-done"); box.setAttribute("role", "status");
+  box.appendChild(mk("h2", null, "✓ Plate saved"));
+  box.appendChild(mk("p", "scan-done-lead", "Here’s where the data went:"));
+  const ul = mk("ul", "scan-done-where");
+  whereItWent(v, { onCard }).forEach((t) => ul.appendChild(mk("li", null, t)));
+  box.appendChild(ul);
+  const p = primary || { label: "Open call card", href: callHref };
+  const main = mk(p.href ? "a" : "button", "btn btn-primary btn-big scan-done-primary", p.label);
+  main.id = "btn-done-primary";
+  if (p.href) main.href = p.href; else { main.type = "button"; main.addEventListener("click", p.onClick); }
+  box.appendChild(main);
+  const links = mk("div", "scan-done-links");
+  const eq = () => (typeof equipment === "function" ? equipment() : equipment);
+  const call = mk("a", "link-btn", "Call card"); call.id = "link-open-call"; call.href = callHref;
+  const man = mk("a", "link-btn", "Manual for " + ([v.brand, v.model].filter(Boolean).join(" ") || "this unit")); man.id = "link-done-manual"; man.href = manualHref(v);
+  const tr = mk("a", "link-btn", "Troubleshooting"); tr.id = "link-done-tree"; tr.href = troubleshootHref(v, eq());
+  tr.addEventListener("click", () => { tr.href = troubleshootHref(v, eq()); });
+  links.append(call, man, tr);
+  box.appendChild(links);
+  const tools = mk("div", "scan-tools");
+  scanToolLinks(v).forEach((q) => { const a = mk("a", "chip scan-tool-link", q.label + " →"); a.href = q.href; a.dataset.tool = q.tool; tools.appendChild(a); });
+  box.appendChild(tools);
+  if (onScanAgain) { const a = mk("button", "link-btn scan-again", "Scan another plate"); a.type = "button"; a.addEventListener("click", onScanAgain); box.appendChild(a); }
+  host.appendChild(box);
+  if (box.scrollIntoView) box.scrollIntoView({ block: "start", behavior: "smooth" });
   return box;
 }

@@ -156,20 +156,16 @@ function mount(tool) {
         if (amps && notes) notes.value = (notes.value ? notes.value + "\n" : "") + "Plate: " + amps;
         run();
         // "Add to call card" (writes the call draft; then "Added — open call card" / "Go to Readings") + "Start troubleshooting".
-        import("./call-card.js?v=14").then(({ renderScanActions, mergeIntoDraft, saveScan, DRAFT_KEY }) => {
-          renderScanActions(scanHost, v, {
-            onAdd: (vals) => {
-              let d = {};
-              try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}"); } catch (e) { /* ignore */ }
-              try { localStorage.setItem(DRAFT_KEY, JSON.stringify(mergeIntoDraft(d, vals))); } catch (e) { /* ignore */ }
-              saveScan(vals);
-            },
-            // Opens the call card on its Readings step (app.js restores draft.step).
-            onReadings: () => {
-              let d = {};
-              try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}"); d.step = "readings"; localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); } catch (e) { /* ignore */ }
-              location.href = "call.html";
-            },
+        // "Fill call card" already happened (forced model/serial check): write the call draft, then Done.
+        import("./call-card.js?v=14").then(({ renderDone, mergeIntoDraft, saveScan, DRAFT_KEY }) => {
+          let d = {};
+          try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}"); } catch (e) { /* ignore */ }
+          try { localStorage.setItem(DRAFT_KEY, JSON.stringify(mergeIntoDraft(d, v))); } catch (e) { /* ignore */ }
+          saveScan(v);
+          const box = scanHost.querySelector(".plate-scan");
+          renderDone(box, v, {
+            primary: { label: "Open call card", href: "call.html" },
+            onScanAgain: () => box.__reset(),
           });
         }).catch(console.error);
         // Manual links for the scanned brand/model.
