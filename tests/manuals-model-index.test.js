@@ -102,3 +102,12 @@ test("generator: Model Manual Index rows -> models/prefixes/templates; non-offic
   const j = parseModelIndex(JSON.stringify([{ brand: "Plainco", match: "model", model: "P-1", docType: "owner", url: "https://plainco.invalid/p1.pdf", source: "s" }]), FX.brands);
   assert.equal(matchModel({ brands: FX.brands, models: j.models }, { brand: "Plainco", model: "p 1" }).kind, "exact");
 });
+
+test("offline: the index is precached at the current version, PDFs never are, cross-origin is network-only", () => {
+  const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
+  const v = sw.match(/const VERSION = "v(\d+)"/)[1];
+  assert.ok(sw.includes('"./data/manuals-index.json?v=' + v + '"'));
+  assert.ok(!/\.pdf/i.test(sw));
+  assert.match(sw, /url\.origin !== self\.location\.origin\) return;/);
+  assert.ok(readFileSync(new URL("../tools/manuals.js", import.meta.url), "utf8").includes("manuals-index.json?v=" + v));
+});
