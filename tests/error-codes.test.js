@@ -61,7 +61,12 @@ test("Mitsubishi rows 2, 3 and 17 stay as flagged blanks", () => {
 test("no-table models: message plus the official manual link", () => {
   const nt = DATA.sets.filter((s) => s.noTable);
   assert.deepEqual(nt.map((s) => s.brand), ["Carrier", "Carrier", "Lennox", "Lennox", "Lennox", "Goodman"]);
-  for (const s of nt) { assert.equal(s.noTable.text, NO_TABLE_TEXT); assert.equal(NO_TABLE_TEXT, "No code table in the official manual"); assert.match(s.noTable.url, /^https:\/\/.+\.pdf$/i); assert.ok(officialHost(s.noTable.url)); }
+  for (const s of nt) { assert.equal(s.noTable.text, NO_TABLE_TEXT); assert.equal(NO_TABLE_TEXT, "No code table in the official manual"); assert.match(s.noTable.url, /^https:\/\//); assert.ok(officialHost(s.noTable.url)); }
+  // shareddocs.com is not approved: 25HBC5/25HCE4 has no Carrier link in the manuals index, so it gets the Carrier brand page.
+  assert.equal(nt[0].noTable.url, "https://www.carrier.com/us/en/product-documents/");
+  assert.equal(nt[1].noTable.url, "https://carrier.com.pr/pdf/products_pdf/24ACC6_INSTALLATION.pdf");
+  assert.ok(!JSON.stringify(DATA).includes("shareddocs.com/"));
+  assert.equal(officialHost("https://www.shareddocs.com/hvac/docs/1009/Public/0D/25HBC-HCE-03SI.pdf"), null);
   assert.equal(findCodeSet(DATA, { brand: "Lennox", model: "ML17XC1-036-230A" }).noTable.url, "https://www.lennox.com/dA/7a43950f24/100049.pdf");
 });
 
@@ -93,6 +98,6 @@ test("matching a scanned unit and typed codes", () => {
 test("tree page wires the Error codes step from the scan header", () => {
   const app = readFileSync(new URL("../tools/tree-app.js", import.meta.url), "utf8");
   assert.match(app, /tree-codes-step/);
-  assert.match(app, /error-codes\.js\?v=20/);
-  assert.match(readFileSync(new URL("../tools/error-codes.js", import.meta.url), "utf8"), /data\/error-codes\.json\?v=20/);
+  assert.match(app, /error-codes\.js\?v=21/);
+  assert.match(readFileSync(new URL("../tools/error-codes.js", import.meta.url), "utf8"), /data\/error-codes\.json\?v=21/);
 });
