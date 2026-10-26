@@ -36,6 +36,9 @@ function setUrl() {
   if (!scan) { history.replaceState(null, "", treeId ? treeHref(treeId) : "tree.html"); return; }
   const q = new URLSearchParams(location.search); q.delete("choose");
   if (treeId) q.set("type", treeId); else q.delete("type");
+  ["step", "code", "row"].forEach((k) => q.delete(k));
+  if (step) q.set("step", step);
+  if (step === "code" && codeRow != null) q.set("row", codeRow); else if (step === "code" && codeQ) q.set("code", codeQ);
   history.replaceState(null, "", "tree.html?" + q);
 }
 function choose(id) { treeId = id; store.set(TYPE_KEY, id); pick.value = id; path = [TREES[id].start]; setUrl(); render(); }
