@@ -1,13 +1,13 @@
 /** Call card: "Scan data plate" in the Open panel. After Confirm, "Add to call card" writes the
  *  plate (brand, model, serial, refrigerant, charge…) into the Open step; nothing is written before that.
  *  Also shows manual links for the plate's brand/model and picks the troubleshooting tree. */
-import { mountPlateScan } from "./plate-scan.js?v=21";
-import { callCardFill, renderDone, saveScan, SCAN_KEY } from "./call-card.js?v=21";
-import { parsePlate } from "./plate-parse.js?v=21";
-import { loadManualsIndex, findManuals, renderManuals } from "./manuals.js?v=21";
-import { chooseTree, treeHref } from "./trees.js?v=21";
-import { scanTreeHref } from "./tree-pick.js?v=21";
-import { getLastPlate, summaryRows, plateOnCard } from "./last-plate.js?v=21";
+import { mountPlateScan } from "./plate-scan.js?v=23";
+import { callCardFill, renderDone, saveScan, SCAN_KEY } from "./call-card.js?v=23";
+import { parsePlate } from "./plate-parse.js?v=23";
+import { loadManualsIndex, findManuals, renderManuals } from "./manuals.js?v=23";
+import { chooseTree, treeHref } from "./trees.js?v=23";
+import { scanTreeHref } from "./tree-pick.js?v=23";
+import { getLastPlate, summaryRows, plateOnCard } from "./last-plate.js?v=23";
 
 
 function set(id, value) {
@@ -75,7 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (host) { const scan = mountPlateScan(host, (v) => {
     const fill = callCardFill(v);
     Object.entries(fill).forEach(([k, val]) => set(k, val));
-    saveScan(v); // after set("plate"): the stored summary now matches the Data plate box
+    saveScan(v); // after set("plate"): the stored summary now matches the Data plate box (also this card's plate, for Troubleshooting)
     refresh();
     renderDone(scan, v, {
       equipment: () => (document.getElementById("equipment") || {}).value,

@@ -7,10 +7,10 @@
  * Nothing is stored (not even localStorage) until the user taps Confirm, and
  * then only the onConfirm callback decides what to keep.
  */
-import { mountGuide, renderReviewSummary, progressLine, INSTRUCTIONS } from "./scan-flow.js?v=21";
-import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=21";
-import { cropStep } from "./plate-crop.js?v=21";
-import { findLabelBox, deglare, clahe } from "./plate-image.js?v=21";
+import { mountGuide, renderReviewSummary, progressLine, INSTRUCTIONS } from "./scan-flow.js?v=23";
+import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=23";
+import { cropStep } from "./plate-crop.js?v=23";
+import { findLabelBox, deglare, clahe } from "./plate-image.js?v=23";
 
 const VENDOR = "vendor/tesseract/";
 const DECODE_SIDE = 4000;   // decode cap (keeps the label's detail before cropping)
@@ -79,6 +79,20 @@ function browserAppliesExif() {
  * falls back to <img> plus manual EXIF rotation on browsers that don't apply it.
  * Returns a canvas with long edge <= MAX_SIDE.
  */
+/** The browser can't decode this image (e.g. HEIC outside Safari). */
+export class UndecodableImageError extends Error {
+  constructor(file) {
+    super(undecodableMessage(file));
+    this.name = "UndecodableImageError";
+  }
+}
+export function undecodableMessage(file) {
+  const heic = /\.(heic|heif)$/i.test((file && file.name) || "") || /hei[cf]/i.test((file && file.type) || "");
+  return (heic ? "This browser can't open HEIC/HEIF photos." : "This browser can't open that image format.") +
+    " Save the photo as JPEG (or take a screenshot of it) and upload that.";
+}
+export const UPLOAD_ACCEPT = "image/*,.heic,.heif";
+
 export async function decodeUpright(file, maxSide = DECODE_SIDE) {
   const orient = await readExifOrientation(file);
   let src = null, manual = 1;
@@ -91,7 +105,7 @@ export async function decodeUpright(file, maxSide = DECODE_SIDE) {
       const img = new Image();
       img.decoding = "async";
       img.src = url;
-      await img.decode();
+      try { await img.decode(); } catch (e) { throw new UndecodableImageError(file); }
       src = img;
     } finally {
       URL.revokeObjectURL(url);
@@ -536,30 +550,39 @@ export function mountPlateScan(container, onConfirm, { confirmLabel = "Fill call
   const box = el("div", "plate-scan");
   const guide = mountGuide(box);
   box.__guide = guide;
+  const fileInput = (cls, accept, capture) => {
+    const i = el("input", "visually-hidden " + cls);
+    i.type = "file"; i.accept = accept;
+    if (capture) i.setAttribute("capture", "environment");
+    i.id = "plate-file-" + Math.random().toString(36).slice(2, 8);
+    return i;
+  };
+  // Take photo: camera. Upload photo: gallery or files (no capture attribute). Both feed the same pipeline below.
   const label = el("label", "btn btn-primary btn-big plate-scan-btn", "📷 Take photo");
-  const input = el("input", "visually-hidden");
-  input.type = "file";
-  input.accept = "image/*";
-  input.setAttribute("capture", "environment");
-  input.id = "plate-file-" + Math.random().toString(36).slice(2, 8);
+  const input = fileInput("plate-camera-input", "image/*", true);
   label.htmlFor = input.id;
+  const upLabel = el("label", "btn btn-secondary plate-upload-btn", "🖼 Upload photo");
+  const upInput = fileInput("plate-upload-input", UPLOAD_ACCEPT, false);
+  upLabel.htmlFor = upInput.id;
+  const showPick = (on) => { label.hidden = upLabel.hidden = !on; tip.hidden = !on; };
   const status = el("p", "plate-status footer-note");
   status.setAttribute("aria-live", "polite");
   const bar = el("progress", "plate-progress");
   bar.max = 1; bar.value = 0; bar.hidden = true;
   const tip = el("p", "plate-tip footer-note", "Tip: fill the frame with the plate, hold the phone square to it, and angle it slightly to kill glare on shiny or curved labels.");
-  box.append(label, input, tip, status, bar);
+  box.append(label, input, upLabel, upInput, tip, status, bar);
   container.appendChild(box);
 
-  input.addEventListener("change", async () => {
-    const file = input.files && input.files[0];
-    input.value = ""; // drop the reference to the photo
+  const onPick = (inp, source) => async () => {
+    const file = inp.files && inp.files[0];
+    inp.value = ""; // drop the reference to the photo
     if (!file) return;
+    box.__lastSource = source; // "camera" | "upload" (tests only)
     box.querySelector(".plate-confirm")?.remove();
     box.querySelector(".scan-done")?.remove();
-    label.classList.add("disabled"); label.hidden = true; tip.hidden = true;
+    label.classList.add("disabled"); showPick(false);
     bar.hidden = false;
-    status.textContent = "Reading plate on this phone…";
+    status.textContent = "Reading plate on this phone…"; status.classList.remove("plate-format-error");
     try {
       const opts = Object.assign({}, globalThis.__plateScanOpts || {});
       if (opts.cropStep !== false) {
@@ -579,7 +602,7 @@ export function mountPlateScan(container, onConfirm, { confirmLabel = "Fill call
       const found = Object.keys(parsed.fields).length;
       guide.set("check", needsRetake(parsed) ? INSTRUCTIONS.checkRetake : INSTRUCTIONS.check);
       status.textContent = found ? "" : "Couldn't read any plate fields. Retake closer, square-on, with less glare — or type the values.";
-      const reset = () => { guide.set("photo"); label.hidden = false; tip.hidden = false; };
+      const reset = () => { guide.set("photo"); showPick(true); };
       box.appendChild(buildConfirm(parsed, (values) => {
         status.textContent = "";
         guide.set("done");
@@ -587,13 +610,17 @@ export function mountPlateScan(container, onConfirm, { confirmLabel = "Fill call
       }, () => { status.textContent = "Read discarded."; reset(); }, res.passes, () => { reset(); status.textContent = "Retake: opening the camera…"; input.click(); }, confirmLabel));
     } catch (e) {
       console.error(e);
-      status.textContent = "Couldn't read the photo: " + (e && e.message ? e.message : e) + " — tap Take photo to try again.";
-      guide.set("photo"); label.hidden = false; tip.hidden = false;
+      status.textContent = e instanceof UndecodableImageError ? e.message
+        : "Couldn't read the photo: " + (e && e.message ? e.message : e) + " — tap Take photo or Upload photo to try again.";
+      status.classList.toggle("plate-format-error", e instanceof UndecodableImageError);
+      guide.set("photo"); showPick(true);
     } finally {
       label.classList.remove("disabled");
       bar.hidden = true;
     }
-  });
-  box.__reset = () => { box.querySelector(".scan-done")?.remove(); guide.set("photo"); label.hidden = false; tip.hidden = false; status.textContent = ""; };
+  };
+  input.addEventListener("change", onPick(input, "camera"));
+  upInput.addEventListener("change", onPick(upInput, "upload"));
+  box.__reset = () => { box.querySelector(".scan-done")?.remove(); guide.set("photo"); showPick(true); status.textContent = ""; };
   return box;
 }

@@ -287,3 +287,5 @@ textarea { min-height: 96px; resize: vertical; }
 .tree-code-row { border-top: 1px solid var(--surface2); padding: 8px 0; }
 .tree-code-pattern, .tree-code-noremedy, .tree-flag { color: var(--muted); display: block; }
 .tree-code-remedy { white-space: pre-line; }
+.plate-upload-btn { margin-top: 8px; }
+.plate-format-error { color: var(--warn, #e0a030); font-weight: 600; }

@@ -1,26 +1,35 @@
 /** tree.html: walks a troubleshooting tree (tools/trees.js) one step at a time. */
-import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=21";
+import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=23";
 import { getTool } from "./registry.js";
-import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=21";
-import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=21";
-import { loadManualsIndex } from "./manuals.js?v=21";
-import { findCodeSet, lookupCode, sourceLink, rowLabel, loadErrorCodes } from "./error-codes.js?v=21";
+import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=23";
+import { getCardPlate } from "./card-plate.js?v=23";
+import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=23";
+import { loadManualsIndex } from "./manuals.js?v=23";
+import { findCodeSet, lookupCode, sourceLink, rowLabel, loadErrorCodes } from "./error-codes.js?v=23";
 
 const params = new URLSearchParams(location.search);
 const TYPE_KEY = "serviceTechTreeType_v1"; // last equipment type picked here
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) { /* ignore */ } } };
-const plate = getLastPlate(); // last scanned plate (call card / nameplate tool)
+// An open call card's plate (stored with the card; hand-edits included) wins over the URL and the last scan.
+const card = getCardPlate();
+const plate = card || getLastPlate(); // else the last scanned plate (nameplate tool)
 const known = { refrigerant: plate && plate.refrigerant, nominalV: nominalVoltage(plate && plate.voltage), rla: plate && plate.rla };
-if (params.get("refrigerant")) known.refrigerant = params.get("refrigerant");
+if (!card && params.get("refrigerant")) known.refrigerant = params.get("refrigerant");
 const pick = document.getElementById("tree-pick");
 const root = document.getElementById("tree-root");
 // Opened from a scan: brand/model/unit type ride along; the tree is re-picked against the manuals index.
-const scan = params.get("from") === "scan" ? { brand: params.get("brand") || "", model: params.get("model") || "", unitType: params.get("unitType") || "", equipment: params.get("equipment") || "" } : null;
+const scan = card ? { brand: card.brand || "", model: card.model || "", serial: card.serial || "", unitType: card.unitType || "", equipment: card.equipment || "", refrigerant: card.refrigerant || "", fromCard: true }
+  : params.get("from") === "scan" ? { brand: params.get("brand") || "", model: params.get("model") || "", unitType: params.get("unitType") || "", equipment: params.get("equipment") || "" } : null;
+const urlStale = card && params.get("from") === "scan" && ["brand", "model", "unitType"].some((k) => (params.get(k) || "") !== scan[k]);
 let choices = scan ? (params.get("choose") || "").split(",").filter((id) => TREES[id]) : [];
+if (card && (!choices.length || urlStale)) { const p0 = pickTree(scan, null); choices = p0.certain ? [] : p0.choices; }
 let why = "";
 let manual = scan ? manualLink(null, scan) : null;
 let treeId = TREES[params.get("type")] ? params.get("type") : (TREES[store.get(TYPE_KEY)] ? store.get(TYPE_KEY) : null);
-if (scan && !params.get("type")) treeId = null; // uncertain: ask, don't fall back to the last type
+if (scan && (!params.get("type") || urlStale)) treeId = null; // uncertain: ask, don't fall back to the last type
+// Card-driven: an explicit ?type= for the same unit (tree jump, reload after a pick) is kept.
+const typeFixed = !!(card && TREES[params.get("type")] && !urlStale);
+if (card && !treeId) { const p0 = pickTree(scan, null); if (p0.certain) treeId = p0.tree; } // offline-safe first pick
 if (treeId) store.set(TYPE_KEY, treeId);
 let path = [];
 // Error-code step (scan only): "codes" = enter/pick screen, "code" = result screen. One screen at a time.
@@ -35,6 +44,7 @@ pick.addEventListener("change", () => { treeId = pick.value || null; store.set(T
 function setUrl() {
   if (!scan) { history.replaceState(null, "", treeId ? treeHref(treeId) : "tree.html"); return; }
   const q = new URLSearchParams(location.search); q.delete("choose");
+  if (scan.fromCard) { q.set("from", "scan"); ["brand", "model", "unitType", "equipment", "refrigerant"].forEach((k) => (scan[k] ? q.set(k, scan[k]) : q.delete(k))); }
   if (treeId) q.set("type", treeId); else q.delete("type");
   ["step", "code", "row"].forEach((k) => q.delete(k));
   if (step) q.set("step", step);
@@ -47,6 +57,9 @@ if (treeId) path = [TREES[treeId].start];
 function unitHeader() {
   const h = el("div", "tree-unit"); h.id = "tree-unit";
   h.appendChild(el("strong", null, [scan.brand, scan.model].filter(Boolean).join(" ") || "Scanned unit"));
+  const sub = [scan.serial && "S/N " + scan.serial, scan.refrigerant].filter(Boolean).join(" · ");
+  if (sub) h.appendChild(el("small", "tree-unit-sub", sub));
+  if (scan.fromCard) h.dataset.source = "call-card";
   if (manual) {
     const a = el("a", "tree-manual", manual.label + " →"); a.id = "tree-manual"; a.href = manual.href; a.dataset.kind = manual.kind;
     if (manual.external) { a.target = "_blank"; a.rel = "noopener"; }
@@ -182,13 +195,17 @@ function render() {
   nav.append(back, restart);
   root.appendChild(nav);
 }
+if (card) setUrl();
 render();
+// Back/forward cache: re-read the card when the page is shown again (the card may have been edited).
+addEventListener("pageshow", (e) => { if (e.persisted) location.reload(); });
 if (scan) loadManualsIndex().then((index) => {
   const p = pickTree(scan, index);
   manual = manualLink(index, scan); why = p.why;
   const chosen = path.length > 1; // tech already moved on: don't yank the tree
   if (!chosen) {
-    if (p.certain && p.tree !== treeId) { treeId = p.tree; store.set(TYPE_KEY, treeId); pick.value = treeId; path = [TREES[treeId].start]; setUrl(); }
+    if (typeFixed) { /* the tech's (or a tree's) explicit pick for this card's unit: keep it */ }
+    else if (p.certain && p.tree !== treeId) { treeId = p.tree; store.set(TYPE_KEY, treeId); pick.value = treeId; path = [TREES[treeId].start]; setUrl(); }
     else if (!p.certain && !params.get("type")) choices = p.choices;
   }
   render();
