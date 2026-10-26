@@ -64,9 +64,9 @@ export function cropStep(container, photo, initial) {
     // Prominent step: the single biggest accuracy win on angled/curved plates.
     const h = document.createElement("div");
     h.className = "plate-crop-head";
-    const t = document.createElement("h2"); t.textContent = "Step 1 of 2 — Straighten the plate";
+    const t = document.createElement("h2"); t.textContent = "Straighten the plate";
     const hp = document.createElement("p");
-    hp.textContent = "Drag the 4 blue corners onto the plate's corners. Straightening first gives the best read on angled or curved labels.";
+    hp.textContent = "Drag the 4 corners to the plate edges, then tap Use this crop. Straightening gives the best read on angled or curved labels.";
     h.append(t, hp);
     const stage = document.createElement("div");
     stage.className = "plate-crop-stage";
@@ -117,8 +117,8 @@ export function cropStep(container, photo, initial) {
     draw();
     const actions = document.createElement("div");
     actions.className = "tool-actions";
-    const use = document.createElement("button"); use.type = "button"; use.className = "btn btn-primary plate-crop-use"; use.textContent = "Straighten & read";
-    const skip = document.createElement("button"); skip.type = "button"; skip.className = "btn btn-secondary plate-crop-skip"; skip.textContent = "Skip — read as is";
+    const use = document.createElement("button"); use.type = "button"; use.className = "btn btn-primary btn-big plate-crop-use"; use.textContent = "Use this crop";
+    const skip = document.createElement("button"); skip.type = "button"; skip.className = "link-btn plate-crop-skip"; skip.textContent = "Skip crop — read the whole photo";
     actions.append(use, skip);
     wrap.append(h, stage, actions);
     container.appendChild(wrap);
