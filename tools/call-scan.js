@@ -6,6 +6,7 @@ import { callCardFill, renderDone, saveScan, SCAN_KEY } from "./call-card.js?v=1
 import { parsePlate } from "./plate-parse.js?v=18";
 import { loadManualsIndex, findManuals, renderManuals } from "./manuals.js?v=18";
 import { chooseTree, treeHref } from "./trees.js?v=18";
+import { scanTreeHref } from "./tree-pick.js?v=18";
 import { getLastPlate, summaryRows, plateOnCard } from "./last-plate.js?v=18";
 
 
@@ -62,8 +63,9 @@ async function refresh() {
   }
   const link = document.getElementById("tree-link");
   if (link) {
-    const t = chooseTree({ equipment: (document.getElementById("equipment") || {}).value, ...id });
-    link.href = t ? treeHref(t) : "tree.html";
+    const equipment = (document.getElementById("equipment") || {}).value;
+    if (id && (id.brand || id.model)) link.href = scanTreeHref(id, equipment);
+    else { const t = chooseTree({ equipment, ...id }); link.href = t ? treeHref(t) : "tree.html"; }
   }
 }
 
