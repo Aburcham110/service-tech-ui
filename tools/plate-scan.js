@@ -7,9 +7,10 @@
  * Nothing is stored (not even localStorage) until the user taps Confirm, and
  * then only the onConfirm callback decides what to keep.
  */
-import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=15";
-import { cropStep } from "./plate-crop.js?v=15";
-import { findLabelBox, deglare, clahe } from "./plate-image.js?v=15";
+import { mountGuide, renderReviewSummary, progressLine, INSTRUCTIONS } from "./scan-flow.js?v=16";
+import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=16";
+import { cropStep } from "./plate-crop.js?v=16";
+import { findLabelBox, deglare, clahe } from "./plate-image.js?v=16";
 
 const VENDOR = "vendor/tesseract/";
 const DECODE_SIDE = 4000;   // decode cap (keeps the label's detail before cropping)
@@ -385,7 +386,7 @@ export function needsRetake(parsed) {
   return Math.min(...idConf) < 0.5 || (parsed.hints || []).some((h) => /glare|blur|retake/i.test(h));
 }
 
-function buildConfirm(parsed, onConfirm, onCancel, passes, onRetake) {
+function buildConfirm(parsed, onConfirm, onCancel, passes, onRetake, confirmLabel = "Fill call card") {
   const wrap = el("div", "plate-confirm");
   wrap.setAttribute("role", "dialog");
   wrap.setAttribute("aria-label", "Confirm data plate");
@@ -400,7 +401,7 @@ function buildConfirm(parsed, onConfirm, onCancel, passes, onRetake) {
     rb.appendChild(el("strong", null, "Low confidence read. "));
     rb.appendChild(document.createTextNode("Retake closer and square-on, tilt slightly to kill glare, or straighten with the crop step — then check model and serial character by character."));
     if (onRetake) {
-      const rt = el("button", "btn btn-primary plate-retake-btn", "📷 Retake");
+      const rt = el("button", "link-btn plate-retake-btn", "Retake now");
       rt.type = "button";
       // One tap: drop this read and reopen the camera (same file input, so it stays a user gesture).
       rt.addEventListener("click", () => { wrap.remove(); onRetake(); });
@@ -469,14 +470,19 @@ function buildConfirm(parsed, onConfirm, onCancel, passes, onRetake) {
     form.appendChild(lab);
   });
   const actions = el("div", "tool-actions");
-  const ok = el("button", retake && onRetake ? "btn btn-secondary" : "btn btn-primary", "Confirm"); ok.type = "submit";
-  const cancel = el("button", "btn btn-secondary", "Discard"); cancel.type = "button";
+  // One primary action: Fill call card — unless the read is unreliable, then Retake leads and Fill is secondary.
+  const ok = el("button", retake && onRetake ? "btn btn-secondary plate-confirm-btn" : "btn btn-primary btn-big plate-confirm-btn", confirmLabel); ok.type = "submit";
+  const cancel = el("button", "link-btn plate-discard", "Discard this read"); cancel.type = "button";
   if (retake && onRetake) {
-    const rt2 = el("button", "btn btn-primary plate-retake-btn2", "📷 Retake"); rt2.type = "button";
+    const rt2 = el("button", "btn btn-primary btn-big plate-retake-btn2", "📷 Retake"); rt2.type = "button";
     rt2.addEventListener("click", () => { wrap.remove(); onRetake(); });
     actions.append(rt2);
+  } else if (onRetake) {
+    const rt3 = el("button", "link-btn plate-retake-link", "Retake photo"); rt3.type = "button";
+    rt3.addEventListener("click", () => { wrap.remove(); onRetake(); });
+    actions.append(ok, rt3, cancel);
   }
-  actions.append(ok, cancel);
+  if (!actions.contains(ok)) actions.append(ok, cancel);
   const gateNote = el("p", "footer-note plate-gate-note");
   function gate() {
     const pending = ID_FIELDS.filter((n) => { const i = form.elements[n], c = form.elements[n + "-ok"]; return i && i.value.trim() && c && !c.checked; });
@@ -495,11 +501,14 @@ function buildConfirm(parsed, onConfirm, onCancel, passes, onRetake) {
     onConfirm(values);
   });
   cancel.addEventListener("click", () => { wrap.remove(); onCancel && onCancel(); });
+  const summary = renderReviewSummary(form);
+  form.addEventListener("change", gate);
+  wrap.insertBefore(summary.el, wrap.querySelector(".plate-retake") ? wrap.querySelector(".plate-retake").nextSibling : wrap.firstChild);
   const cols = el("div", "plate-cols");
   cols.appendChild(form);
   if (passes && passes.length) cols.appendChild(rawPanel(passes, parsed.bestPass));
   wrap.appendChild(cols);
-  queueMicrotask(gate);
+  queueMicrotask(() => { gate(); summary.update(); });
   return wrap;
 }
 
@@ -523,9 +532,11 @@ export function plateSummary(v) {
  * Put a "Scan data plate" button into `container`.
  * onConfirm(values) is called only after the user confirms the (possibly edited) form.
  */
-export function mountPlateScan(container, onConfirm) {
+export function mountPlateScan(container, onConfirm, { confirmLabel = "Fill call card" } = {}) {
   const box = el("div", "plate-scan");
-  const label = el("label", "btn btn-secondary plate-scan-btn", "📷 Scan data plate");
+  const guide = mountGuide(box);
+  box.__guide = guide;
+  const label = el("label", "btn btn-primary btn-big plate-scan-btn", "📷 Take photo");
   const input = el("input", "visually-hidden");
   input.type = "file";
   input.accept = "image/*";
@@ -545,35 +556,44 @@ export function mountPlateScan(container, onConfirm) {
     input.value = ""; // drop the reference to the photo
     if (!file) return;
     box.querySelector(".plate-confirm")?.remove();
-    label.classList.add("disabled");
+    box.querySelector(".scan-done")?.remove();
+    label.classList.add("disabled"); label.hidden = true; tip.hidden = true;
     bar.hidden = false;
     status.textContent = "Reading plate on this phone…";
     try {
       const opts = Object.assign({}, globalThis.__plateScanOpts || {});
       if (opts.cropStep !== false) {
-        status.textContent = "Straighten the plate (optional)…";
+        guide.set("crop");
+        status.textContent = "";
         const { canvas: photo } = await decodeUpright(file);
         const warped = await cropStep(box, photo);
         if (warped) { opts.canvas = warped; photo.width = photo.height = 0; }
-        status.textContent = "Reading plate on this phone…";
       }
-      const res = await scanPlate(file, (stage, frac) => { status.textContent = stage + " " + Math.round(frac * 100) + "%"; bar.value = frac; }, opts);
+      guide.set("reading");
+      const t0 = performance.now();
+      status.textContent = progressLine("Preparing", 0, 0);
+      const res = await scanPlate(file, (stage, frac) => { status.textContent = progressLine(stage, performance.now() - t0, frac); bar.value = frac; }, opts);
       const parsed = res.merged;
       box.__lastParse = parsed; // for debugging/tests only, in memory
       box.__lastScan = { timing: res.timing, crop: res.crop, angle: res.angle, probes: res.probes, orientation: res.orientation, passes: res.passes.map((p) => ({ name: p.name, text: p.text, confidence: p.confidence })) };
       const found = Object.keys(parsed.fields).length;
-      status.textContent = found ? "Found " + found + " field(s). Review below." : "Couldn't read any plate fields. Try again closer, square-on, with less glare.";
+      guide.set("check", needsRetake(parsed) ? INSTRUCTIONS.checkRetake : INSTRUCTIONS.check);
+      status.textContent = found ? "" : "Couldn't read any plate fields. Retake closer, square-on, with less glare — or type the values.";
+      const reset = () => { guide.set("photo"); label.hidden = false; tip.hidden = false; };
       box.appendChild(buildConfirm(parsed, (values) => {
-        status.textContent = "Plate values applied.";
+        status.textContent = "";
+        guide.set("done");
         onConfirm(values);
-      }, () => { status.textContent = "Discarded."; }, res.passes, () => { status.textContent = "Retake: opening the camera…"; input.click(); }));
+      }, () => { status.textContent = "Read discarded."; reset(); }, res.passes, () => { reset(); status.textContent = "Retake: opening the camera…"; input.click(); }, confirmLabel));
     } catch (e) {
       console.error(e);
-      status.textContent = "OCR failed: " + (e && e.message ? e.message : e);
+      status.textContent = "Couldn't read the photo: " + (e && e.message ? e.message : e) + " — tap Take photo to try again.";
+      guide.set("photo"); label.hidden = false; tip.hidden = false;
     } finally {
       label.classList.remove("disabled");
       bar.hidden = true;
     }
   });
+  box.__reset = () => { box.querySelector(".scan-done")?.remove(); guide.set("photo"); label.hidden = false; tip.hidden = false; status.textContent = ""; };
   return box;
 }

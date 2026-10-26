@@ -1,12 +1,12 @@
 /** Call card: "Scan data plate" in the Open panel. After Confirm, "Add to call card" writes the
  *  plate (brand, model, serial, refrigerant, charge…) into the Open step; nothing is written before that.
  *  Also shows manual links for the plate's brand/model and picks the troubleshooting tree. */
-import { mountPlateScan } from "./plate-scan.js?v=15";
-import { callCardFill, renderScanActions, saveScan, SCAN_KEY } from "./call-card.js?v=15";
-import { parsePlate } from "./plate-parse.js?v=15";
-import { loadManualsIndex, findManuals, renderManuals } from "./manuals.js?v=15";
-import { chooseTree, treeHref } from "./trees.js?v=15";
-import { getLastPlate, summaryRows, plateOnCard } from "./last-plate.js?v=15";
+import { mountPlateScan } from "./plate-scan.js?v=16";
+import { callCardFill, renderDone, saveScan, SCAN_KEY } from "./call-card.js?v=16";
+import { parsePlate } from "./plate-parse.js?v=16";
+import { loadManualsIndex, findManuals, renderManuals } from "./manuals.js?v=16";
+import { chooseTree, treeHref } from "./trees.js?v=16";
+import { getLastPlate, summaryRows, plateOnCard } from "./last-plate.js?v=16";
 
 
 function set(id, value) {
@@ -69,18 +69,19 @@ async function refresh() {
 
 document.addEventListener("DOMContentLoaded", () => {
   const host = document.getElementById("plate-scan-host");
-  if (host) mountPlateScan(host, (v) => {
-    renderScanActions(host, v, {
+  // "Fill call card" writes the plate into the Open step (after the forced model/serial check), then Done.
+  if (host) { const scan = mountPlateScan(host, (v) => {
+    const fill = callCardFill(v);
+    Object.entries(fill).forEach(([k, val]) => set(k, val));
+    saveScan(v); // after set("plate"): the stored summary now matches the Data plate box
+    refresh();
+    renderDone(scan, v, {
       equipment: () => (document.getElementById("equipment") || {}).value,
-      onReadings: goReadings,
-      onAdd: (vals) => {
-        const fill = callCardFill(vals);
-        Object.entries(fill).forEach(([k, val]) => set(k, val));
-        saveScan(vals); // after set("plate"): the stored summary now matches the Data plate box
-        refresh();
-      },
+      primary: { label: "Go to Readings", onClick: goReadings },
+      callHref: "#panel-open",
+      onScanAgain: () => scan.__reset(),
     });
-  });
+  }); }
   ["plate", "equipment"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) { el.addEventListener("input", refresh); el.addEventListener("change", refresh); }
