@@ -63,7 +63,7 @@ test("real index: only official OEM domains, all https, every link sourced from 
   const SOURCES = "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba";
   let n = 0;
   for (const b of Object.values(INDEX.brands)) for (const o of b.oem) { n++; assert.match(o.url, OFFICIAL, o.url); assert.equal(o.source, SOURCES); assert.ok(o.verified); }
-  assert.equal(n, 40);
+  assert.equal(n, 37); // 3 Tecumseh /Resources/documents pages return 404 since 2026-10-26 and are left out (failedToLoad)
   for (const e of INDEX.entries) if (e.brand !== "Trane") assert.equal(e.url, "https://app.notion.com/p/3d3402f833af8106af2ae647a39fcf48");
 });
 
