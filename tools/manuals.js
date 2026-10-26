@@ -98,13 +98,13 @@ export function listUnmatched(storage) {
 /** Saves {brand, model, date} when the best match is brand-level only. Returns true if saved/updated. */
 export function recordUnmatched(match, storage, now = new Date()) {
   const s = store(storage);
-  if (!s || !isBrandLevel(match) || !match.model || !match.brand) return false;
+  if (!s || !match || !match.model || !(isBrandLevel(match) || !match.brand)) return false; // brand-level, or no brand read
   const list = listUnmatched(s).filter((x) => !(norm(x.brand) === norm(match.brand) && norm(x.model) === norm(match.model)));
-  list.unshift({ brand: match.brand, model: match.model, date: now.toISOString().slice(0, 10) });
+  list.unshift({ brand: match.brand || "", model: match.model, kind: match.kind, date: now.toISOString().slice(0, 10) });
   try { s.setItem(UNMATCHED_KEY, JSON.stringify(list.slice(0, 100))); return true; } catch { return false; }
 }
 export function clearUnmatched(storage) { try { store(storage).removeItem(UNMATCHED_KEY); } catch { /* ignore */ } }
-export const unmatchedText = (list) => ["Models without a manual:", ...list.map((x) => x.date + "  " + x.brand + "  " + x.model)].join("\n");
+export const unmatchedText = (list) => ["Models without a manual:", ...list.map((x) => x.date + "  " + (x.brand || "(no brand)") + "  " + x.model)].join("\n");
 
 /** Lock label for login-only docs. */
 export const LOCK = "\u{1F512}";
@@ -138,10 +138,12 @@ function findManualsOld(index, { brand, model, family } = {}) {
 
 let cached = null;
 /** Loads the bundled index (precached by sw.js, so it works offline). */
-export function loadManualsIndex(url = new URL("../data/manuals-index.json?v=16", import.meta.url).href) {
+export function loadManualsIndex(url = new URL("../data/manuals-index.json?v=17", import.meta.url).href) {
   if (!cached) cached = fetch(url).then((r) => { if (!r.ok) throw new Error("manuals index " + r.status); return r.json(); }).catch((e) => { cached = null; throw e; });
   return cached;
 }
+
+import { renderSendButton } from "./missing-model.js?v=17";
 
 /** Renders the result of findManuals into host (DOM). */
 export function renderManuals(host, res, { brand, model } = {}) {
@@ -152,7 +154,7 @@ export function renderManuals(host, res, { brand, model } = {}) {
   h.textContent = "Manuals" + (brand || model ? " — " + [brand, model].filter(Boolean).join(" ") : "");
   host.appendChild(h);
   const m = res.match;
-  if (m && m.kind !== "none" && m.model) {
+  if (m && m.model && (m.kind !== "none" || !m.brand)) {
     const box = document.createElement("div");
     box.className = "manuals-match manuals-match-" + m.kind;
     const k = document.createElement("strong"); k.className = "match-kind"; k.textContent = m.label;
@@ -167,11 +169,13 @@ export function renderManuals(host, res, { brand, model } = {}) {
       ml.appendChild(li);
     });
     box.appendChild(ml);
-    if (isBrandLevel(m) && recordUnmatched(m)) {
+    if (!m.brand) box.appendChild(Object.assign(document.createElement("small"), { className: "unmatched-note", textContent: "No brand read from the plate." }));
+    if ((isBrandLevel(m) || !m.brand) && recordUnmatched(m)) {
       const n = document.createElement("small"); n.className = "unmatched-note";
       n.textContent = "Saved to \u201cModels without a manual\u201d on this phone (not uploaded).";
       box.appendChild(n);
     }
+    renderSendButton(box, m);
     host.appendChild(box);
   }
   const list = document.createElement("ul");

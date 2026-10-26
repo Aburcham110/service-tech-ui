@@ -53,7 +53,7 @@ test("unmatched list: brand-level only, deduped, local, copyable", () => {
   assert.equal(recordUnmatched(matchModel(FX, { brand: "Plainco", model: "P-1" }), s, new Date("2026-10-26T12:00:00Z")), true);
   assert.equal(recordUnmatched(matchModel(FX, { brand: "Plainco", model: "p1" }), s, new Date("2026-10-27T12:00:00Z")), true);
   const list = listUnmatched(s);
-  assert.deepEqual(list, [{ brand: "Plainco", model: "p1", date: "2026-10-27" }, { brand: "Fixtureco", model: "ZZ9", date: "2026-10-26" }]);
+  assert.deepEqual(list, [{ brand: "Plainco", model: "p1", kind: "brand", date: "2026-10-27" }, { brand: "Fixtureco", model: "ZZ9", kind: "search", date: "2026-10-26" }]);
   assert.ok(JSON.parse(s.getItem(UNMATCHED_KEY)).length === 2);
   assert.equal(unmatchedText(list), "Models without a manual:\n2026-10-27  Plainco  p1\n2026-10-26  Fixtureco  ZZ9");
   clearUnmatched(s); assert.deepEqual(listUnmatched(s), []);
