@@ -10,13 +10,23 @@ const spy = (fail = false) => { const calls = []; const f = async (url, init) =>
 // A scan result with everything a scan carries; only brand/model/kind may leave the phone.
 const SCAN = { kind: "search", brand: "Trane", model: "4TTR5036", serial: "21123ABC", photo: "data:image/jpeg;base64,xx", location: { lat: 1, lon: 2 }, callCard: { customer: "Smith" }, docs: [{ url: "x" }] };
 
-test("config: Apps Script URL is a placeholder (unset) for now, so nothing can send", async () => {
-  assert.equal(MISSING_MODEL_URL, "");
-  const f = spy();
-  assert.equal(await sendMissing(SCAN, { storage: mem(), fetchFn: f, online: true }), "unset");
-  assert.equal(f.calls.length, 0);
-  assert.equal(await flushQueue({ storage: mem(), fetchFn: f, online: true }), 0);
+// Tests must never reach the real Apps Script: any un-stubbed fetch fails loudly.
+globalThis.fetch = async () => { throw new Error("real network call in a test"); };
+
+test("config: Apps Script URL is set; default sends go to it via the stubbed fetch only", async () => {
+  assert.equal(MISSING_MODEL_URL, "https://script.google.com/macros/s/AKfycbx_JTOt1P_z2wP6JnKkBMNV_NSyBH3fMnkhhM9YMwaeE3Pb8l5IzKzJm1nO-w6JkMTI/exec");
+  const f = spy(); const s = mem();
+  assert.equal(await sendMissing(SCAN, { storage: s, fetchFn: f, online: true }), "sent");
+  assert.equal(f.calls.length, 1); assert.equal(f.calls[0].url, MISSING_MODEL_URL);
 });
+
+test("an empty URL still disables sending (and hides the button)", async () => {
+  const f = spy();
+  assert.equal(await sendMissing(SCAN, { url: "", storage: mem(), fetchFn: f, online: true }), "unset");
+  assert.equal(await flushQueue({ url: "", storage: mem(), fetchFn: f, online: true }), 0);
+  assert.equal(f.calls.length, 0);
+});
+
 
 test("when to offer it: search template, brand page, or no brand — not exact/prefix", () => {
   assert.ok(needsSend({ kind: "search", brand: "Trane", model: "X1" }));
