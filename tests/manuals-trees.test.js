@@ -63,7 +63,7 @@ test("real index: only official OEM domains, all https, every link sourced from 
   const SOURCES = "https://app.notion.com/p/3d3402f833af8125a057eaa0304b38ba";
   let n = 0;
   for (const b of Object.values(INDEX.brands)) for (const o of b.oem) { n++; assert.match(o.url, OFFICIAL, o.url); assert.equal(o.source, SOURCES); assert.ok(o.verified); }
-  assert.equal(n, 40);
+  assert.equal(n, 37); // 3 Tecumseh /Resources/documents pages return 404 since 2026-10-26 and are left out (failedToLoad)
   for (const e of INDEX.entries) if (e.brand !== "Trane") assert.equal(e.url, "https://app.notion.com/p/3d3402f833af8106af2ae647a39fcf48");
 });
 
@@ -136,8 +136,8 @@ test("chooseTree picks by equipment / scanned unit type", () => {
 
 test("offline: new files are precached and the cache is bumped", () => {
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  for (const f of ["./tree.html", "./tools/manuals.js?v=13", "./tools/trees.js?v=13", "./tools/tree-app.js?v=13", "./data/manuals-index.json?v=13", "./manuals.html", "./tools/prefill.js?v=13", "./tools/call-card.js?v=13", "./tools/manuals-helper.js?v=13", "./tools/manuals-helper-app.js?v=13", "./tools/last-plate.js?v=13"]) assert.ok(sw.includes('"' + f + '"'), f);
-  assert.match(sw, /const VERSION = "v13"/);
+  for (const f of ["./tree.html", "./tools/manuals.js?v=15", "./tools/trees.js?v=15", "./tools/tree-app.js?v=15", "./data/manuals-index.json?v=15", "./manuals.html", "./tools/prefill.js?v=15", "./tools/call-card.js?v=15", "./tools/manuals-helper.js?v=15", "./tools/manuals-helper-app.js?v=15", "./tools/last-plate.js?v=15"]) assert.ok(sw.includes('"' + f + '"'), f);
+  assert.match(sw, /const VERSION = "v15"/);
 });
 
 const count = (b) => INDEX.brands[b].oem.length;

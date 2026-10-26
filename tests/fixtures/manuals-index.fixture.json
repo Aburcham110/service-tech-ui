@@ -1,0 +1,27 @@
+{
+  "about": "TEST FIXTURE ONLY — not shipped, not real OEM data. Brands, models, prefixes and URLs are invented (.invalid TLD) to exercise matching.",
+  "fixture": true,
+  "brands": {
+    "Fixtureco": {
+      "heading": "Fixtureco (TEST FIXTURE)",
+      "aliases": ["Fixtureco", "Fixture Co"],
+      "oem": [{ "title": "Literature portal", "url": "https://fixtureco.invalid/literature", "source": "fixture" }],
+      "searchTemplate": { "url": "https://fixtureco.invalid/search?q={model}&type=manual", "source": "fixture" }
+    },
+    "Plainco": {
+      "heading": "Plainco (TEST FIXTURE)",
+      "aliases": ["Plainco"],
+      "oem": [{ "title": "Brand page", "url": "https://plainco.invalid/", "source": "fixture" }]
+    }
+  },
+  "entries": [],
+  "models": [
+    { "brand": "Fixtureco", "model": "FX-1000A", "docType": "install", "title": "FX-1000A installation manual", "url": "https://fixtureco.invalid/docs/fx1000a-install.pdf", "source": "fixture" },
+    { "brand": "Fixtureco", "model": "FX-1000A", "docType": "service", "title": "FX-1000A service manual", "url": "https://fixtureco.invalid/dealer/fx1000a-service.pdf", "source": "fixture", "loginRequired": true }
+  ],
+  "prefixes": [
+    { "brand": "Fixtureco", "prefix": "FX", "docType": "owner", "title": "FX series owner's manual", "url": "https://fixtureco.invalid/docs/fx-owner.pdf", "source": "fixture" },
+    { "brand": "Fixtureco", "prefix": "FX-20", "docType": "wiring", "title": "FX-20 family wiring diagram", "url": "https://fixtureco.invalid/docs/fx20-wiring.pdf", "source": "fixture" },
+    { "brand": "Fixtureco", "prefix": "FX-2", "docType": "install", "title": "FX-2 family installation", "url": "https://fixtureco.invalid/docs/fx2-install.pdf", "source": "fixture" }
+  ]
+}
