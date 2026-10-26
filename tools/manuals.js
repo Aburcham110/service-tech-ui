@@ -138,7 +138,7 @@ function findManualsOld(index, { brand, model, family } = {}) {
 
 let cached = null;
 /** Loads the bundled index (precached by sw.js, so it works offline). */
-export function loadManualsIndex(url = new URL("../data/manuals-index.json?v=15", import.meta.url).href) {
+export function loadManualsIndex(url = new URL("../data/manuals-index.json?v=16", import.meta.url).href) {
   if (!cached) cached = fetch(url).then((r) => { if (!r.ok) throw new Error("manuals index " + r.status); return r.json(); }).catch((e) => { cached = null; throw e; });
   return cached;
 }
