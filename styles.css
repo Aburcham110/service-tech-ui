@@ -279,3 +279,11 @@ textarea { min-height: 96px; resize: vertical; }
 .mh-unmatched-list .send-missing { margin: .1rem 0 .4rem; }
 .tree-unit { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: 8px; background: var(--surface2); margin: 8px 0; }
 .tree-manual-note, .tree-why { color: var(--muted); }
+.tree-codes-step { align-self: flex-start; }
+.tree-code-form { display: flex; gap: 8px; margin: 8px 0; }
+.tree-code-form input { flex: 1; min-width: 0; font-size: 1.1rem; padding: 8px; }
+.tree-code-list { display: flex; flex-direction: column; gap: 6px; max-height: 60vh; overflow-y: auto; }
+.tree-code-opt { text-align: left; }
+.tree-code-row { border-top: 1px solid var(--surface2); padding: 8px 0; }
+.tree-code-pattern, .tree-code-noremedy, .tree-flag { color: var(--muted); display: block; }
+.tree-code-remedy { white-space: pre-line; }
