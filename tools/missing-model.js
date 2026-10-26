@@ -4,7 +4,7 @@
  * Offline sends wait in a local queue and go out on the 'online' event or the next app start.
  * Each brand+model is sent at most once from this phone.
  */
-import { isBrandLevel } from "./manuals.js?v=16";
+import { isBrandLevel } from "./manuals.js?v=17";
 
 // Google Apps Script web-app URL. Placeholder: while it's empty the Send button stays hidden.
 export const MISSING_MODEL_URL = "";

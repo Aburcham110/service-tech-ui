@@ -1,12 +1,12 @@
 /** Call card: "Scan data plate" in the Open panel. After Confirm, "Add to call card" writes the
  *  plate (brand, model, serial, refrigerant, charge…) into the Open step; nothing is written before that.
  *  Also shows manual links for the plate's brand/model and picks the troubleshooting tree. */
-import { mountPlateScan } from "./plate-scan.js?v=16";
-import { callCardFill, renderDone, saveScan, SCAN_KEY } from "./call-card.js?v=16";
-import { parsePlate } from "./plate-parse.js?v=16";
-import { loadManualsIndex, findManuals, renderManuals } from "./manuals.js?v=16";
-import { chooseTree, treeHref } from "./trees.js?v=16";
-import { getLastPlate, summaryRows, plateOnCard } from "./last-plate.js?v=16";
+import { mountPlateScan } from "./plate-scan.js?v=17";
+import { callCardFill, renderDone, saveScan, SCAN_KEY } from "./call-card.js?v=17";
+import { parsePlate } from "./plate-parse.js?v=17";
+import { loadManualsIndex, findManuals, renderManuals } from "./manuals.js?v=17";
+import { chooseTree, treeHref } from "./trees.js?v=17";
+import { getLastPlate, summaryRows, plateOnCard } from "./last-plate.js?v=17";
 
 
 function set(id, value) {
