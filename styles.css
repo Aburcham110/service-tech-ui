@@ -277,3 +277,5 @@ textarea { min-height: 96px; resize: vertical; }
 .send-missing-btn[data-state="sent"] { color: var(--ok, #2e7d32); text-decoration: none; }
 .send-missing-note { opacity: .75; }
 .mh-unmatched-list .send-missing { margin: .1rem 0 .4rem; }
+.tree-unit { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: 8px; background: var(--surface2); margin: 8px 0; }
+.tree-manual-note, .tree-why { color: var(--muted); }
