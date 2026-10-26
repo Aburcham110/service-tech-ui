@@ -59,6 +59,7 @@ const ask = (choices, why, hint) => {
 export function scanBrand(index, { brand, model } = {}) {
   const k = index ? brandKey(index, brand) : null;
   if (k) return k;
+  if (/^mitsubishi(\s+electric)?$/i.test(String(brand || "").trim())) return "Mitsubishi Electric"; // plates often say just MITSUBISHI
   if (index && model) { const m = matchModel(index, { model }); if (m.kind === "exact") return m.brand; }
   return brand ? String(brand) : null;
 }
