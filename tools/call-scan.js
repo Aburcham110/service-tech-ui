@@ -8,6 +8,7 @@ import { loadManualsIndex, findManuals, renderManuals } from "./manuals.js?v=22"
 import { chooseTree, treeHref } from "./trees.js?v=22";
 import { scanTreeHref } from "./tree-pick.js?v=22";
 import { getLastPlate, summaryRows, plateOnCard } from "./last-plate.js?v=22";
+import { saveCardScan } from "./card-plate.js?v=22";
 
 
 function set(id, value) {
@@ -76,6 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const fill = callCardFill(v);
     Object.entries(fill).forEach(([k, val]) => set(k, val));
     saveScan(v); // after set("plate"): the stored summary now matches the Data plate box
+    saveCardScan(v); // this card's plate, for Troubleshooting (survives reloads; card edits win)
     refresh();
     renderDone(scan, v, {
       equipment: () => (document.getElementById("equipment") || {}).value,

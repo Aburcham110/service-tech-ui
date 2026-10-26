@@ -51,6 +51,7 @@ const ASSETS = [
   "./tools/trees.js?v=22",
   "./tools/tree-app.js?v=22",
   "./tools/tree-pick.js?v=22",
+  "./tools/card-plate.js?v=22",
   "./tools/error-codes.js?v=22",
   "./tools/official-domains.js",
   "./data/error-codes.json?v=22",
