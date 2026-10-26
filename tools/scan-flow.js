@@ -96,7 +96,8 @@ export function renderReviewSummary(form) {
     const filled = inputs.filter((i) => i.value.trim()).length;
     const need = inputs.filter((i) => {
       const cb = form.querySelector('[data-looks-right="' + i.name + '"]');
-      return (i.classList.contains("low-conf") && i.value.trim()) || (cb && i.value.trim() && !cb.checked);
+      if (!i.value.trim()) return false;
+      return cb ? !cb.checked : i.classList.contains("low-conf"); // model/serial: resolved once ticked
     });
     head.textContent = reviewSummaryText(filled, need.length);
     jumps.innerHTML = "";

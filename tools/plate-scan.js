@@ -401,7 +401,7 @@ function buildConfirm(parsed, onConfirm, onCancel, passes, onRetake, confirmLabe
     rb.appendChild(el("strong", null, "Low confidence read. "));
     rb.appendChild(document.createTextNode("Retake closer and square-on, tilt slightly to kill glare, or straighten with the crop step — then check model and serial character by character."));
     if (onRetake) {
-      const rt = el("button", "btn btn-primary plate-retake-btn", "📷 Retake");
+      const rt = el("button", "link-btn plate-retake-btn", "Retake now");
       rt.type = "button";
       // One tap: drop this read and reopen the camera (same file input, so it stays a user gesture).
       rt.addEventListener("click", () => { wrap.remove(); onRetake(); });

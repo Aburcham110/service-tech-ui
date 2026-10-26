@@ -49,6 +49,7 @@ test("safety checks kept: forced Looks right gate, low-conf flags, blanks; one p
   assert.match(ps, /classList\.add\("low-conf"\)/);
   assert.match(ps, /Blank = not read/);
   assert.match(ps, /"📷 Take photo"/);
+  assert.match(ps, /link-btn plate-retake-btn"/); // banner retake is a link; the single primary is the Retake in the actions
   assert.match(ps, /btn btn-secondary plate-confirm-btn" : "btn btn-primary btn-big plate-confirm-btn"/); // retake leads when unreliable
   assert.match(ps, /link-btn plate-discard/);
   const pc = src("plate-crop.js");
