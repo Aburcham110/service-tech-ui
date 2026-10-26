@@ -1,6 +1,6 @@
 /** manuals.html: renders the offline manuals helper from the precached index. Picking a brand renders its
  *  terms and links immediately (change event); the last scanned plate pre-fills brand/model. */
-import { loadManualsIndex, brandKey } from "./manuals.js?v=13";
+import { loadManualsIndex, brandKey, matchModel, listUnmatched, clearUnmatched, unmatchedText, loginLabel, LOCK } from "./manuals.js?v=13";
 import { searchTerms, portalLinks, bestLink, allTermsText, LABEL } from "./manuals-helper.js?v=13";
 import { getLastPlate } from "./last-plate.js?v=13";
 
@@ -31,6 +31,19 @@ loadManualsIndex().then((index) => {
     if (!b) { root.appendChild(el("p", "use-when", "Pick a brand (Bohn, Ruud, Coleman… are listed under their parent).")); return; }
     root.appendChild(el("div", "disclaimer mh-label", LABEL));
     if (modelIn.dataset.fromScan) root.appendChild(el("p", "footer-note", "Model pre-filled from your last scan — edit if this is a different unit."));
+    const m = matchModel(index, { brand: b, model: modelIn.value });
+    if (modelIn.value.trim() && m.kind !== "none") {
+      const box = el("div", "manuals-match manuals-match-" + m.kind); box.id = "mh-match";
+      box.appendChild(el("strong", "match-kind", m.label));
+      const ul = el("ul");
+      m.docs.forEach((d) => {
+        const li = el("li"); const a = el("a", null, (d.loginRequired ? LOCK + " " : "") + d.title); a.href = d.url; a.target = "_blank"; a.rel = "noopener";
+        li.appendChild(a); const meta = [d.docType, loginLabel(d)].filter(Boolean).join(" · ");
+        if (meta) li.appendChild(el("small", d.loginRequired ? "login-lock" : "", " " + meta));
+        ul.appendChild(li);
+      });
+      box.appendChild(ul); root.appendChild(box);
+    }
     root.appendChild(el("h2", null, "Search terms"));
     const terms = searchTerms(index, b, modelIn.value);
     const all = el("button", "btn btn-primary mh-copy-all", "Copy search terms"); all.type = "button"; all.id = "mh-copy-all";
@@ -49,13 +62,39 @@ loadManualsIndex().then((index) => {
     portalLinks(index, b).forEach((o) => {
       const li = el("li");
       if (best && best.url === o.url) { li.className = "mh-best"; li.appendChild(el("span", "mh-best-tag", "Best match: ")); li.title = best.why; } const a = el("a", null, o.title); a.href = o.url; a.target = "_blank"; a.rel = "noopener";
-      li.appendChild(a); li.appendChild(el("small", null, " " + new URL(o.url).hostname + (o.note ? " — " + o.note : "")));
+      if (o.loginRequired) a.textContent = LOCK + " " + o.title;
+      li.appendChild(a); li.appendChild(el("small", o.loginRequired ? "login-lock" : null, " " + new URL(o.url).hostname + (o.loginRequired ? " — dealer login" : "") + (o.note ? " — " + o.note : "")));
       pl.appendChild(li);
     });
     root.appendChild(pl);
     root.appendChild(el("p", "footer-note online-only", "Portals open online. Aliases: " + (index.brands[b].aliases || []).join(", ") + "."));
   };
+  renderUnmatched();
   pick.addEventListener("change", render);
   modelIn.addEventListener("input", () => { delete modelIn.dataset.fromScan; render(); });
   render();
 }).catch(() => { root.textContent = "Manuals index unavailable."; });
+
+/** "Models without a manual" saved on this phone after scans; copy or share by hand, nothing is uploaded. */
+function renderUnmatched() {
+  const host = document.getElementById("mh-unmatched");
+  if (!host) return;
+  host.innerHTML = "";
+  const list = listUnmatched();
+  host.appendChild(el("h2", null, "Models without a manual"));
+  if (!list.length) { host.appendChild(el("p", "footer-note", "None yet. Scanned models with only a brand-level match are saved here, on this phone only.")); return; }
+  const ul = el("ul", "mh-unmatched-list");
+  list.forEach((x) => ul.appendChild(el("li", null, x.date + " — " + x.brand + " " + x.model)));
+  host.appendChild(ul);
+  const text = unmatchedText(list);
+  const row = el("div", "mh-unmatched-actions");
+  const c = el("button", "btn btn-secondary", "Copy list"); c.type = "button"; c.id = "mh-unmatched-copy"; c.addEventListener("click", () => copy(text, c)); row.appendChild(c);
+  if (navigator.share) {
+    const s = el("button", "btn btn-secondary", "Share"); s.type = "button"; s.id = "mh-unmatched-share";
+    s.addEventListener("click", () => navigator.share({ title: "Models without a manual", text }).catch(() => {})); row.appendChild(s);
+  }
+  const x = el("button", "btn btn-secondary", "Clear"); x.type = "button"; x.id = "mh-unmatched-clear";
+  x.addEventListener("click", () => { if (confirm("Clear the list on this phone?")) { clearUnmatched(); renderUnmatched(); } }); row.appendChild(x);
+  host.appendChild(row);
+  host.appendChild(el("p", "footer-note", "Stored on this phone only — nothing is uploaded. Copy or share it to whoever keeps the Model Manual Index."));
+}

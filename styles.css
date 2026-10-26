@@ -241,3 +241,13 @@ textarea { min-height: 96px; resize: vertical; }
 .mh-best-tag { font-weight: 700; color: var(--accent, #4caf50); }
 .tile-last { border: 2px solid var(--accent, #4caf50); }
 .btn[hidden], .scan-added[hidden], .scanned-summary[hidden], .plate-chars[hidden] { display: none; }
+
+/* Manuals model index */
+.manuals-match { border: 1px solid var(--accent, #3b82f6); border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+.manuals-match .match-kind { display: block; margin-bottom: 4px; }
+.manuals-match-exact .match-kind { color: #22c55e; }
+.manuals-match-prefix .match-kind { color: #84cc16; }
+.manuals-match-search .match-kind, .manuals-match-brand .match-kind { color: #f59e0b; }
+.login-lock { color: #f59e0b; font-weight: 600; }
+.unmatched-note { display: block; opacity: .8; margin-top: 4px; }
+.mh-unmatched-actions { display: flex; gap: 8px; flex-wrap: wrap; }
