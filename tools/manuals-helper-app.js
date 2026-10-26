@@ -37,7 +37,7 @@ loadManualsIndex().then((index) => {
       box.appendChild(el("strong", "match-kind", m.label));
       const ul = el("ul");
       m.docs.forEach((d) => {
-        const li = el("li"); const a = el("a", null, (d.loginRequired ? LOCK + " " : "") + d.title); a.href = d.url; a.target = "_blank"; a.rel = "noopener";
+        const li = el("li"); const a = el("a", null, d.title); a.href = d.url; a.target = "_blank"; a.rel = "noopener";
         li.appendChild(a); const meta = [d.docType, loginLabel(d)].filter(Boolean).join(" · ");
         if (meta) li.appendChild(el("small", d.loginRequired ? "login-lock" : "", " " + meta));
         ul.appendChild(li);

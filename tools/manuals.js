@@ -161,7 +161,7 @@ export function renderManuals(host, res, { brand, model } = {}) {
     m.docs.forEach((d) => {
       const li = document.createElement("li");
       const a = document.createElement("a"); a.href = d.url; a.target = "_blank"; a.rel = "noopener";
-      a.textContent = (d.loginRequired ? LOCK + " " : "") + d.title; li.appendChild(a);
+      a.textContent = d.title; li.appendChild(a);
       const meta = [d.docType, loginLabel(d)].filter(Boolean).join(" · ");
       if (meta) { const s = document.createElement("small"); s.className = d.loginRequired ? "login-lock" : ""; s.textContent = " " + meta; li.appendChild(s); }
       ml.appendChild(li);
