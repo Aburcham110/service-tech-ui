@@ -476,5 +476,8 @@
   ],
   "failedToLoad": [
     "https://support.trane.com/hc/en-us/articles/360045062271-List-of-Light-Commercial-LED-Codes -> HTTP 403"
-  ]
+  ],
+  "models": [],
+  "prefixes": [],
+  "schema": "2: models[] (exact) and prefixes[] (family) entries with docType install|service|owner|wiring, source, optional loginRequired; brands[B].searchTemplate {url with {model}, source}. Empty until the Notion Model Manual Index is loaded."
 }

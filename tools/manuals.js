@@ -6,7 +6,17 @@
  *   { status: "match", brand, docs: [...], oem: [...] }   an index entry matched by model prefix, family or brand-wide doc
  *   { status: "oem",   brand, docs: [],    oem: [...] }   nothing on file: the brand's official OEM literature pages
  *   { status: "none",  brand, docs: [],    oem: [] }      neither ("No manual on file")
+ * Every result also carries .match = matchModel(...) (model-level match, see below).
+ *
+ * Index schema (additions, all optional so older indexes keep working):
+ *   models:   [{ brand, model,  docType, title, url, source, loginRequired? }]   exact model numbers
+ *   prefixes: [{ brand, prefix, docType, title, url, source, loginRequired? }]   model-family prefixes
+ *   brands[B].searchTemplate: { url: "https://<OEM>/...{model}...", source }      OEM literature search
+ *   docType is one of DOC_TYPES. Official OEM URLs only.
  */
+export const DOC_TYPES = ["install", "service", "owner", "wiring"];
+export const MATCH_LABELS = { exact: "Exact model", prefix: "Model family", search: "Search results for ", brand: " brand page" };
+
 const norm = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 /** Canonical brand key in the index for a parser/typed brand name, or null. */
@@ -37,7 +47,77 @@ function entryMatches(e, key, model, family) {
   return false;
 }
 
+/** OEM search template URL with {model} filled in, URL-encoded. */
+export function fillTemplate(tpl, model) {
+  return String(tpl || "").split("{model}").join(encodeURIComponent(String(model || "").trim()));
+}
+
+/** Human label for a match kind. */
+export function matchLabel(m) {
+  if (!m || m.kind === "none") return "No manual on file";
+  if (m.kind === "search") return MATCH_LABELS.search + m.model;
+  if (m.kind === "brand") return m.brand + MATCH_LABELS.brand;
+  return MATCH_LABELS[m.kind];
+}
+
+/**
+ * Model-level match, in order: exact model -> longest prefix -> brand search template (model filled in)
+ * -> brand page. -> { kind: "exact"|"prefix"|"search"|"brand"|"none", brand, model, label, docs:[{title,url,docType,loginRequired}] }
+ * kind "search"/"brand" = brand-level only (nothing filed for this model).
+ */
+export function matchModel(index, { brand, model } = {}) {
+  const key = brandKey(index, brand);
+  const raw = String(model || "").trim();
+  const m = norm(raw);
+  const same = (e) => !key || brandKey(index, e.brand) === key;
+  const out = (kind, docs, b) => { const r = { kind, brand: b || key || brand || null, model: raw, docs }; r.label = matchLabel(r); return r; };
+  if (m) {
+    const exact = ((index && index.models) || []).filter((e) => same(e) && norm(e.model) === m);
+    if (exact.length) return out("exact", exact, brandKey(index, exact[0].brand) || exact[0].brand);
+    if (key) { // a short prefix without a brand is too ambiguous
+      const hits = ((index && index.prefixes) || []).filter((e) => same(e) && norm(e.prefix) && m.startsWith(norm(e.prefix)));
+      const longest = Math.max(0, ...hits.map((e) => norm(e.prefix).length));
+      if (longest) return out("prefix", hits.filter((e) => norm(e.prefix).length === longest));
+    }
+  }
+  const b = key && index.brands && index.brands[key];
+  const t = b && b.searchTemplate;
+  if (m && t && t.url) return out("search", [{ title: key + " literature search: " + raw, url: fillTemplate(t.url, raw), source: t.source, loginRequired: !!t.loginRequired }]);
+  if (b && (b.oem || []).length) return out("brand", b.oem.slice(0, 1));
+  return out("none", []);
+}
+
+export const isBrandLevel = (m) => !!m && (m.kind === "search" || m.kind === "brand");
+
+/** "Models without a manual": local list only (never uploaded). */
+export const UNMATCHED_KEY = "serviceTechNoManual_v1";
+const store = (s) => s || (typeof localStorage !== "undefined" ? localStorage : null);
+export function listUnmatched(storage) {
+  try { const v = JSON.parse(store(storage).getItem(UNMATCHED_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+/** Saves {brand, model, date} when the best match is brand-level only. Returns true if saved/updated. */
+export function recordUnmatched(match, storage, now = new Date()) {
+  const s = store(storage);
+  if (!s || !isBrandLevel(match) || !match.model || !match.brand) return false;
+  const list = listUnmatched(s).filter((x) => !(norm(x.brand) === norm(match.brand) && norm(x.model) === norm(match.model)));
+  list.unshift({ brand: match.brand, model: match.model, date: now.toISOString().slice(0, 10) });
+  try { s.setItem(UNMATCHED_KEY, JSON.stringify(list.slice(0, 100))); return true; } catch { return false; }
+}
+export function clearUnmatched(storage) { try { store(storage).removeItem(UNMATCHED_KEY); } catch { /* ignore */ } }
+export const unmatchedText = (list) => ["Models without a manual:", ...list.map((x) => x.date + "  " + x.brand + "  " + x.model)].join("\n");
+
+/** Lock label for login-only docs. */
+export const LOCK = "\u{1F512}";
+export const loginLabel = (d) => (d && d.loginRequired ? LOCK + " dealer login" : "");
+
 export function findManuals(index, { brand, model, family } = {}) {
+  const match = matchModel(index, { brand, model });
+  const res = findManualsOld(index, { brand, model, family });
+  res.match = match;
+  return res;
+}
+
+function findManualsOld(index, { brand, model, family } = {}) {
   const key = brandKey(index, brand);
   const docs = [];
   for (const e of (index && index.entries) || []) {
@@ -71,6 +151,29 @@ export function renderManuals(host, res, { brand, model } = {}) {
   h.className = "manuals-head";
   h.textContent = "Manuals" + (brand || model ? " — " + [brand, model].filter(Boolean).join(" ") : "");
   host.appendChild(h);
+  const m = res.match;
+  if (m && m.kind !== "none" && m.model) {
+    const box = document.createElement("div");
+    box.className = "manuals-match manuals-match-" + m.kind;
+    const k = document.createElement("strong"); k.className = "match-kind"; k.textContent = m.label;
+    box.appendChild(k);
+    const ml = document.createElement("ul");
+    m.docs.forEach((d) => {
+      const li = document.createElement("li");
+      const a = document.createElement("a"); a.href = d.url; a.target = "_blank"; a.rel = "noopener";
+      a.textContent = (d.loginRequired ? LOCK + " " : "") + d.title; li.appendChild(a);
+      const meta = [d.docType, loginLabel(d)].filter(Boolean).join(" · ");
+      if (meta) { const s = document.createElement("small"); s.className = d.loginRequired ? "login-lock" : ""; s.textContent = " " + meta; li.appendChild(s); }
+      ml.appendChild(li);
+    });
+    box.appendChild(ml);
+    if (isBrandLevel(m) && recordUnmatched(m)) {
+      const n = document.createElement("small"); n.className = "unmatched-note";
+      n.textContent = "Saved to \u201cModels without a manual\u201d on this phone (not uploaded).";
+      box.appendChild(n);
+    }
+    host.appendChild(box);
+  }
   const list = document.createElement("ul");
   const add = (title, url, note) => {
     const li = document.createElement("li");
