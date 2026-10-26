@@ -76,6 +76,10 @@ with sync_playwright() as p:
     pg.goto(B + "tree.html"); f = tree_state(); R["after_brand_edit"] = f
     check("hand-edited brand re-picks the tree", f["header"] == "Copeland RST64C1E-CAV" and f["pick"] == "compressor", f)
 
+    # An explicit tree jump (?type=) for the card's unit is kept, with the card's header.
+    pg.goto(B + "tree.html?type=walk-in"); g = tree_state(); pg.reload(); g2 = tree_state()
+    check("explicit ?type= kept with the card header", g["pick"] == "walk-in" and g2 == g and g["header"] == f["header"], g)
+
     # 4. No call card open (draft cleared): old behavior (no unit header; last-scanned banner).
     pg.goto(B + "call.html"); pg.wait_for_selector("#btn-reset")
     pg.once("dialog", lambda dl: dl.accept()); pg.click("#btn-reset")

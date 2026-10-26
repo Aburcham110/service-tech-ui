@@ -27,6 +27,8 @@ let why = "";
 let manual = scan ? manualLink(null, scan) : null;
 let treeId = TREES[params.get("type")] ? params.get("type") : (TREES[store.get(TYPE_KEY)] ? store.get(TYPE_KEY) : null);
 if (scan && (!params.get("type") || urlStale)) treeId = null; // uncertain: ask, don't fall back to the last type
+// Card-driven: an explicit ?type= for the same unit (tree jump, reload after a pick) is kept.
+const typeFixed = !!(card && TREES[params.get("type")] && !urlStale);
 if (card && !treeId) { const p0 = pickTree(scan, null); if (p0.certain) treeId = p0.tree; } // offline-safe first pick
 if (treeId) store.set(TYPE_KEY, treeId);
 let path = [];
@@ -202,7 +204,8 @@ if (scan) loadManualsIndex().then((index) => {
   manual = manualLink(index, scan); why = p.why;
   const chosen = path.length > 1; // tech already moved on: don't yank the tree
   if (!chosen) {
-    if (p.certain && p.tree !== treeId) { treeId = p.tree; store.set(TYPE_KEY, treeId); pick.value = treeId; path = [TREES[treeId].start]; setUrl(); }
+    if (typeFixed) { /* the tech's (or a tree's) explicit pick for this card's unit: keep it */ }
+    else if (p.certain && p.tree !== treeId) { treeId = p.tree; store.set(TYPE_KEY, treeId); pick.value = treeId; path = [TREES[treeId].start]; setUrl(); }
     else if (!p.certain && !params.get("type")) choices = p.choices;
   }
   render();

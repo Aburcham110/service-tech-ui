@@ -4,6 +4,7 @@ import { scanTreeHref } from "./tree-pick.js?v=22";
 
 import { saveLastPlate, nominalVoltage, SCAN_KEY } from "./last-plate.js?v=22";
 import { whereItWent } from "./scan-flow.js?v=22";
+import { saveCardScan } from "./card-plate.js?v=22";
 export { SCAN_KEY };
 export const DRAFT_KEY = "serviceTechCallDraft_v1"; // app.js STORAGE_KEY
 
@@ -29,8 +30,8 @@ export function troubleshootHref(v, equipment) {
   return scanTreeHref(v || {}, equipment);
 }
 
-/** Stores the confirmed plate as the last scanned plate (see last-plate.js). */
-export function saveScan(v) { saveLastPlate(v); }
+/** A plate sent to the call card: the last scanned plate (last-plate.js) and this card's plate (card-plate.js). */
+export function saveScan(v) { saveLastPlate(v); saveCardScan(v); }
 
 /** Tool links for a confirmed plate: SH/SC with the refrigerant, electrical with nameplate voltage + RLA. */
 export function scanToolLinks(v) {
