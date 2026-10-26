@@ -136,8 +136,8 @@ test("chooseTree picks by equipment / scanned unit type", () => {
 
 test("offline: new files are precached and the cache is bumped", () => {
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  for (const f of ["./tree.html", "./tools/manuals.js?v=18", "./tools/trees.js?v=18", "./tools/tree-app.js?v=18", "./data/manuals-index.json?v=18", "./manuals.html", "./tools/prefill.js?v=18", "./tools/call-card.js?v=18", "./tools/manuals-helper.js?v=18", "./tools/manuals-helper-app.js?v=18", "./tools/last-plate.js?v=18", "./tools/scan-flow.js?v=18", "./tools/missing-model.js?v=18"]) assert.ok(sw.includes('"' + f + '"'), f);
-  assert.match(sw, /const VERSION = "v18"/);
+  for (const f of ["./tree.html", "./tools/manuals.js?v=19", "./tools/trees.js?v=19", "./tools/tree-app.js?v=19", "./data/manuals-index.json?v=19", "./manuals.html", "./tools/prefill.js?v=19", "./tools/call-card.js?v=19", "./tools/manuals-helper.js?v=19", "./tools/manuals-helper-app.js?v=19", "./tools/last-plate.js?v=19", "./tools/scan-flow.js?v=19", "./tools/missing-model.js?v=19", "./tools/tree-pick.js?v=19"]) assert.ok(sw.includes('"' + f + '"'), f);
+  assert.match(sw, /const VERSION = "v19"/);
 });
 
 const count = (b) => INDEX.brands[b].oem.length;
