@@ -45,7 +45,7 @@ function unitHeader() {
     const a = el("a", "tree-manual", manual.label + " →"); a.id = "tree-manual"; a.href = manual.href; a.dataset.kind = manual.kind;
     if (manual.external) { a.target = "_blank"; a.rel = "noopener"; }
     h.appendChild(a);
-    if (manual.kind !== "error-codes" && manual.external) h.appendChild(el("small", "tree-manual-note", "No error-code section indexed for this model — codes are in the manual."));
+    if (manual.kind !== "error-codes" && manual.external) h.appendChild(el("small", "tree-manual-note", "No error-code section is indexed for this model; see the manual."));
   }
   return h;
 }
