@@ -1,9 +1,9 @@
 /** Confirmed plate scan -> call card (Open step), and the scan's follow-up actions. */
-import { plateSummary } from "./plate-scan.js?v=19";
-import { scanTreeHref } from "./tree-pick.js?v=19";
+import { plateSummary } from "./plate-scan.js?v=20";
+import { scanTreeHref } from "./tree-pick.js?v=20";
 
-import { saveLastPlate, nominalVoltage, SCAN_KEY } from "./last-plate.js?v=19";
-import { whereItWent } from "./scan-flow.js?v=19";
+import { saveLastPlate, nominalVoltage, SCAN_KEY } from "./last-plate.js?v=20";
+import { whereItWent } from "./scan-flow.js?v=20";
 export { SCAN_KEY };
 export const DRAFT_KEY = "serviceTechCallDraft_v1"; // app.js STORAGE_KEY
 

@@ -1,9 +1,9 @@
 /** tree.html: walks a troubleshooting tree (tools/trees.js) one step at a time. */
-import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=19";
+import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=20";
 import { getTool } from "./registry.js";
-import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=19";
-import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=19";
-import { loadManualsIndex } from "./manuals.js?v=19";
+import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=20";
+import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=20";
+import { loadManualsIndex } from "./manuals.js?v=20";
 import { findCodeSet, lookupCode, sourceLink, rowLabel, loadErrorCodes } from "./error-codes.js?v=20";
 
 const params = new URLSearchParams(location.search);
