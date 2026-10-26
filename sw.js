@@ -9,11 +9,11 @@
    - Any other same-origin GET: network-first, falling back to cache.
    - Navigations to pages not in the cache while offline: offline.html.
    - Cross-origin (Notion, GitHub): not handled, network only. */
-const VERSION = "v18";
+const VERSION = "v19";
 const CACHE = "service-tech-" + VERSION;
 const OFFLINE_URL = "./offline.html";
 
-// Exact URLs the pages request (versioned ones include ?v=18).
+// Exact URLs the pages request (versioned ones include ?v=19).
 const ASSETS = [
   "./",
   "./index.html",
@@ -28,37 +28,38 @@ const ASSETS = [
   "./icon-192.png",
   "./icon-512.png",
   "./apple-touch-icon.png",
-  "./styles.css?v=18",
-  "./app.js?v=18",
+  "./styles.css?v=19",
+  "./app.js?v=19",
   // Every tools/*.js module:
-  "./tools/tool-app.js?v=18",
+  "./tools/tool-app.js?v=19",
   "./tools/registry.js",
   "./tools/registry-a.js",
   "./tools/registry-b.js",
-  "./tools/logic.js?v=18",
-  "./tools/logic-1.js?v=18",
+  "./tools/logic.js?v=19",
+  "./tools/logic-1.js?v=19",
   "./tools/logic-1b.js",
   "./tools/logic-2.js",
   "./tools/logic-2a.js",
   "./tools/logic-2b.js",
-  "./tools/pt-tables.js?v=18",
-  "./tools/plate-parse.js?v=18",
-  "./tools/plate-image.js?v=18",
-  "./tools/plate-scan.js?v=18",
-  "./tools/plate-crop.js?v=18",
-  "./tools/call-scan.js?v=18",
-  "./tools/manuals.js?v=18",
-  "./tools/trees.js?v=18",
-  "./tools/tree-app.js?v=18",
-  "./tools/prefill.js?v=18",
-  "./tools/call-card.js?v=18",
-  "./tools/manuals-helper.js?v=18",
-  "./tools/manuals-helper-app.js?v=18",
-  "./tools/last-plate.js?v=18",
-  "./tools/scan-flow.js?v=18",
-  "./tools/missing-model.js?v=18",
+  "./tools/pt-tables.js?v=19",
+  "./tools/plate-parse.js?v=19",
+  "./tools/plate-image.js?v=19",
+  "./tools/plate-scan.js?v=19",
+  "./tools/plate-crop.js?v=19",
+  "./tools/call-scan.js?v=19",
+  "./tools/manuals.js?v=19",
+  "./tools/trees.js?v=19",
+  "./tools/tree-app.js?v=19",
+  "./tools/tree-pick.js?v=19",
+  "./tools/prefill.js?v=19",
+  "./tools/call-card.js?v=19",
+  "./tools/manuals-helper.js?v=19",
+  "./tools/manuals-helper-app.js?v=19",
+  "./tools/last-plate.js?v=19",
+  "./tools/scan-flow.js?v=19",
+  "./tools/missing-model.js?v=19",
   // Manual links index (generated from the Notion Manuals page + OEM sources map).
-  "./data/manuals-index.json?v=18",
+  "./data/manuals-index.json?v=19",
   // On-device OCR (vendored Tesseract.js 7.0.0, ~15 MB; see vendor/tesseract/README.md).
   // All three LSTM core builds: the worker picks one from the device's wasm SIMD support.
   "./vendor/tesseract/tesseract.min.js",

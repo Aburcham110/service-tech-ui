@@ -1,9 +1,9 @@
 /** Confirmed plate scan -> call card (Open step), and the scan's follow-up actions. */
-import { plateSummary } from "./plate-scan.js?v=18";
-import { chooseTree, treeHref } from "./trees.js?v=18";
+import { plateSummary } from "./plate-scan.js?v=19";
+import { scanTreeHref } from "./tree-pick.js?v=19";
 
-import { saveLastPlate, nominalVoltage, SCAN_KEY } from "./last-plate.js?v=18";
-import { whereItWent } from "./scan-flow.js?v=18";
+import { saveLastPlate, nominalVoltage, SCAN_KEY } from "./last-plate.js?v=19";
+import { whereItWent } from "./scan-flow.js?v=19";
 export { SCAN_KEY };
 export const DRAFT_KEY = "serviceTechCallDraft_v1"; // app.js STORAGE_KEY
 
@@ -23,11 +23,10 @@ export function mergeIntoDraft(draft, v) {
   return Object.assign({}, draft || {}, callCardFill(v));
 }
 
-/** "Start troubleshooting for this equipment": the matching tree, with the refrigerant carried along. */
+/** "Start troubleshooting for this equipment": tree.html opened from the scan (tree-pick.js picks the
+ *  tree from brand/model/unit type; the page re-checks against the manuals index and asks when unsure). */
 export function troubleshootHref(v, equipment) {
-  const t = chooseTree({ equipment, unitType: v && v.unitType, brand: v && v.brand, model: v && v.model });
-  if (!t) return "tree.html";
-  return treeHref(t) + (v && v.refrigerant ? "&refrigerant=" + encodeURIComponent(v.refrigerant) : "");
+  return scanTreeHref(v || {}, equipment);
 }
 
 /** Stores the confirmed plate as the last scanned plate (see last-plate.js). */

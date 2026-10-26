@@ -1,7 +1,9 @@
 /** tree.html: walks a troubleshooting tree (tools/trees.js) one step at a time. */
-import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=18";
+import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=19";
 import { getTool } from "./registry.js";
-import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=18";
+import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=19";
+import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=19";
+import { loadManualsIndex } from "./manuals.js?v=19";
 
 const params = new URLSearchParams(location.search);
 const TYPE_KEY = "serviceTechTreeType_v1"; // last equipment type picked here
@@ -11,7 +13,13 @@ const known = { refrigerant: plate && plate.refrigerant, nominalV: nominalVoltag
 if (params.get("refrigerant")) known.refrigerant = params.get("refrigerant");
 const pick = document.getElementById("tree-pick");
 const root = document.getElementById("tree-root");
+// Opened from a scan: brand/model/unit type ride along; the tree is re-picked against the manuals index.
+const scan = params.get("from") === "scan" ? { brand: params.get("brand") || "", model: params.get("model") || "", unitType: params.get("unitType") || "", equipment: params.get("equipment") || "" } : null;
+let choices = scan ? (params.get("choose") || "").split(",").filter((id) => TREES[id]) : [];
+let why = "";
+let manual = scan ? manualLink(null, scan) : null;
 let treeId = TREES[params.get("type")] ? params.get("type") : (TREES[store.get(TYPE_KEY)] ? store.get(TYPE_KEY) : null);
+if (scan && !params.get("type")) treeId = null; // uncertain: ask, don't fall back to the last type
 if (treeId) store.set(TYPE_KEY, treeId);
 let path = [];
 
@@ -20,11 +28,39 @@ const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls)
 pick.appendChild(new Option("Choose…", ""));
 Object.entries(TREES).forEach(([id, t]) => pick.appendChild(new Option(t.title, id)));
 pick.value = treeId || "";
-pick.addEventListener("change", () => { treeId = pick.value || null; store.set(TYPE_KEY, treeId); path = treeId ? [TREES[treeId].start] : []; history.replaceState(null, "", treeId ? treeHref(treeId) : "tree.html"); render(); });
+pick.addEventListener("change", () => { treeId = pick.value || null; store.set(TYPE_KEY, treeId); path = treeId ? [TREES[treeId].start] : []; setUrl(); render(); });
+function setUrl() {
+  if (!scan) { history.replaceState(null, "", treeId ? treeHref(treeId) : "tree.html"); return; }
+  const q = new URLSearchParams(location.search); q.delete("choose");
+  if (treeId) q.set("type", treeId); else q.delete("type");
+  history.replaceState(null, "", "tree.html?" + q);
+}
+function choose(id) { treeId = id; store.set(TYPE_KEY, id); pick.value = id; path = [TREES[id].start]; setUrl(); render(); }
 if (treeId) path = [TREES[treeId].start];
+
+function unitHeader() {
+  const h = el("div", "tree-unit"); h.id = "tree-unit";
+  h.appendChild(el("strong", null, [scan.brand, scan.model].filter(Boolean).join(" ") || "Scanned unit"));
+  if (manual) {
+    const a = el("a", "tree-manual", manual.label + " →"); a.id = "tree-manual"; a.href = manual.href; a.dataset.kind = manual.kind;
+    if (manual.external) { a.target = "_blank"; a.rel = "noopener"; }
+    h.appendChild(a);
+    if (manual.kind !== "error-codes" && manual.external) h.appendChild(el("small", "tree-manual-note", "No error-code section is indexed for this model; see the manual."));
+  }
+  return h;
+}
 
 function render() {
   root.innerHTML = "";
+  if (scan) root.appendChild(unitHeader());
+  if (!treeId && scan && choices.length) {
+    const c = el("div", "tree-step tree-choose"); c.id = "tree-choose";
+    c.appendChild(el("p", null, "Which equipment is this?"));
+    if (why) c.appendChild(el("small", "tree-why", why));
+    choices.forEach((id) => { const b = el("button", "btn btn-secondary tree-opt", TREE_LABELS[id] || TREES[id].title); b.type = "button"; b.dataset.tree = id; b.addEventListener("click", () => choose(id)); c.appendChild(b); });
+    root.appendChild(c);
+    return;
+  }
   if (!treeId) { root.appendChild(el("p", "use-when", "Pick the equipment type to start.")); return; }
   const tree = TREES[treeId];
   document.getElementById("tree-title").textContent = tree.title;
@@ -35,7 +71,7 @@ function render() {
     const chosen = (n.options || []).find((o) => o.next === path[i + 1]);
     trail.appendChild(el("li", null, n.text.split(/(?<=\?)\s/)[0] + (chosen ? " → " + chosen.label : "")));
   });
-  const scanned = plateLabel(plate);
+  const scanned = !scan && plateLabel(plate);
   if (scanned) {
     const b = el("div", "tree-scanned"); b.id = "tree-scanned";
     b.appendChild(el("strong", null, "Last scanned: ")); b.appendChild(document.createTextNode(scanned));
@@ -81,3 +117,13 @@ function render() {
   root.appendChild(nav);
 }
 render();
+if (scan) loadManualsIndex().then((index) => {
+  const p = pickTree(scan, index);
+  manual = manualLink(index, scan); why = p.why;
+  const chosen = path.length > 1; // tech already moved on: don't yank the tree
+  if (!chosen) {
+    if (p.certain && p.tree !== treeId) { treeId = p.tree; store.set(TYPE_KEY, treeId); pick.value = treeId; path = [TREES[treeId].start]; setUrl(); }
+    else if (!p.certain && !params.get("type")) choices = p.choices;
+  }
+  render();
+}).catch(() => { /* offline without the index: keep the link's pick and the Manuals helper link */ });

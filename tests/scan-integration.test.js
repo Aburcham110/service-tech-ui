@@ -46,11 +46,15 @@ test("Add to call card: brand, model, serial, refrigerant and charge land in the
 });
 
 test("Start troubleshooting for this equipment opens the matching tree", () => {
-  assert.equal(troubleshootHref(SCAN, "split"), "tree.html?type=split-ac-hp&refrigerant=R-410A");
-  assert.equal(troubleshootHref({ brand: "Copeland", unitType: "compressor" }, "cooler"), "tree.html?type=compressor");
-  assert.equal(troubleshootHref({ brand: "Fujitsu", unitType: "indoor" }, "split"), "tree.html?type=mini-split");
-  assert.equal(troubleshootHref({ brand: "Heatcraft" }, "freezer"), "tree.html?type=walk-in");
-  assert.equal(troubleshootHref({}, "other"), "tree.html");
+  const q = (h) => { assert.match(h, /^tree\.html\?from=scan&/); return new URLSearchParams(h.split("?")[1]); };
+  const s = q(troubleshootHref(SCAN, "split"));
+  assert.equal(s.get("type"), "split-ac-hp"); assert.equal(s.get("refrigerant"), "R-410A");
+  assert.equal(q(troubleshootHref({ brand: "Copeland", unitType: "compressor" }, "cooler")).get("type"), "compressor");
+  // Fujitsu without a model: ducted or ductless is a one-tap choice (the call card says split, so that's first)
+  assert.equal(q(troubleshootHref({ brand: "Fujitsu", unitType: "indoor" }, "split")).get("choose"), "split-ac-hp,mini-split");
+  assert.equal(q(troubleshootHref({ brand: "Fujitsu", model: "ASUG15LZAS", unitType: "indoor" }, "cooler")).get("type"), "mini-split");
+  assert.equal(q(troubleshootHref({ brand: "Heatcraft" }, "freezer")).get("type"), "walk-in");
+  assert.equal(q(troubleshootHref({}, "other")).get("choose"), "split-ac-hp,mini-split,walk-in");
 });
 
 import { needsRetake } from "../tools/plate-scan.js";

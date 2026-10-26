@@ -1,12 +1,13 @@
 /** Call card: "Scan data plate" in the Open panel. After Confirm, "Add to call card" writes the
  *  plate (brand, model, serial, refrigerant, charge…) into the Open step; nothing is written before that.
  *  Also shows manual links for the plate's brand/model and picks the troubleshooting tree. */
-import { mountPlateScan } from "./plate-scan.js?v=18";
-import { callCardFill, renderDone, saveScan, SCAN_KEY } from "./call-card.js?v=18";
-import { parsePlate } from "./plate-parse.js?v=18";
-import { loadManualsIndex, findManuals, renderManuals } from "./manuals.js?v=18";
-import { chooseTree, treeHref } from "./trees.js?v=18";
-import { getLastPlate, summaryRows, plateOnCard } from "./last-plate.js?v=18";
+import { mountPlateScan } from "./plate-scan.js?v=19";
+import { callCardFill, renderDone, saveScan, SCAN_KEY } from "./call-card.js?v=19";
+import { parsePlate } from "./plate-parse.js?v=19";
+import { loadManualsIndex, findManuals, renderManuals } from "./manuals.js?v=19";
+import { chooseTree, treeHref } from "./trees.js?v=19";
+import { scanTreeHref } from "./tree-pick.js?v=19";
+import { getLastPlate, summaryRows, plateOnCard } from "./last-plate.js?v=19";
 
 
 function set(id, value) {
@@ -62,8 +63,9 @@ async function refresh() {
   }
   const link = document.getElementById("tree-link");
   if (link) {
-    const t = chooseTree({ equipment: (document.getElementById("equipment") || {}).value, ...id });
-    link.href = t ? treeHref(t) : "tree.html";
+    const equipment = (document.getElementById("equipment") || {}).value;
+    if (id && (id.brand || id.model)) link.href = scanTreeHref(id, equipment);
+    else { const t = chooseTree({ equipment, ...id }); link.href = t ? treeHref(t) : "tree.html"; }
   }
 }
 
