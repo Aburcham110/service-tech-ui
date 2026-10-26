@@ -2,6 +2,7 @@
  *  terms and links immediately (change event); the last scanned plate pre-fills brand/model. */
 import { loadManualsIndex, brandKey, matchModel, listUnmatched, clearUnmatched, unmatchedText, loginLabel, LOCK } from "./manuals.js?v=16";
 import { searchTerms, portalLinks, bestLink, allTermsText, LABEL } from "./manuals-helper.js?v=16";
+import { renderSendButton } from "./missing-model.js?v=16";
 import { getLastPlate } from "./last-plate.js?v=16";
 
 const q = new URLSearchParams(location.search);
@@ -42,7 +43,7 @@ loadManualsIndex().then((index) => {
         if (meta) li.appendChild(el("small", d.loginRequired ? "login-lock" : "", " " + meta));
         ul.appendChild(li);
       });
-      box.appendChild(ul); root.appendChild(box);
+      box.appendChild(ul); renderSendButton(box, m); root.appendChild(box);
     }
     root.appendChild(el("h2", null, "Search terms"));
     const terms = searchTerms(index, b, modelIn.value);
@@ -84,7 +85,7 @@ function renderUnmatched() {
   host.appendChild(el("h2", null, "Models without a manual"));
   if (!list.length) { host.appendChild(el("p", "footer-note", "None yet. Scanned models with only a brand-level match are saved here, on this phone only.")); return; }
   const ul = el("ul", "mh-unmatched-list");
-  list.forEach((x) => ul.appendChild(el("li", null, x.date + " — " + x.brand + " " + x.model)));
+  list.forEach((x) => { const li = el("li", null, x.date + " — " + (x.brand || "(no brand)") + " " + x.model); renderSendButton(li, { brand: x.brand, model: x.model, kind: x.kind || "brand" }); ul.appendChild(li); });
   host.appendChild(ul);
   const text = unmatchedText(list);
   const row = el("div", "mh-unmatched-actions");
@@ -96,5 +97,5 @@ function renderUnmatched() {
   const x = el("button", "btn btn-secondary", "Clear"); x.type = "button"; x.id = "mh-unmatched-clear";
   x.addEventListener("click", () => { if (confirm("Clear the list on this phone?")) { clearUnmatched(); renderUnmatched(); } }); row.appendChild(x);
   host.appendChild(row);
-  host.appendChild(el("p", "footer-note", "Stored on this phone only — nothing is uploaded. Copy or share it to whoever keeps the Model Manual Index."));
+  host.appendChild(el("p", "footer-note", "Stored on this phone. Copy or share it, or tap Send missing model where shown — only the brand and model number are sent."));
 }

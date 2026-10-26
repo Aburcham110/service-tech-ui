@@ -271,3 +271,9 @@ textarea { min-height: 96px; resize: vertical; }
 .scan-done-links { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0; }
 .plate-progress { width: 100%; height: 14px; }
 .plate-status { font-size: 1rem; }
+
+/* Send missing model */
+.send-missing { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .6rem; margin-top: .35rem; }
+.send-missing-btn[data-state="sent"] { color: var(--ok, #2e7d32); text-decoration: none; }
+.send-missing-note { opacity: .75; }
+.mh-unmatched-list .send-missing { margin: .1rem 0 .4rem; }
