@@ -79,3 +79,26 @@ test("shipped index: new arrays present and empty (no invented entries), old mat
   const old = { ...REAL }; delete old.models; delete old.prefixes;
   assert.equal(matchModel(old, { brand: "Carrier", model: "24ACC636" }).kind, "brand");
 });
+
+import { parseModelIndex } from "../tools/gen-manuals-index.mjs";
+test("generator: Model Manual Index rows -> models/prefixes/templates; non-official hosts rejected", () => {
+  const md = `| Brand | Match | Model / Prefix | Doc type | Title | URL | Source | Login required |
+|---|---|---|---|---|---|---|---|
+| Fixture Co | model | FX-1000A | install | FX install | https://docs.fixtureco.invalid/a.pdf | https://app.notion.com/p/x | no |
+| Fixtureco | prefix | FX-2 | service | FX-2 svc | [svc](https://fixtureco.invalid/b.pdf) | https://app.notion.com/p/x | Yes |
+| Fixtureco | template |  |  |  | https://fixtureco.invalid/s?q={model} | https://app.notion.com/p/x | |
+| Fixtureco | model | FX-9 | install | Mirror | https://manualslib.invalid/fx9.pdf | https://app.notion.com/p/x | |
+| Fixtureco | model | FX-8 | brochure | Bad | https://fixtureco.invalid/c.pdf | https://app.notion.com/p/x | |
+| Fixtureco | template |  |  |  | https://fixtureco.invalid/s | https://app.notion.com/p/x | |`;
+  const r = parseModelIndex(md, FX.brands);
+  assert.deepEqual(r.models, [{ brand: "Fixtureco", model: "FX-1000A", docType: "install", title: "FX install", url: "https://docs.fixtureco.invalid/a.pdf", source: "https://app.notion.com/p/x" }]);
+  assert.equal(r.prefixes[0].prefix, "FX-2"); assert.equal(r.prefixes[0].loginRequired, true); assert.equal(r.prefixes[0].url, "https://fixtureco.invalid/b.pdf");
+  assert.equal(r.templates.Fixtureco.url, "https://fixtureco.invalid/s?q={model}");
+  assert.equal(r.rejected.length, 3);
+  assert.match(r.rejected.join("\n"), /not an official Fixtureco domain/);
+  assert.match(r.rejected.join("\n"), /doc type/);
+  assert.match(r.rejected.join("\n"), /needs \{model\}/);
+  // JSON input works too, and its output feeds matchModel directly
+  const j = parseModelIndex(JSON.stringify([{ brand: "Plainco", match: "model", model: "P-1", docType: "owner", url: "https://plainco.invalid/p1.pdf", source: "s" }]), FX.brands);
+  assert.equal(matchModel({ brands: FX.brands, models: j.models }, { brand: "Plainco", model: "p 1" }).kind, "exact");
+});

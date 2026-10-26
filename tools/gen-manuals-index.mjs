@@ -13,6 +13,13 @@
  * --verify fetches every URL (following redirects) and fails unless each one returns 2xx; the final
  * URL after redirects is stored (e.g. fujitsugeneral.com/us -> airstagehvac.com, Fujitsu's own US domain).
  * Only URLs that appear in the Notion pages are used: nothing is guessed or added by hand.
+ *
+ * Optional --models=model-index.md|.json: Researcher's Notion "Model Manual Index" (fetched the same way).
+ * Markdown table or JSON array, one row per doc / template, columns (case-insensitive):
+ *   Brand | Match (model | prefix | template) | Model / Prefix | Doc type (install|service|owner|wiring) |
+ *   Title | URL | Source | Login required (yes/no)
+ * A "template" row's URL holds {model}. Rows whose URL host isn't one of that brand's official OEM domains
+ * (from the sources page), with a bad doc type, or missing fields are rejected and listed, never kept.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 
@@ -136,6 +143,56 @@ export function parseManuals(md) {
   return entries;
 }
 
+export const DOC_TYPES = ["install", "service", "owner", "wiring"];
+const domainOf = (h) => h.replace(/^www\./, "").split(".").slice(-2).join(".");
+const yes = (v) => /^(y|yes|true|1|x|✓|checked|__yes__)$/i.test(String(v == null ? "" : v).trim());
+const cellUrl = (v) => { const m = String(v || "").match(/https?:\/\/[^\s)\]>|]+/); return m ? m[0] : ""; };
+
+function tableRows(text) {
+  const t = String(text).trim();
+  if (t.startsWith("[")) return JSON.parse(t);
+  const lines = t.split(/\r?\n/).filter((l) => /^\s*\|/.test(l));
+  if (!lines.length) return [];
+  const cells = (l) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+  const head = cells(lines[0]).map((h) => h.toLowerCase());
+  return lines.slice(1).filter((l) => !/^\s*\|[\s:|-]+\|?\s*$/.test(l)).map((l) => Object.fromEntries(cells(l).map((c, i) => [head[i], c])));
+}
+
+/** Parses the Model Manual Index -> { models, prefixes, templates: {brand: {url, source}}, rejected: [why] }.
+ *  brands = parseSources() output (official domains + alias -> brand key). */
+export function parseModelIndex(text, brands) {
+  const pick = (r, ...ks) => { for (const k of Object.keys(r)) if (ks.includes(k.toLowerCase().replace(/[^a-z]/g, ""))) return String(r[k] ?? "").trim(); return ""; };
+  const keyOf = (name) => { const n = String(name).toUpperCase().replace(/[^A-Z0-9]/g, ""); return Object.keys(brands).find((k) => [k, ...(brands[k].aliases || [])].some((a) => a.toUpperCase().replace(/[^A-Z0-9]/g, "") === n)) || null; };
+  const out = { models: [], prefixes: [], templates: {}, rejected: [] };
+  tableRows(text).forEach((r, i) => {
+    const row = "row " + (i + 1);
+    const brand = keyOf(pick(r, "brand"));
+    const match = pick(r, "match", "matchtype", "kind").toLowerCase() || (pick(r, "prefix") ? "prefix" : "model");
+    const id = pick(r, "modelprefix", "model", "prefix", "modelnumber");
+    const url = cellUrl(pick(r, "url", "link"));
+    const source = cellUrl(pick(r, "source")) || pick(r, "source");
+    if (!brand) return out.rejected.push(row + ": unknown brand " + pick(r, "brand"));
+    if (!/^https:\/\//.test(url)) return out.rejected.push(row + ": needs an https URL");
+    const host = domainOf(new URL(url.replace("{model}", "x")).hostname);
+    const official = new Set((brands[brand].oem || []).map((o) => domainOf(new URL(o.url).hostname)));
+    if (!official.has(host)) return out.rejected.push(row + ": " + host + " is not an official " + brand + " domain (" + [...official].join(", ") + ")");
+    if (!source) return out.rejected.push(row + ": missing source");
+    if (match === "template") {
+      if (!url.includes("{model}")) return out.rejected.push(row + ": template URL needs {model}");
+      out.templates[brand] = { url, source, ...(yes(pick(r, "loginrequired", "login")) ? { loginRequired: true } : {}) };
+      return;
+    }
+    const docType = pick(r, "doctype", "type").toLowerCase();
+    if (!DOC_TYPES.includes(docType)) return out.rejected.push(row + ": doc type must be one of " + DOC_TYPES.join("/"));
+    if (!id) return out.rejected.push(row + ": missing model/prefix");
+    if (match !== "model" && match !== "prefix") return out.rejected.push(row + ": match must be model, prefix or template");
+    const e = { brand, [match]: id, docType, title: pick(r, "title") || brand + " " + id + " " + docType + " manual", url, source };
+    if (yes(pick(r, "loginrequired", "login"))) e.loginRequired = true;
+    (match === "model" ? out.models : out.prefixes).push(e);
+  });
+  return out;
+}
+
 async function verify(url) {
   const res = await fetch(url, { redirect: "follow", headers: { "user-agent": "Mozilla/5.0 (service-tech-ui gen-manuals-index)", accept: "text/html,application/pdf,*/*" } });
   try { await res.body?.cancel(); } catch {}
@@ -170,11 +227,16 @@ async function main() {
       e.url = o.url; e.verified = o.verified;
     }
   }
+  const mi = arg("models") ? parseModelIndex(readFileSync(arg("models"), "utf8"), brands) : { models: [], prefixes: [], templates: {}, rejected: [] };
+  for (const [b, t] of Object.entries(mi.templates)) brands[b].searchTemplate = t;
+  mi.rejected.forEach((r) => console.error("REJECTED", r));
   const out = {
+    schema: "2: models[] (exact) and prefixes[] (family) entries with docType install|service|owner|wiring, source, optional loginRequired; brands[B].searchTemplate {url with {model}, source}. Empty until the Notion Model Manual Index is loaded.",
     about: "Generated by tools/gen-manuals-index.mjs from Arthur's Notion Manuals page and OEM official sources map. Official OEM URLs only.",
     generated: new Date().toISOString().slice(0, 10),
     sources: [MANUALS_PAGE, SOURCES_PAGE],
-    brands, entries,
+    brands, entries, models: mi.models, prefixes: mi.prefixes,
+    ...(mi.rejected.length ? { rejectedModelRows: mi.rejected } : {}),
     ...(failed.length ? { failedToLoad: failed } : {}),
   };
   writeFileSync(arg("out") || "data/manuals-index.json", JSON.stringify(out, null, 2) + "\n");
