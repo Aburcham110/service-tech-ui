@@ -57,7 +57,7 @@ test("offline: queued (once), then sent on retry; network failure also queues", 
   assert.equal(await flushQueue({ url: URL_, storage: s, fetchFn: f, online: false }), 0); // still offline
   assert.equal(await flushQueue({ url: URL_, storage: s, fetchFn: f, online: true }), 1);  // 'online' / app start
   assert.equal(queueLength(s), 0); assert.ok(isSent(SCAN, s)); assert.equal(f.calls.length, 1);
-  assert.deepEqual(Object.keys(JSON.parse(f.calls[0].init.body)).sort(), ["app", "brand", "match", "model"]);
+  assert.deepEqual(JSON.parse(f.calls[0].init.body), { brand: "Trane", model: "4TTR5036", match: "search", app: APP }); // queued send keeps its match
   assert.equal(await flushQueue({ url: URL_, storage: s, fetchFn: f, online: true }), 0);
   // fetch rejects (flaky signal): stays queued, retried later
   const s2 = mem();

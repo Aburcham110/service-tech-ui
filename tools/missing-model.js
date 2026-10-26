@@ -64,7 +64,7 @@ export function flushQueue({ url = MISSING_MODEL_URL, storage, fetchFn = globalT
   flushing = (async () => {
     let n = 0;
     for (const p of read(storage, QUEUE_KEY)) {
-      if (!isSent(p, storage)) { try { await post(url, payload(p), fetchFn); markSent(p, storage); n++; } catch { continue; } }
+      if (!isSent(p, storage)) { try { await post(url, { brand: String(p.brand || ""), model: String(p.model || ""), match: String(p.match || ""), app: APP }, fetchFn); markSent(p, storage); n++; } catch { continue; } }
       write(storage, QUEUE_KEY, read(storage, QUEUE_KEY).filter((q) => keyOf(q) !== keyOf(p)));
     }
     return n;
