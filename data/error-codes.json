@@ -11,7 +11,7 @@
   "www.yorknow.com/": "York (Johnson Controls) dealer site",
   "elibrary.tranetechnologies.com/": "Trane Technologies literature library",
   "pts.rheem.com/": "Rheem product technical support docstore",
-  "www.shareddocs.com/hvac/": "Carrier's document host (PDF ©2020 Carrier)",
+  "www.carrier.com/": "Carrier (brand product-documents page)",
   "carrier.com.pr/": "Carrier Puerto Rico (already accepted for the manuals index)",
   "www.lennox.com/": "Lennox",
   "mobile.goodmanmfg.com/": "Goodman Manufacturing"
@@ -4317,11 +4317,11 @@
     "25HBC5",
     "25HCE4"
    ],
-   "note": "Verified 2026-10-26. no code table in manual — [Installation instructions 25HBC-HCE-03SI](https://www.shareddocs.com/hvac/docs/1009/Public/0D/25HBC-HCE-03SI.pdf).",
+   "note": "Verified 2026-10-26. no code table in manual — Installation instructions 25HBC-HCE-03SI.",
    "rows": [],
    "noTable": {
     "text": "No code table in the official manual",
-    "url": "https://www.shareddocs.com/hvac/docs/1009/Public/0D/25HBC-HCE-03SI.pdf"
+    "url": "https://www.carrier.com/us/en/product-documents/"
    }
   },
   {
@@ -4392,5 +4392,12 @@
    }
   }
  ],
- "dropped": []
+ "dropped": [],
+ "relinked": [
+  {
+   "set": "Carrier 25HBC5 / 25HCE4",
+   "was": "www.shareddocs.com (not an approved host)",
+   "now": "https://www.carrier.com/us/en/product-documents/"
+  }
+ ]
 }
