@@ -69,18 +69,28 @@ test("fixture entries use the schema's docTypes", () => {
   for (const e of [...FX.models, ...FX.prefixes]) { assert.ok(DOC_TYPES.includes(e.docType)); assert.ok(e.source); }
 });
 
-test("shipped index: new arrays present and empty (no invented entries), old matching unchanged", () => {
-  assert.deepEqual(REAL.models, []); assert.deepEqual(REAL.prefixes, []);
-  assert.ok(Object.values(REAL.brands).every((b) => !b.searchTemplate));
-  const r = findManuals(REAL, { brand: "Trane", model: "XR16" });
-  assert.ok(["match", "oem"].includes(r.status));
-  assert.equal(r.match.kind, "brand");
-  // an old index without the new keys still works
+test("shipped index: Researcher's Model Manual Index loaded — official hosts, cited, matching works", () => {
+  const MI = "https://app.notion.com/p/405402f833af81e5ad02d05a324316a0";
+  assert.equal(REAL.models.length, 12); assert.equal(REAL.prefixes.length, 21);
+  assert.deepEqual(Object.keys(REAL.brands).filter((b) => REAL.brands[b].searchTemplate).sort(), ["Copeland", "Trane"]);
+  const OK = /^https:\/\/(?:[a-z0-9-]+\.)*(fujitsugeneral\.com|upgnet\.com|copeland\.com|tecumseh\.com|daikincomfort\.com|goodmanmfg\.com|lennox\.com|tranetechnologies\.com|carrier\.com\.pr|rheem\.com|yorknow\.com)\//;
+  for (const e of [...REAL.models, ...REAL.prefixes]) { assert.match(e.url, OK, e.url); assert.ok(e.source.startsWith(MI)); assert.ok(["install", "service", "owner", "wiring"].includes(e.docType)); }
+  assert.ok(![...REAL.models, ...REAL.prefixes].some((e) => /mylinkdrive|amazonaws|daikincity|shareddocs/.test(e.url)));
+  assert.equal(matchModel(REAL, { model: "ASUG15LZAS" }).kind, "exact");
+  assert.equal(matchModel(REAL, { brand: "Trane", model: "5TTR7024A1000A" }).kind, "prefix");
+  assert.equal(matchModel(REAL, { brand: "Coleman", model: "BRCS0301BDG" }).kind, "exact"); // UPG/Coleman = York
+  assert.equal(matchModel(REAL, { brand: "Carrier", model: "24ACC636A003" }).docs[0].url, "https://carrier.com.pr/pdf/products_pdf/24ACC6_INSTALLATION.pdf");
+  assert.equal(matchModel(REAL, { brand: "Copeland", model: "ZR34K5E" }).kind, "search");
+  assert.equal(matchModel(REAL, { brand: "Rheem", model: "RP20" }).kind, "brand");
   const old = { ...REAL }; delete old.models; delete old.prefixes;
-  assert.equal(matchModel(old, { brand: "Carrier", model: "24ACC636" }).kind, "brand");
+  assert.equal(matchModel(old, { brand: "Lennox", model: "EL16XC1" }).kind, "brand");
+});
+test("generator: carrier.com.pr is its own registrable domain, accepted for Carrier only", () => {
+  assert.equal(domainOf("carrier.com.pr"), "carrier.com.pr"); assert.equal(domainOf("www.docs.lennox.com"), "lennox.com");
 });
 
-import { parseModelIndex } from "../tools/gen-manuals-index.mjs";
+
+import { parseModelIndex, domainOf } from "../tools/gen-manuals-index.mjs";
 test("generator: Model Manual Index rows -> models/prefixes/templates; non-official hosts rejected", () => {
   const md = `| Brand | Match | Model / Prefix | Doc type | Title | URL | Source | Login required |
 |---|---|---|---|---|---|---|---|

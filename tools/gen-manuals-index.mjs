@@ -39,6 +39,10 @@ const EXTRA_ALIASES = {
   LG: ["LG", "LG Electronics", "LG Air Conditioning Technologies"],
 };
 
+// Extra official document hosts per brand (Arthur's decisions, 2026-10-26), on top of the sources-map domains:
+// carrier.com.pr = Carrier Puerto Rico; upgnet.com = UPG, same brand as York; fujitsugeneral.com = Fujitsu General's doc host.
+export const EXTRA_DOMAINS = { Carrier: ["carrier.com.pr"], York: ["upgnet.com"], Fujitsu: ["fujitsugeneral.com"] };
+
 // Labels for links whose Notion description carries a caveat. Each one restates what the Notion map says.
 const LINK_NOTES = [
   [/hvacpartners\.com/i, "Dealer login required (HVACpartners dealer portal)", "login"],
@@ -144,7 +148,8 @@ export function parseManuals(md) {
 }
 
 export const DOC_TYPES = ["install", "service", "owner", "wiring"];
-const domainOf = (h) => h.replace(/^www\./, "").split(".").slice(-2).join(".");
+// Registrable domain; two-level country suffixes (carrier.com.pr, x.co.uk) keep three labels.
+export const domainOf = (h) => { const p = h.replace(/^www\./, "").split("."); return p.slice(/^(com|co|net|org|gov|edu|ac)$/.test(p[p.length - 2]) && p[p.length - 1].length === 2 ? -3 : -2).join("."); };
 const yes = (v) => /^(y|yes|true|1|x|✓|checked|__yes__)$/i.test(String(v == null ? "" : v).trim());
 const cellUrl = (v) => { const m = String(v || "").match(/https?:\/\/[^\s)\]>|]+/); return m ? m[0] : ""; };
 
@@ -174,7 +179,7 @@ export function parseModelIndex(text, brands) {
     if (!brand) return out.rejected.push(row + ": unknown brand " + pick(r, "brand"));
     if (!/^https:\/\//.test(url)) return out.rejected.push(row + ": needs an https URL");
     const host = domainOf(new URL(url.replace("{model}", "x")).hostname);
-    const official = new Set((brands[brand].oem || []).map((o) => domainOf(new URL(o.url).hostname)));
+    const official = new Set([...(brands[brand].oem || []).map((o) => domainOf(new URL(o.url).hostname)), ...(EXTRA_DOMAINS[brand] || [])]);
     if (!official.has(host)) return out.rejected.push(row + ": " + host + " is not an official " + brand + " domain (" + [...official].join(", ") + ")");
     if (!source) return out.rejected.push(row + ": missing source");
     if (match === "template") {
@@ -228,6 +233,12 @@ async function main() {
     }
   }
   const mi = arg("models") ? parseModelIndex(readFileSync(arg("models"), "utf8"), brands) : { models: [], prefixes: [], templates: {}, rejected: [] };
+  if (process.argv.includes("--verify")) {
+    // Model/prefix docs and search templates (tried with a sample model) must load too, or they're left out.
+    const ok = async (u) => { try { await verify(u); console.error("ok", u); return true; } catch (e) { failed.push(e.message); console.error("FAILED", e.message); return false; } };
+    for (const k of ["models", "prefixes"]) { const keep = []; for (const e of mi[k]) if (await ok(e.url)) keep.push(e); mi[k] = keep; }
+    for (const [b, t] of Object.entries(mi.templates)) if (!(await ok(t.url.replace("{model}", "TEST123")))) delete mi.templates[b];
+  }
   for (const [b, t] of Object.entries(mi.templates)) brands[b].searchTemplate = t;
   mi.rejected.forEach((r) => console.error("REJECTED", r));
   const out = {
