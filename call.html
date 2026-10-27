@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="Service Tech" />
   <meta http-equiv="Cache-Control" content="no-cache" />
   <title>New call — Service Tech</title>
-  <link rel="stylesheet" href="styles.css?v=33" />
+  <link rel="stylesheet" href="styles.css?v=34" />
 </head>
 <body>
   <div class="app">
@@ -75,6 +75,8 @@
         <label class="field"><span>Supply air (°F)</span><input id="supplyTemp" inputmode="decimal" /></label>
         <label class="field"><span>Return air (°F)</span><input id="returnTemp" inputmode="decimal" /></label>
       </div>
+      <a class="btn btn-secondary" id="psy-link" href="psychro.html?from=call">Analyze in Psychrometrics →</a>
+      <p class="footer-note" id="psy-link-note"></p>
       <div class="row">
         <label class="field"><span>Amps (A)</span><input id="amps" inputmode="decimal" /></label>
         <label class="field"><span>Plate RLA/FLA (A)</span><input id="fla" inputmode="decimal" /></label>
@@ -114,10 +116,10 @@
     </div>
     <p class="footer-note"><button type="button" class="btn btn-secondary" id="btn-reset" style="margin-top:12px">Clear draft</button></p>
   </div>
-  <script src="version.js?v=33"></script>
-  <script src="app.js?v=33"></script>
-  <script type="module" src="tools/call-scan.js?v=33"></script>
-  <script type="module" src="tools/call-gauge.js?v=33"></script>
-  <script type="module" src="tools/call-wizard.js?v=33"></script>
+  <script src="version.js?v=34"></script>
+  <script src="app.js?v=34"></script>
+  <script type="module" src="tools/call-scan.js?v=34"></script>
+  <script type="module" src="tools/call-gauge.js?v=34"></script>
+  <script type="module" src="tools/call-wizard.js?v=34"></script>
 </body>
 </html>
