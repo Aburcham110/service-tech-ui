@@ -11,8 +11,8 @@
  * or defaulted: a field that isn't on the plate stays absent (blank).
  */
 
-import { parseLoadTable, voltPhHz } from "./plate-loadtable.js?v=39";
-import { assignIdsByPattern, parseHeaderRow, partNumbers, fixHeatcraftModel, HEATCRAFT_MODEL, HEATCRAFT_SERIAL, parseRefrigerantTable, gridFields } from "./plate-heatcraft.js?v=39";
+import { parseLoadTable, voltPhHz } from "./plate-loadtable.js?v=40";
+import { assignIdsByPattern, parseHeaderRow, partNumbers, fixHeatcraftModel, HEATCRAFT_MODEL, HEATCRAFT_SERIAL, parseRefrigerantTable, gridFields } from "./plate-heatcraft.js?v=40";
 
 export const LOW_CONFIDENCE = 0.6;
 /** Stricter bar for identifiers: a wrong model/serial costs a wrong part or warranty lookup. */
@@ -374,9 +374,9 @@ function parseRefrigerant(lines) {
 const NUM = "(\\d{1,5}(?:[.,]\\d{1,3})?)";
 
 function parseCharge(lines) {
-  const label = /\b(?:FACTORY\s*)?(?:CHARGE[D]?|CHG|CHRG)\b|\bREFRIG(?:ERANT)?\b|\b(?:R|HFC)\s?-?\s?\d{2,4}[A-Z]?\b/i;
+  const label = /\b(?:FACTORY\s*)?(?:CHARGE[D]?|CHG|CHRG)\b|(?:FAC)?TORY\W{0,3}[CGE]HARGE|\bREFRIG(?:ERANT)?\b|\b(?:R|HFC)\s?-?\s?\d{2,4}[A-Z]?\b/i;
   const bad = /\bTOTAL\s*CHARGE\b|\b(?:WEIGHT|WT\.?|NET|GROSS|SHIPPING|SHIP\.?|PSI|PSIG|KPA|MPA|FT\.?|IN\.?\s*LBS?|FT\.?\s*LBS?)\b/i;
-  const reLbOz = new RegExp(NUM + "\\s*-?\\s*[\"'“”‘’]?\\s*(?:LBS?\\.?|[I1|]BS\\.?|POUNDS?|#)\\s*[,\\-]?\\s*(?:" + NUM + "\\s*(?:OZ\\.?|OUNCES?))?", "i");
+  const reLbOz = new RegExp(NUM + "\\s*-?\\s*[\"'“”‘’]?\\s*(?:LBS?\\.?|L[E8]S\\.?|LB5\\.?|[I1|][B8]S\\.?|LE(?=\\W{0,3}\\d{1,2}\\s*OZ)|POUNDS?|#)\\s*[,\\-]?\\s*(?:" + NUM + "\\s*(?:OZ\\.?|OUNCES?))?", "i");
   const reOz = new RegExp(NUM + "\\s*(?:OZ\\.?|OUNCES?)\\b", "i");
   const reKg = new RegExp(NUM + "\\s*KGS?\\b", "i");
   // Grams only with a G/KG unit that isn't the start of PSIG/GPM ("23g/Psic" is 236 PSIG).
@@ -386,28 +386,46 @@ function parseCharge(lines) {
   // Motor rows (HP column) are never a charge.
   const motor = /\bHP\b|\bH\.P\.|\bBLWR\b|\bBLOWER\b|\bFAN\b|\bMOTOR\b/i;
   const cands = [];
-  lines.forEach((l, i) => {
+  // A FACTORY CHARGED line (OCR variants: EHARGED, GHARGED, "TORY/CHARGED") is the only source when present.
+  const factory = /(?:FAC)?TORY\W{0,3}[CGE]HARGE|\bFACTORY\s*CHARGE/i;
+  const fIdx = lines.map((l, i) => (factory.test(l) ? i : -1)).filter((i) => i >= 0);
+  if (fIdx.length) {
+    for (const i of fIdx) {
+      // Sparse OCR splits the row: join the next lines until a pressure/voltage/other label.
+      let l = lines[i];
+      for (let j = i + 1; j < Math.min(lines.length, i + 7); j++) {
+        if (/PRESS|PS[I1L]|\bSIDE\b|DESIGN|VOLT|\bMIN\b|\bMAX\b|FURNACE|GAS|ORIFICE|FLA|RLA|LRA|\bHP\b|H\.P\.|COMP|BLWR|BLOWER|\bFAN\b|MOTOR/i.test(lines[j])) break;
+        l += " " + lines[j];
+      }
+      cands.push({ l: l.replace(/^.*?(?:TORY\W{0,3}[CGE]HARGE\w*|FACTORY\s*CHARGE\w*)/i, ""), q: 1, factory: true });
+    }
+  } else lines.forEach((l, i) => {
     if (bad.test(l)) return;
     if (motor.test(l) && !/\bCHARGE|\bCHG\b/i.test(l)) return;
     if (label.test(l)) cands.push({ l, q: 1 });
     else if (i > 0 && /\b(?:CHARGED?|CHG)\b\s*[:.]?\s*$/i.test(lines[i - 1])) cands.push({ l, q: 0.85 });
   });
-  for (const { l, q } of cands) {
-    let lb = null, oz = null, kg = null, raw = null, unitNote;
+  for (const { l, q, factory: fac } of cands) {
+    const st = fac || strong.test(l);
+    let lb = null, oz = null, kg = null, raw = null, unitNote, fuzzy = false;
     const m = l.match(reLbOz);
-    if (m) { lb = toNum(m[1]); oz = m[2] ? toNum(m[2]) : 0; raw = m[0]; }
+    if (m) { lb = toNum(m[1]); oz = m[2] ? toNum(m[2]) : 0; raw = m[0]; fuzzy = !/^[\d.,]+\s*-?\s*["'“”‘’]?\s*(?:LBS?|POUNDS?|#)/i.test(m[0]); }
     else { const mo = l.match(reOz); if (mo) { lb = 0; oz = toNum(mo[1]); raw = mo[0]; } }
     const mk = l.match(reKg);
-    if (mk && (m || strong.test(l))) kg = toNum(mk[1]);
-    else if (!strong.test(l)) { /* no metric value without a charge label */ }
+    if (mk && (m || st)) kg = toNum(mk[1]);
+    else if (!st) { /* no metric value without a charge label */ }
     else { const mg = l.match(reG); if (mg) { kg = toNum(mg[1]) / 1000; unitNote = "converted from g"; if (!raw) raw = mg[0]; } }
     if (lb == null && kg == null) continue;
     if (lb == null && mk && kg != null) raw = mk[0];
     let totalLb = round(lb != null ? lb + oz / 16 : kg * 2.20462, 2);
     if (!(totalLb > 0 && totalLb < 400)) continue;
-    let quality = q * (lb != null ? 1 : 0.9);
-    if (lb === 0 && oz < 16) quality *= 0.7; // lone "14 oz": the pounds may be unread
+    let quality = q * (lb != null ? 1 : 0.9) * (fuzzy ? 0.85 : 1); // OCR-variant pound unit (LES, L8S, 4 LE 4 oz)
     let note = lb == null ? (unitNote || "converted from kg") : undefined;
+    if (lb === 0 && oz < 16) {
+      // Lone "4 oz": the pounds were not read ("[4 188.) 4 oz" is 4 LBS. 4 OZ. with LBS misread). Flag it.
+      quality = Math.min(quality * 0.7, 0.45);
+      note = /\d[^\d]{0,6}$/.test(l.slice(0, l.toUpperCase().indexOf(raw.toUpperCase()))) ? "pounds unreadable (a number before the ounces may be the pounds) — check the plate" : "only ounces read — check the pounds";
+    }
     if (lb != null && kg != null && Math.abs(kg * 2.20462 - totalLb) > 0.15 * totalLb) { note = "lb and kg on plate disagree"; quality *= 0.5; }
     const exactLb = lb != null ? lb + oz / 16 : kg * 2.20462;
     const wholeLb = Math.floor(exactLb + 1e-9);

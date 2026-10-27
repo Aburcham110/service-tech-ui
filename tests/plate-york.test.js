@@ -100,3 +100,25 @@ test("squareProbeBox: tall plates probe a centered square, normal ones the full 
   assert.deepEqual(squareProbeBox(1868, 4000), { x: 0, y: 1066, s: 1868 });
   assert.equal(squareProbeBox(1200, 1000), null);
 });
+
+test("york phone2 dump: charge only from FACTORY CHARGED, misread LBS flagged, never PSIG", async () => {
+  const { parsePlate } = await import("../tools/plate-parse.js");
+  const c = (t) => parsePlate(t).fields.charge;
+  assert.equal(c("FACTORY CHARGED: SYS #1 R-410A 4 LBS. 4 OZ.\nHIGH SIDE 445 PSIG LOW SIDE 236 PSIG").value.lb, 4.25);
+  const bad = c("TORY/CHARGED: / 'sYsg1 fs RaTuAL [4 188.) 4 oz.");
+  assert.equal(bad.value.lb, 0.25); assert.ok(bad.confidence < 0.6 && /pounds unreadable/.test(bad.note));
+  const sparse = c("FACTORY GHARGED!\nSYS #1\nCro\n4 LE\n4 oz.\nMIN. DESIGN PRESS.: HIGH SIDE 445 PSIG");
+  assert.equal(sparse.value.lb, 4.25);
+  // A FACTORY CHARGED line with no readable amount: nothing else (PSIG, HP, refrigerant lines) fills it.
+  assert.equal(c("8 FACTORY EHARGED! / I s¥s #1 | 7 yak appz.\nLOW SIDE 236 ps1e\nCOMP 2.5 HP 4 LBS"), undefined);
+});
+test("york phone2 merged fixture: charge is 4.25 lb, flagged since one pass misread LBS", async () => {
+  const fs = await import("node:fs"); const { parsePlate, mergeParses } = await import("../tools/plate-parse.js");
+  const D = new URL("./fixtures/plates/ocr/", import.meta.url);
+  const m = mergeParses(fs.readdirSync(D).filter((f) => f.startsWith("york-zs04-rtu-phone2.")).map((f) => ({ name: f, parsed: parsePlate(fs.readFileSync(new URL(f, D), "utf8")) })));
+  assert.equal(m.fields.charge.value.lb, 4.25); assert.ok(m.fields.charge.confidence < 0.6);
+  for (const f of ["york-zs04-rtu", "york-zs04-rtu-live"]) {
+    const n = mergeParses(fs.readdirSync(D).filter((x) => x.startsWith(f + ".")).map((x) => ({ name: x, parsed: parsePlate(fs.readFileSync(new URL(x, D), "utf8")) })));
+    assert.ok(!n.fields.charge || n.fields.charge.confidence < 0.6, f + " charge never confidently wrong");
+  }
+});
