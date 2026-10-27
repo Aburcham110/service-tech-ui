@@ -335,3 +335,26 @@ input.imported, select.imported { outline: 2px solid var(--warn, #e0a030); }
 .psy-warn { border: 1px solid #fb923c; background: rgba(251,146,60,.12); border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
 .psy-hints { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin: 8px 0; color: var(--muted); }
 .psy-warn ul, .psy-hints ul { margin: 6px 0 0; padding-left: 18px; }
+.psy-chart-wrap { margin: 8px 0 14px; }
+.psy-chart-bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.psy-chart-bar .check { margin: 0; font-size: 0.9rem; }
+.psy-zoom-btn { min-height: 40px; padding: 8px 12px; font-size: 0.9rem; width: auto; }
+.psy-chart-box { background: #0b1016; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: zoom-in; }
+.psy-chart { display: block; width: 100%; height: auto; }
+.psy-chart-wrap.zoom { position: fixed; inset: 0; z-index: 50; background: var(--bg, #0f1419); padding: 10px; overflow: auto; margin: 0; }
+.psy-chart-wrap.zoom .psy-chart-box { overflow: auto; cursor: auto; }
+.psy-chart-wrap.zoom .psy-chart { width: 260%; max-width: none; }
+.psy-chart .psy-grid { stroke: #223040; stroke-width: 0.4; }
+.psy-chart .psy-tick, .psy-chart .psy-axis, .psy-chart .psy-note { fill: #8b98a5; font-size: 7px; }
+.psy-chart .psy-note { font-size: 6px; }
+.psy-chart .psy-sat { fill: none; stroke: #e6edf3; stroke-width: 1.4; }
+.psy-chart .psy-rh-line { fill: none; stroke: #3b82f6; stroke-width: 0.6; opacity: 0.8; }
+.psy-chart .psy-rh-label { fill: #60a5fa; font-size: 6px; }
+.psy-chart .psy-wb-line { fill: none; stroke: #22c55e; stroke-width: 0.45; opacity: 0.6; }
+.psy-chart .psy-h-line { fill: none; stroke: #a78bfa; stroke-width: 0.45; opacity: 0.55; stroke-dasharray: 3 2; }
+.psy-chart .psy-process { stroke: #fbbf24; stroke-width: 1.6; }
+.psy-chart .psy-arrowhead { fill: #fbbf24; }
+.psy-chart .psy-dp-proj { stroke: #fbbf24; stroke-width: 0.9; stroke-dasharray: 2 2; }
+.psy-chart circle { stroke: #0b1016; stroke-width: 1; }
+.psy-chart .psy-pt-ret circle { fill: #f87171; } .psy-chart .psy-pt-sup circle { fill: #38bdf8; }
+.psy-chart .psy-pt-label { fill: #e6edf3; font-size: 8px; font-weight: 700; }
