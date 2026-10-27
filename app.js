@@ -359,7 +359,7 @@
     const hadController = !!navigator.serviceWorker.controller;
     // updateViaCache "none": check sw.js and version.js past the HTTP cache (Pages sends max-age=600).
     navigator.serviceWorker.register("./sw.js", { scope: "./", updateViaCache: "none" })
-      .then((reg) => reg.update && reg.update()).catch(console.error);
+      .then((reg) => reg && reg.update && reg.update().catch(() => {})).catch(console.error);
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       askCacheStatus();
       // The new version applies right away: reload once (guarded against loops in version.js).

@@ -926,8 +926,8 @@ export function mergeParses(list) {
       const second = [...tally.values()].sort((a, b) => b - a)[1] || 0;
       // Also flag a near tie: a runner-up within 25% of the winner's weight.
       const nearTie = second >= top * 0.75;
-      // Near tie: the most confident pass's read wins (got[0]), flagged.
-      if (nearTie) Object.assign(best, got[0]);
+      // Amps near tie: the most confident pass's read wins (got[0]); any near tie is flagged.
+      if (nearTie && AMP_FIELDS.includes(n)) Object.assign(best, got[0]);
       // A majority of weaker passes outvoting the most confident pass is flagged too.
       if (top * 2 <= total || votesFor(key(best, n)) < maxVotes || nearTie || key(best, n) !== key(got[0], n)) {
         best.confidence = round(best.confidence * 0.55, 2);
