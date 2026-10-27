@@ -68,7 +68,10 @@ export function mountGuide(host) {
   ol.setAttribute("aria-label", "Scan steps");
   STEPS.forEach((s, i) => { const li = mk("li", "scan-step"); li.dataset.step = s.id; li.append(mk("span", "scan-step-n", String(i + 1)), mk("span", "scan-step-l", s.label)); ol.appendChild(li); });
   const line = mk("p", "scan-instruction"); line.setAttribute("aria-live", "polite");
-  g.append(ol, line);
+  // "?" jumps to the scan section of the Help page.
+  const help = mk("a", "scan-help-link", "?");
+  help.href = "help.html#scan"; help.setAttribute("aria-label", "How to scan a plate (help)"); help.title = "How to scan";
+  g.append(ol, help, line);
   host.prepend(g);
   const set = (id, text) => {
     const idx = STEPS.findIndex((s) => s.id === id);

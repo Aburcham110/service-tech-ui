@@ -289,3 +289,12 @@ textarea { min-height: 96px; resize: vertical; }
 .tree-code-remedy { white-space: pre-line; }
 .plate-upload-btn { margin-top: 8px; }
 .plate-format-error { color: var(--warn, #e0a030); font-weight: 600; }
+
+/* Help page + scan "?" link */
+.scan-help-link { position: absolute; top: 4px; right: 4px; z-index: 6; width: 28px; height: 28px; line-height: 28px; text-align: center; border-radius: 50%; border: 1px solid currentColor; text-decoration: none; font-weight: 700; }
+.help-sec { margin: 8px 0; padding: 8px 12px; border: 1px solid rgba(255,255,255,.15); border-radius: 10px; }
+.help-sec > summary { font-weight: 700; cursor: pointer; padding: 6px 0; }
+.help-tools li { margin: 4px 0; }
+.feedback-form textarea { width: 100%; box-sizing: border-box; font: inherit; }
+.feedback-form label { display: block; margin-bottom: 6px; }
+.scan-guide .scan-steps { padding-right: 36px; }

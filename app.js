@@ -353,7 +353,8 @@
     window.addEventListener("offline", updateIndicator);
     updateIndicator();
     // Retry queued "Send missing model" posts at app start and whenever the phone comes back online.
-    import("./tools/missing-model.js?v=26").then((m) => m.startMissingSender()).catch(() => {});
+    import("./tools/missing-model.js?v=27").then((m) => m.startMissingSender()).catch(() => {});
+    import("./tools/feedback.js?v=27").then((m) => m.startFeedbackSender()).catch(() => {});
     if (!("serviceWorker" in navigator) || window.__stSwRegistered) return;
     window.__stSwRegistered = true;
     const hadController = !!navigator.serviceWorker.controller;

@@ -136,8 +136,8 @@ test("chooseTree picks by equipment / scanned unit type", () => {
 
 test("offline: new files are precached and the cache is bumped", () => {
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  for (const f of ["./tree.html", "./tools/manuals.js?v=26", "./tools/trees.js?v=26", "./tools/tree-app.js?v=26", "./data/manuals-index.json?v=26", "./manuals.html", "./tools/prefill.js?v=26", "./tools/call-card.js?v=26", "./tools/manuals-helper.js?v=26", "./tools/manuals-helper-app.js?v=26", "./tools/last-plate.js?v=26", "./tools/scan-flow.js?v=26", "./tools/missing-model.js?v=26", "./tools/tree-pick.js?v=26", "./tools/card-plate.js?v=26", "./tools/error-codes.js?v=26", "./data/error-codes.json?v=26", "./tools/heic.js?v=26", "./tools/plate-heatcraft.js?v=26", "./vendor/libheif/libheif-bundle.mjs"]) assert.ok(sw.includes('"' + f + '"'), f);
-  assert.match(readFileSync(new URL("../version.js", import.meta.url), "utf8"), /self.APP_VERSION = "v26"/);
+  for (const f of ["./tree.html", "./tools/manuals.js?v=27", "./tools/trees.js?v=27", "./tools/tree-app.js?v=27", "./data/manuals-index.json?v=27", "./manuals.html", "./tools/prefill.js?v=27", "./tools/call-card.js?v=27", "./tools/manuals-helper.js?v=27", "./tools/manuals-helper-app.js?v=27", "./tools/last-plate.js?v=27", "./tools/scan-flow.js?v=27", "./tools/missing-model.js?v=27", "./tools/tree-pick.js?v=27", "./tools/card-plate.js?v=27", "./tools/error-codes.js?v=27", "./data/error-codes.json?v=27", "./tools/heic.js?v=27", "./tools/plate-heatcraft.js?v=27", "./vendor/libheif/libheif-bundle.mjs", "./help.html", "./tools/help-app.js?v=27", "./tools/feedback.js?v=27"]) assert.ok(sw.includes('"' + f + '"'), f);
+  assert.match(readFileSync(new URL("../version.js", import.meta.url), "utf8"), /self.APP_VERSION = "v27"/);
 });
 
 const count = (b) => INDEX.brands[b].oem.length;
