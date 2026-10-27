@@ -298,3 +298,22 @@ textarea { min-height: 96px; resize: vertical; }
 .feedback-form textarea { width: 100%; box-sizing: border-box; font: inherit; }
 .feedback-form label { display: block; margin-bottom: 6px; }
 .scan-guide .scan-steps { padding-right: 36px; }
+
+/* Gauge report import */
+.gauge-import { position: relative; margin: 8px 0 12px; }
+.gauge-import .gi-title { font-size: 1.05rem; margin: 4px 36px 8px 0; }
+.gauge-import .gi-step { color: var(--muted, #8a97a6); font-weight: 400; }
+.gauge-import .gi-help { position: absolute; top: 2px; right: 2px; width: 28px; height: 28px; line-height: 28px; text-align: center; border-radius: 50%; border: 1px solid currentColor; text-decoration: none; font-weight: 700; }
+.gauge-import .gi-error { color: var(--warn, #e0a030); font-weight: 600; min-height: 1em; }
+.gauge-import .gi-map { display: flex; gap: 8px; align-items: flex-end; }
+.gauge-import .gi-map .field { flex: 1; }
+.gauge-import .gi-unit { width: 7.5em; margin-bottom: 12px; }
+.gauge-import .btn { margin: 4px 0; width: 100%; }
+.gauge-import .gi-rownav { display: flex; gap: 8px; align-items: center; }
+.gauge-import .gi-rownav .btn { width: 3em; }
+.gi-preview { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.gi-preview th, .gi-preview td { text-align: left; padding: 6px 4px; border-bottom: 1px solid #2a3540; vertical-align: top; }
+.gi-preview .gi-why { font-size: 0.85rem; }
+.gi-preview tr.gi-flag { color: var(--warn, #e0a030); }
+.gi-preview tr.gi-flag .gi-why::before { content: "check: "; font-weight: 700; }
+input.imported, select.imported { outline: 2px solid var(--warn, #e0a030); }

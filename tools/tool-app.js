@@ -138,6 +138,24 @@ function mount(tool) {
     if (out.dataset.copy) copyText(out.dataset.copy);
   });
 
+  if (tool.id === "superheat-subcool") {
+    import("./gauge-import.js?v=27").then(({ mountGaugeImport }) => {
+      const refs = (tool.fields.find((f) => f.name === "refrigerant").options || []).map((o) => o[0]);
+      mountGaugeImport(scanHost, {
+        refrigerants: refs,
+        onFill(vals) {
+          form.querySelectorAll(".imported").forEach((el) => el.classList.remove("imported"));
+          for (const [k, v] of Object.entries(vals)) {
+            const el = form.querySelector('[data-field="' + k + '"]');
+            if (el) { el.value = v; el.classList.add("imported"); }
+          }
+          run();
+          return "Calculated below.";
+        },
+      });
+    }).catch(console.error);
+  }
+
   if (tool.id === "nameplate-faults") {
     import("./plate-scan.js?v=27").then(({ mountPlateScan, plateSummary }) => {
       mountPlateScan(scanHost, (v) => {
