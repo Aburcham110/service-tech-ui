@@ -38,26 +38,41 @@ function scGuide(sc) {
   return "High — check for overcharge or non-condensables (approx).";
 }
 
-export function runSuperheatSubcool(f) {
-  const lines = ["Refrigerant: " + f.refrigerant, "Note: Sat temps from PT table — dew for superheat, bubble for subcooling.", "Verify against the OEM PT chart for the refrigerant.", ""];
+/** The numbers behind runSuperheatSubcool (one code path for the SH/SC tool and the call card).
+ *  Returns { superheat: {psig, line, sat, value}|null, subcool: {...}|null } or { error }. PT: dew for SH, bubble for SC. */
+export function shScValues(f) {
   const mode = f.mode || "both";
+  const out = { superheat: null, subcool: null };
   try {
     if (mode === "superheat" || mode === "both") {
       const sp = num(f.suctionPsig), st = num(f.suctionTemp);
-      if (sp == null || st == null) return { lines: ["Need suction pressure and suction temp for superheat."] };
-      const tsat = satTemp(f.refrigerant, sp, "dew");
-      const sh = st - tsat;
-      lines.push("--- Superheat ---", `Suction: ${sp.toFixed(1)} psig → dew sat ${tsat.toFixed(1)} °F`, `Line temp: ${st.toFixed(1)} °F`, `Superheat: ${sh.toFixed(1)} °F`, "[APPROX] " + shGuide(sh), "");
+      if (sp == null || st == null) return { error: "Need suction pressure and suction temp for superheat." };
+      const sat = satTemp(f.refrigerant, sp, "dew");
+      out.superheat = { psig: sp, line: st, sat, value: st - sat };
     }
     if (mode === "subcooling" || mode === "both") {
       const lp = num(f.liquidPsig), lt = num(f.liquidTemp);
-      if (lp == null || lt == null) return { lines: ["Need liquid pressure and liquid temp for subcooling."] };
-      const tsat = satTemp(f.refrigerant, lp, "bubble");
-      const sc = tsat - lt;
-      lines.push("--- Subcooling ---", `Liquid: ${lp.toFixed(1)} psig → bubble sat ${tsat.toFixed(1)} °F`, `Line temp: ${lt.toFixed(1)} °F`, `Subcooling: ${sc.toFixed(1)} °F`, "[APPROX] " + scGuide(sc), "");
+      if (lp == null || lt == null) return { error: "Need liquid pressure and liquid temp for subcooling." };
+      const sat = satTemp(f.refrigerant, lp, "bubble");
+      out.subcool = { psig: lp, line: lt, sat, value: sat - lt };
     }
   } catch (e) {
-    return { lines: ["Error: " + e.message] };
+    return { error: "Error: " + e.message };
+  }
+  return out;
+}
+
+export function runSuperheatSubcool(f) {
+  const lines = ["Refrigerant: " + f.refrigerant, "Note: Sat temps from PT table — dew for superheat, bubble for subcooling.", "Verify against the OEM PT chart for the refrigerant.", ""];
+  const r = shScValues(f);
+  if (r.error) return { lines: [r.error] };
+  if (r.superheat) {
+    const { psig, line, sat, value } = r.superheat;
+    lines.push("--- Superheat ---", `Suction: ${psig.toFixed(1)} psig → dew sat ${sat.toFixed(1)} °F`, `Line temp: ${line.toFixed(1)} °F`, `Superheat: ${value.toFixed(1)} °F`, "[APPROX] " + shGuide(value), "");
+  }
+  if (r.subcool) {
+    const { psig, line, sat, value } = r.subcool;
+    lines.push("--- Subcooling ---", `Liquid: ${psig.toFixed(1)} psig → bubble sat ${sat.toFixed(1)} °F`, `Line temp: ${line.toFixed(1)} °F`, `Subcooling: ${value.toFixed(1)} °F`, "[APPROX] " + scGuide(value), "");
   }
   return { lines };
 }
