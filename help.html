@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1419" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" type="image/png" />
+  <meta http-equiv="Cache-Control" content="no-cache" />
+  <title>Help — Service Tech</title>
+  <link rel="stylesheet" href="styles.css?v=26" />
+</head>
+<body>
+  <div class="app help">
+  <header class="app-header">
+    <a class="back" href="index.html" aria-label="Back">←</a>
+    <h1>Help / How to use</h1>
+  </header>
+  <p class="footer-note">Tap a section to open it. Works offline.</p>
+
+  <details class="help-sec" id="install">
+    <summary>1. Install the app</summary>
+    <p><strong>Android (Chrome or Brave):</strong> open the app, tap the ⋮ menu, then <em>Add to Home screen</em> or <em>Install app</em>.</p>
+    <p><strong>iPhone (Safari):</strong> tap Share <span aria-hidden="true">⬆</span>, then <em>Add to Home Screen</em>.</p>
+    <p>Open it once <strong>while online</strong> so it can save itself. After that it works with no signal. The home page shows “Available offline” when it's ready.</p>
+  </details>
+
+  <details class="help-sec" id="scan">
+    <summary>2. Scan a data plate</summary>
+    <p><strong>📷 Take photo</strong> opens the camera. <strong>🖼 Upload photo</strong> picks a picture you already took (JPEG, PNG or iPhone HEIC).</p>
+    <p><strong>Tips:</strong> fill the frame with the plate. Hold the phone square to it, not at an angle. Tilt it a little to get rid of glare.</p>
+    <p><strong>The 5 steps:</strong></p>
+    <ol>
+      <li><strong>Photo</strong>: take or upload the picture.</li>
+      <li><strong>Crop</strong>: the app finds the plate and straightens it. If it asks, drag the 4 corners to the plate edges and tap <em>Use this crop</em>.</li>
+      <li><strong>Reading</strong>: the phone reads the text several ways. Nothing is uploaded.</li>
+      <li><strong>Check</strong>: compare every value with the plate.</li>
+      <li><strong>Done</strong>: the values are on the call card.</li>
+    </ol>
+    <p><strong>Flagged fields</strong> are orange with “check”. The app wasn't sure, so look closely. If passes disagreed, tap the right value under “Pick”. Blank means it couldn't read it. It never guesses.</p>
+    <p><strong>“Looks right”</strong>: tick it after you compare model or serial with the plate character by character. Fill call card needs both ticked. Editing a value clears its tick.</p>
+    <p><strong>Retake</strong>: if the read is poor, the app says so and shows <em>Retake</em> first. It opens the camera again. Nothing from the bad read is kept.</p>
+  </details>
+
+  <details class="help-sec" id="callcard">
+    <summary>3. Fill the call card &amp; troubleshoot</summary>
+    <p>After Check, tap <strong>Fill call card</strong>. The plate values go into the card. You can still edit them. The card is saved on this phone.</p>
+    <p><strong>Troubleshoot</strong> follows the open call card: it picks the tree for that unit type (mini-split, split AC/HP, compressor or walk-in) and uses its brand and model. Change the card and the tree follows.</p>
+  </details>
+
+  <details class="help-sec" id="manuals">
+    <summary>4. Manuals &amp; error codes</summary>
+    <p>Manuals and code tables come only from <strong>official OEM sources</strong> (the maker's own sites and documents), never forums or resellers.</p>
+    <p><strong>No code table</strong> means nobody has typed in that model's error codes yet. Open the manual instead. Its troubleshooting section has them.</p>
+  </details>
+
+  <details class="help-sec" id="missing">
+    <summary>5. Send missing model</summary>
+    <p>If there's no manual for your model, tap <strong>Send missing model</strong>. Only the <strong>brand and model number</strong> are sent. Photos never leave the phone. Offline? It waits and sends when you're back online.</p>
+  </details>
+
+  <details class="help-sec" id="tools">
+    <summary>6. Tools</summary>
+    <ul id="help-tools" class="help-tools"></ul>
+  </details>
+
+  <details class="help-sec" id="updates">
+    <summary>7. Updates</summary>
+    <p>The version is at the bottom of every page (for example “Version v27”).</p>
+    <p>To update: <strong>fully close the app</strong> (swipe it away from recent apps), then open it again while online. If the version still looks old, close and reopen once more.</p>
+  </details>
+
+  <details class="help-sec" id="feedback">
+    <summary>8. Send feedback</summary>
+    <form id="feedback-form" class="feedback-form">
+      <label for="feedback-msg">What worked, what didn't, what you'd like:</label>
+      <textarea id="feedback-msg" name="message" rows="5" maxlength="1000" required></textarea>
+      <small class="feedback-count" id="feedback-count"></small>
+      <button type="submit" class="btn btn-primary">Send feedback</button>
+      <p class="footer-note feedback-status" id="feedback-status" aria-live="polite"></p>
+      <small class="footer-note">Only your typed text and the app version are sent. No photos, plates or call cards. Offline? It sends when you're back online.</small>
+    </form>
+  </details>
+  </div>
+  <script src="version.js?v=26"></script>
+  <script src="app.js?v=26"></script>
+  <script type="module" src="tools/help-app.js?v=26"></script>
+</body>
+</html>
