@@ -14,4 +14,6 @@ export const TRUTH = {
   // York (Unitary Products Group) ZS gas/electric RTU, phone photo, read by eye. Charge "SYS #1 R-410A 4 LBS. 4 OZ.";
   // MCA printed "29.9/29.9", fuse and breaker "40/40"; test pressures 445 / 236 PSIG.
   "york-zs04-rtu": { brand: "Unitary Products Group (York/Coleman)", model: "ZS-04N13BTAZZ10001A", serial: "N1D1914801", voltage: "208/230", phase: 3, hz: 60, rla: 16, lra: 120, fanFla: 2.3, mca: 29.9, mop: 40, refrigerant: "R-410A", charge: 4.25, designHigh: "445 psig", designLow: "236 psig" },
+  // Same photo, OCR from the live browser pipeline after the square-probe orientation fix.
+  "york-zs04-rtu-live": { brand: "Unitary Products Group (York/Coleman)", model: "ZS-04N13BTAZZ10001A", serial: "N1D1914801", voltage: "208/230", phase: 3, hz: 60, rla: 16, lra: 120, fanFla: 2.3, mca: 29.9, mop: 40, refrigerant: "R-410A", charge: 4.25, designHigh: "445 psig", designLow: "236 psig" },
 };

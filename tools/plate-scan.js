@@ -7,11 +7,11 @@
  * Nothing is stored (not even localStorage) until the user taps Confirm, and
  * then only the onConfirm callback decides what to keep.
  */
-import { mountGuide, renderReviewSummary, progressLine, INSTRUCTIONS } from "./scan-flow.js?v=37";
-import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=37";
-import { cropStep } from "./plate-crop.js?v=37";
-import { findLabelBox, deglare, clahe } from "./plate-image.js?v=37";
-import { isHeic, heicToFile } from "./heic.js?v=37";
+import { mountGuide, renderReviewSummary, progressLine, INSTRUCTIONS } from "./scan-flow.js?v=38";
+import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=38";
+import { cropStep } from "./plate-crop.js?v=38";
+import { findLabelBox, deglare, clahe } from "./plate-image.js?v=38";
+import { isHeic, heicToFile } from "./heic.js?v=38";
 
 const VENDOR = "vendor/tesseract/";
 const DECODE_SIDE = 4000;   // decode cap (keeps the label's detail before cropping)
@@ -134,6 +134,21 @@ export async function decodeUpright(file, maxSide = DECODE_SIDE) {
 }
 
 /** Rotate (0/90/180/270) and scale to long edge <= maxSide; returns a grayscale Uint8 array + dims. */
+/** Long side over 1.5x the short side: the centered short-side square (else the canvas itself). */
+export function squareProbeBox(w, h) {
+  const lo = Math.min(w, h), hi = Math.max(w, h);
+  if (hi <= lo * 1.5) return null;
+  return w >= h ? { x: Math.round((w - h) / 2), y: 0, s: h } : { x: 0, y: Math.round((h - w) / 2), s: w };
+}
+function squareProbe(src) {
+  const b = squareProbeBox(src.width, src.height);
+  if (!b) return src;
+  const c = document.createElement("canvas");
+  c.width = c.height = b.s;
+  c.getContext("2d").drawImage(src, b.x, b.y, b.s, b.s, 0, 0, b.s, b.s);
+  return c;
+}
+
 function rotatedGray(srcCanvas, deg, maxSide) {
   const s = Math.min(1, maxSide / Math.max(srcCanvas.width, srcCanvas.height));
   const w = Math.round(srcCanvas.width * s), h = Math.round(srcCanvas.height * s);
@@ -280,9 +295,12 @@ export async function scanPlate(file, progress = () => {}, opts = (globalThis.__
   const passes = [];
   try {
     const angles = [0, 90, 180, 270], probes = [];
+    // A tall, narrow plate shrunk to PROBE_SIDE leaves its text too small to read at any angle, so the
+    // probe picks noise. Probe a square from its middle instead: same text size at every angle.
+    const probeSrc = squareProbe(upright);
     for (let i = 0; i < angles.length; i++) {
       progress("Finding orientation " + (i + 1) + "/4…", 0.05 + 0.25 * (i / 4));
-      const g = rotatedGray(upright, angles[i], PROBE_SIDE);
+      const g = rotatedGray(probeSrc, angles[i], PROBE_SIDE);
       const c = toCanvas(stretch(g.gray), g.w, g.h);
       const r = await recognize(worker, c, 11);
       c.width = c.height = 0;
