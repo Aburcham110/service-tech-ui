@@ -1,7 +1,8 @@
 """Browser check for the Upload photo button (Playwright, Chromium; serve like plate_photos.py).
 
 Checks both buttons on the first scan screen, the upload input's attributes, that an
-undecodable file (fake HEIC) shows the JPEG/screenshot message, and that no request leaves the origin.
+undecodable file (fake HEIC: ftyp heic + zeros) goes through the self-hosted HEIC decoder, fails, and shows
+the damaged-file JPEG/screenshot message; the only request during the upload is the same-origin decoder module.
 """
 import json, os, sys
 from urllib.parse import urlsplit
@@ -36,6 +37,7 @@ ok = (len(R["buttons"]) == 2 and "Take photo" in R["buttons"][0][1] and "btn-pri
       and "Upload photo" in R["buttons"][1][1] and "btn-secondary" in R["buttons"][1][0]
       and R["upload_input"] == ["image/*,.heic,.heif", None] and R["camera_input"][1] == "environment"
       and "HEIC" in R["message"] and "JPEG" in R["message"] and "screenshot" in R["message"]
-      and all(R["buttons_after"]) and not R["off_origin"] and not R["requests_during_upload"])
+      and all(R["buttons_after"]) and not R["off_origin"]
+      and all(u.split("?")[0].endswith("/vendor/libheif/libheif-bundle.mjs") for u in R["requests_during_upload"]))
 R["ok"] = ok
 print(json.dumps(R, indent=1)); sys.exit(0 if ok else 1)
