@@ -4,7 +4,7 @@
  * URLs are only the ones already in the index; nothing is added here. No PDFs.
  * The Notion OEM map / Manuals pages stay the online source of truth.
  */
-import { findManuals } from "./manuals.js?v=38";
+import { findManuals } from "./manuals.js?v=39";
 
 export const LABEL = "Search terms only — verify with OEM";
 

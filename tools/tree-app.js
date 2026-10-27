@@ -1,12 +1,12 @@
 /** tree.html: walks a troubleshooting tree (tools/trees.js) one step at a time. */
-import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=38";
+import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=39";
 import { getTool } from "./registry.js";
-import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=38";
-import { getCardPlate } from "./card-plate.js?v=38";
-import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=38";
-import { loadManualsIndex } from "./manuals.js?v=38";
-import { mountAddToCall, treeNote } from "./call-notes.js?v=38";
-import { findCodeSet, lookupCode, sourceLink, rowLabel, loadErrorCodes } from "./error-codes.js?v=38";
+import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=39";
+import { getCardPlate } from "./card-plate.js?v=39";
+import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=39";
+import { loadManualsIndex } from "./manuals.js?v=39";
+import { mountAddToCall, treeNote, treeStepEntry, hasOpenCall } from "./call-notes.js?v=39";
+import { findCodeSet, lookupCode, sourceLink, rowLabel, loadErrorCodes } from "./error-codes.js?v=39";
 
 const params = new URLSearchParams(location.search);
 const TYPE_KEY = "serviceTechTreeType_v1"; // last equipment type picked here
@@ -173,6 +173,13 @@ function render() {
     node.tools.forEach((t) => { const a = el("a", "chip", (getTool(t) || { title: t }).title); a.href = toolHref(t); tl.appendChild(a); });
     card.appendChild(tl);
   }
+  // Reverse flow: this step's answer (or the result) -> the open call's Found/Did notes.
+  const stepEntry = treeStepEntry(treeId, tree, path);
+  if (stepEntry && hasOpenCall()) {
+    const sc = el("div", "tree-add-step");
+    mountAddToCall(sc, () => treeStepEntry(treeId, tree, path), { id: "tree-step-add", label: "Add to call notes", chip: true });
+    card.appendChild(sc);
+  }
   (node.options || []).forEach((o) => {
     const b = el("button", "btn btn-secondary tree-opt", o.label);
     b.type = "button";
@@ -186,7 +193,7 @@ function render() {
     const log = el("a", "btn btn-secondary tree-log", "Log this in job notes →"); log.id = "tree-log";
     log.href = jobLogHref(treeId, path, plate || {});
     card.appendChild(log);
-    mountAddToCall(card, () => treeNote(tree, path), { id: "tree-add-call" });
+    mountAddToCall(card, () => ({ field: "found", label: "Tree: " + treeId, text: treeNote(tree, path).replace(/^Troubleshooting — /, "") }), { id: "tree-add-call", label: "Add whole walk to call notes" });
   }
   root.appendChild(card);
   const nav = el("div", "nav-row");

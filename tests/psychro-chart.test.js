@@ -59,5 +59,5 @@ test("worked example: points placed at (db, grains), process line, dew-point pro
 });
 
 test("chart module precached", () => {
-  assert.ok(readFileSync(new URL("../sw.js", import.meta.url), "utf8").includes('"./tools/psychro-chart.js?v=38"'));
+  assert.ok(readFileSync(new URL("../sw.js", import.meta.url), "utf8").includes('"./tools/psychro-chart.js?v=39"'));
 });

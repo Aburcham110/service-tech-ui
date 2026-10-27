@@ -1,6 +1,6 @@
 /* Single source of the app version: the service worker's cache name (sw.js imports this file)
    and the footer label both read it. Bump it with the ?v= cache-bust. */
-self.APP_VERSION = "v38";
+self.APP_VERSION = "v39";
 
 /**
  * New service worker took control. Reload ONCE so the page runs the new code, but never on the

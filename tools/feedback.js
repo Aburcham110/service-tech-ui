@@ -3,7 +3,7 @@
  * photo, plate, call card, location or anything else. Goes to the same Apps Script URL as Send missing model.
  * Offline sends wait in localStorage and go out on the 'online' event or the next app start.
  */
-import { MISSING_MODEL_URL } from "./missing-model.js?v=38";
+import { MISSING_MODEL_URL } from "./missing-model.js?v=39";
 
 export const FEEDBACK_QUEUE_KEY = "serviceTechFeedbackQueue_v1";
 export const MAX_FEEDBACK = 1000;

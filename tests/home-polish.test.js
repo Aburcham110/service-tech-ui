@@ -14,5 +14,5 @@ test("call card preview sits before Copy; chips toast; help covers it", () => {
   assert.ok(c.indexOf('id="card-preview"') > 0 && c.indexOf('id="card-preview"') < c.indexOf('id="btn-copy"'));
   assert.match(r("tools/call-wizard.js"), /stToast\("Added: "/);
   const help = r("help.html");
-  for (const s of ["Resume last call", "Call tools", "Preview call card", "Add to current call notes", "Analyze in Psychrometrics", "Parts"]) assert.ok(help.includes(s), s);
+  for (const s of ["Resume last call", "Call tools", "Preview call card", "Add to call notes", "Add results to current call", "Back to call", "Analyze in Psychrometrics", "Parts"]) assert.ok(help.includes(s), s);
 });
