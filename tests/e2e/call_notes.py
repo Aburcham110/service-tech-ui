@@ -1,7 +1,7 @@
 """Call wizard Troubleshooting deep-links to the tree for the equipment type; trees and tool results get
 'Add to current call notes' (only with an open call), appended to Found with a confirmation. Offline.
 Run: python3 -m http.server 8765 (from the parent of the repo), then python tests/e2e/call_notes.py"""
-import asyncio, json, os
+import asyncio, json, os, re
 from urllib.parse import urlparse
 from playwright.async_api import async_playwright
 B = os.environ.get("BASE", "http://localhost:8765/service-tech-ui/")
@@ -43,6 +43,7 @@ async def main():
         chk("add button on tree result", await pg.is_visible("#tree-add-call"))
         await pg.click("#tree-add-call"); await pg.wait_for_timeout(200)
         chk("tree confirmation", "Added to the call" in await pg.inner_text("#tree-add-call-status"))
+        await pg.click("#tree-step-add"); await pg.wait_for_timeout(200)
         await pg.goto(B + "tool.html?id=superheat-subcool"); await pg.wait_for_timeout(600)
         chk("tool add disabled before result", await pg.is_disabled("#tool-add-call"))
         for k, v in {"refrigerant": "R-410A", "suctionPsig": "118.4", "suctionTemp": "52.3", "liquidPsig": "331", "liquidTemp": "94.8"}.items():
@@ -56,9 +57,9 @@ async def main():
         await pg.wait_for_timeout(500); await pg.click("[data-step=mid]")
         f = await pg.eval_on_selector("#found", "e => e.value"); out["found"] = f
         lines = f.split("\n")
-        chk("found kept + tree + tool appended", lines[0] == "Dirty filter" and lines[1].startswith("Troubleshooting — ") and lines[2].startswith("SH / Subcool: ") and "Superheat" in lines[2])
+        chk("found kept + tree + tool appended", lines[0] == "Dirty filter" and re.match(r"^\[\d\d:\d\d Tree: [a-z-]+\] ", lines[1]) and re.match(r"^\[\d\d:\d\d Tool: SH / Subcool\] ", lines[-1]) and "Superheat" in lines[-1] and len(lines) == 4)
         await pg.fill("#did", "x"); await pg.wait_for_timeout(100)
-        chk("later edits keep notes", "Troubleshooting" in json.loads(await pg.evaluate("localStorage.getItem('serviceTechCallDraft_v1')"))["found"])
+        chk("later edits keep notes", "Tree: compressor" in json.loads(await pg.evaluate("localStorage.getItem('serviceTechCallDraft_v1')"))["found"])
         await br.close()
     out["failed"] = [n for n, c in ok if not c]; out["checks"] = len(ok)
     out["ok"] = not out["failed"] and not out["errors"] and not out["off_origin"]
