@@ -328,3 +328,10 @@ input.imported, select.imported { outline: 2px solid var(--warn, #e0a030); }
 .phrase-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
 .phrase-chip { min-height: 40px; cursor: pointer; color: inherit; }
 .total-time { font-weight: 600; }
+.psy-table { width: 100%; border-collapse: collapse; margin: 6px 0 14px; font-size: 0.95rem; }
+.psy-table th { text-align: left; font-weight: 500; color: var(--muted); padding: 6px 8px 6px 0; border-bottom: 1px solid var(--border); }
+.psy-table td { text-align: right; padding: 6px 0; border-bottom: 1px solid var(--border); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.psy-h { font-size: 1.05rem; margin: 14px 0 4px; }
+.psy-warn { border: 1px solid #fb923c; background: rgba(251,146,60,.12); border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
+.psy-hints { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin: 8px 0; color: var(--muted); }
+.psy-warn ul, .psy-hints ul { margin: 6px 0 0; padding-left: 18px; }

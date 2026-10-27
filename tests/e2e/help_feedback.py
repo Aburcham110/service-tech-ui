@@ -39,7 +39,7 @@ async def main():
         out["queued_after"] = await pg.evaluate("JSON.parse(localStorage.getItem('serviceTechFeedbackQueue_v1')||'[]').length")
         await br.close()
     bodies = [json.loads(b) for b in out["posts"] if b]
-    out["ok"] = (len(out["sections"]) == 9 and out["tools_listed"] >= 10 and out["all_closed"] and out["q_visible"]
+    out["ok"] = (len(out["sections"]) == 10 and out["tools_listed"] >= 10 and out["all_closed"] and out["q_visible"]
                  and out["jump_url"].endswith("help.html#scan") and out["scan_open"]
                  and out["scan_steps_in_help"] == ["Photo", "Crop", "Reading", "Check", "Done"]
                  and "Queued" in out["offline_status"] and out["queued"] == 1 and out["queued_after"] == 0
