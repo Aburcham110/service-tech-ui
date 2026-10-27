@@ -28,6 +28,8 @@ const ASSETS = [
   "./help.html",
   "./tools/help-app.js?v=28",
   "./tools/feedback.js?v=28",
+  "./tools/call-extras.js?v=28",
+  "./tools/call-wizard.js?v=28",
   "./share.html",
   "./tools/gauge-parse.js?v=28",
   "./tools/gauge-import.js?v=28",

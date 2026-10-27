@@ -1,6 +1,7 @@
 /* Service Tech field UI */
 (function () {
   const STORAGE_KEY = "serviceTechCallDraft_v1";
+  const TECH_KEY = "serviceTechTechName_v1"; // tools/call-extras.js TECH_KEY
   const STEPS = ["open", "readings", "mid", "close"];
 
   const TOOLS = [
@@ -65,11 +66,32 @@
 
   function saveDraft(data) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if (data && String(data.techName || "").trim()) try { localStorage.setItem(TECH_KEY, String(data.techName).trim()); } catch (_) { /* ignore */ }
+    try { document.dispatchEvent(new CustomEvent("st:draft")); } catch (_) { /* ignore */ }
+  }
+
+  function rememberedTech() {
+    try { return localStorage.getItem(TECH_KEY) || ""; } catch (_) { return ""; }
+  }
+
+  // Auto-stamps (editable): start when the call opens, end when Close is first reached.
+  function nowStamp() {
+    const n = new Date(), p = (x) => String(x).padStart(2, "0");
+    return { date: n.getFullYear() + "-" + p(n.getMonth() + 1) + "-" + p(n.getDate()), time: p(n.getHours()) + ":" + p(n.getMinutes()) };
+  }
+  function stampStart(d) {
+    if (d.startTime) return d;
+    const s = nowStamp(); d.startTime = s.time; if (!d.startDate) d.startDate = s.date; return d;
+  }
+  function stampEnd(d) {
+    if (d.step !== "close" || d.endTime) return d;
+    const s = nowStamp(); d.endTime = s.time; if (!d.endDate) d.endDate = s.date; return d;
   }
 
   function defaultDraft() {
     return {
       step: "open",
+      workOrder: "", techName: rememberedTech(), startDate: "", startTime: "", endDate: "", endTime: "",
       site: "", equipment: "cooler", symptom: "", refrigerant: "", plate: "", photosReady: false,
       suctionPsig: "", suctionTemp: "", liquidPsig: "", liquidTemp: "",
       supplyTemp: "", returnTemp: "", amps: "", fla: "", voltage: "",
@@ -84,6 +106,7 @@
 
   function readFormIntoDraft(d) {
     const map = {
+      workOrder: "workOrder", techName: "techName", startDate: "startDate", startTime: "startTime", endDate: "endDate", endTime: "endTime",
       site: "site", equipment: "equipment", symptom: "symptom", refrigerant: "refrigerant", plate: "plate",
       photosReady: "photosReady",
       suctionPsig: "suctionPsig", suctionTemp: "suctionTemp",
@@ -118,9 +141,13 @@
 
   function buildCard(d, throughStep) {
     const idx = STEPS.indexOf(throughStep);
+    const ex = typeof self.stCallCopyExtras === "function" ? self.stCallCopyExtras(d) : null;
+    const extras = { header: (ex && ex.header) || [], readings: (ex && ex.readings) || [] };
     const parts = [
       "SERVICE TECH CALL CARD",
       "======================",
+      ...extras.header,
+      "",
       line("Site", d.site),
       line("Equipment", d.equipment),
       line("Symptom", d.symptom),
@@ -135,8 +162,9 @@
         line("Suction", `${d.suctionPsig || "—"} psig / ${d.suctionTemp || "—"} °F`),
         line("Liquid", `${d.liquidPsig || "—"} psig / ${d.liquidTemp || "—"} °F`),
         line("Supply / Return", `${d.supplyTemp || "—"} / ${d.returnTemp || "—"} °F`),
-        line("Amps / FLA", `${d.amps || "—"} / ${d.fla || "—"}`),
-        line("Voltage", d.voltage),
+        line("Amps / plate RLA-FLA", `${d.amps || "—"} A / ${d.fla || "—"} A`),
+        line("Voltage", d.voltage ? d.voltage + " V" : ""),
+        ...extras.readings,
       );
     }
     if (idx >= 2) {
@@ -173,7 +201,8 @@
   /** A saved call draft with anything typed in it (beyond the defaults). */
   function draftHasContent(d) {
     const def = defaultDraft();
-    return Object.keys(d || {}).some((k) => k !== "step" && d[k] !== "" && d[k] != null && d[k] !== false && d[k] !== def[k]);
+    const auto = ["step", "techName", "startDate", "startTime", "endDate", "endTime"]; // stamped/remembered, not typed for this call
+    return Object.keys(d || {}).some((k) => !auto.includes(k) && d[k] !== "" && d[k] != null && d[k] !== false && d[k] !== def[k]);
   }
 
   function initHome() {
@@ -200,12 +229,16 @@
 
   function initCall() {
     let d = mergeDraft();
+    if (!d.techName) d.techName = rememberedTech();
+    d = stampEnd(stampStart(d));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
     fillForm(d);
     showStep(d.step || "open");
     $all(".step-pill").forEach((pill) => {
       pill.addEventListener("click", () => {
         d = readFormIntoDraft(d);
         d.step = pill.dataset.step;
+        d = stampEnd(d); fillForm(d);
         saveDraft(d);
         showStep(d.step);
       });
@@ -218,6 +251,7 @@
       d = readFormIntoDraft(d);
       const i = Math.max(0, STEPS.indexOf(d.step) - 1);
       d.step = STEPS[i];
+      d = stampEnd(d); fillForm(d);
       saveDraft(d);
       showStep(d.step);
     });
@@ -225,6 +259,7 @@
       d = readFormIntoDraft(d);
       const i = Math.min(STEPS.length - 1, STEPS.indexOf(d.step) + 1);
       d.step = STEPS[i];
+      d = stampEnd(d); fillForm(d);
       saveDraft(d);
       showStep(d.step);
     });
@@ -235,7 +270,7 @@
     });
     $("#btn-reset")?.addEventListener("click", () => {
       if (!confirm("Clear this call draft?")) return;
-      d = defaultDraft();
+      d = stampStart(defaultDraft());
       saveDraft(d);
       fillForm(d);
       showStep("open");

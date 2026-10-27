@@ -30,6 +30,14 @@
     </div>
 
     <section id="panel-open">
+      <div class="call-header" id="call-header">
+        <label class="field"><span>Work order / customer #</span><input id="workOrder" autocomplete="off" /></label>
+        <label class="field"><span>Tech name</span><input id="techName" autocomplete="name" placeholder="Remembered on this phone" /></label>
+        <div class="row">
+          <label class="field"><span>Start date</span><input id="startDate" type="date" /></label>
+          <label class="field"><span>Start time</span><input id="startTime" type="time" /></label>
+        </div>
+      </div>
       <div id="scanned-summary" class="scanned-summary" hidden></div>
       <label class="field"><span>Site</span><input id="site" autocomplete="organization" placeholder="Store / address" /></label>
       <label class="field"><span>Equipment</span>
@@ -55,33 +63,42 @@
     <section id="panel-readings" class="hidden">
       <div id="gauge-import-host"></div>
       <div class="row">
-        <label class="field"><span>Suction psig</span><input id="suctionPsig" inputmode="decimal" /></label>
-        <label class="field"><span>Suction °F</span><input id="suctionTemp" inputmode="decimal" /></label>
+        <label class="field"><span>Suction pressure (psig)</span><input id="suctionPsig" inputmode="decimal" /></label>
+        <label class="field"><span>Suction line temp (°F)</span><input id="suctionTemp" inputmode="decimal" /></label>
       </div>
       <div class="row">
-        <label class="field"><span>Liquid psig</span><input id="liquidPsig" inputmode="decimal" /></label>
-        <label class="field"><span>Liquid °F</span><input id="liquidTemp" inputmode="decimal" /></label>
+        <label class="field"><span>Liquid pressure (psig)</span><input id="liquidPsig" inputmode="decimal" /></label>
+        <label class="field"><span>Liquid line temp (°F)</span><input id="liquidTemp" inputmode="decimal" /></label>
+      </div>
+      <div id="shsc-inline" class="shsc-inline" role="status" aria-live="polite"></div>
+      <div class="row">
+        <label class="field"><span>Supply air (°F)</span><input id="supplyTemp" inputmode="decimal" /></label>
+        <label class="field"><span>Return air (°F)</span><input id="returnTemp" inputmode="decimal" /></label>
       </div>
       <div class="row">
-        <label class="field"><span>Supply °F</span><input id="supplyTemp" inputmode="decimal" /></label>
-        <label class="field"><span>Return °F</span><input id="returnTemp" inputmode="decimal" /></label>
+        <label class="field"><span>Amps (A)</span><input id="amps" inputmode="decimal" /></label>
+        <label class="field"><span>Plate RLA/FLA (A)</span><input id="fla" inputmode="decimal" /></label>
       </div>
-      <div class="row">
-        <label class="field"><span>Amps</span><input id="amps" inputmode="decimal" /></label>
-        <label class="field"><span>FLA</span><input id="fla" inputmode="decimal" /></label>
-      </div>
-      <label class="field"><span>Voltage</span><input id="voltage" inputmode="decimal" placeholder="L1-L2 / phases" /></label>
+      <div id="amps-pct" class="amps-pct" role="status" aria-live="polite"></div>
+      <label class="field"><span>Voltage (V)</span><input id="voltage" inputmode="decimal" placeholder="L1-L2 / phases" /></label>
     </section>
 
     <section id="panel-mid" class="hidden">
       <label class="field"><span>Did</span><textarea id="did" placeholder="Actions taken"></textarea></label>
+      <div class="phrase-chips" data-for="did" aria-label="Quick phrases for Did"></div>
       <label class="field"><span>Found</span><textarea id="found" placeholder="Findings"></textarea></label>
       <label class="field"><span>Still seeing</span><textarea id="stillSeeing" placeholder="What remains"></textarea></label>
     </section>
 
     <section id="panel-close" class="hidden">
       <label class="field"><span>Fixed</span><textarea id="fixed" placeholder="Resolution"></textarea></label>
+      <div class="phrase-chips" data-for="fixed" aria-label="Quick phrases for Fixed"></div>
       <label class="field"><span>Parts used</span><textarea id="partsUsed" placeholder="Parts / materials"></textarea></label>
+      <div class="row">
+        <label class="field"><span>End date</span><input id="endDate" type="date" /></label>
+        <label class="field"><span>End time</span><input id="endTime" type="time" /></label>
+      </div>
+      <p id="total-time" class="total-time" role="status"></p>
     </section>
 
     <button type="button" class="btn btn-copy" id="btn-copy">Copy for Service Tech</button>
@@ -95,5 +112,6 @@
   <script src="app.js?v=28"></script>
   <script type="module" src="tools/call-scan.js?v=28"></script>
   <script type="module" src="tools/call-gauge.js?v=28"></script>
+  <script type="module" src="tools/call-wizard.js?v=28"></script>
 </body>
 </html>
