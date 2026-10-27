@@ -1,6 +1,6 @@
 /** Last confirmed plate scan, kept on this phone (localStorage) so the call card, trees, tools and
  *  manuals helper can use it without re-scanning. Only plate fields; nothing leaves the device. */
-import { plateSummary } from "./plate-scan.js?v=35";
+import { plateSummary } from "./plate-scan.js?v=36";
 
 export const SCAN_KEY = "serviceTechLastScan_v1";
 export const PLATE_FIELDS = ["brand", "model", "serial", "unitType", "refrigerant", "charge", "voltage", "phase", "hz", "rla", "fla", "mca", "mop"];

@@ -365,3 +365,15 @@ input.imported, select.imported { outline: 2px solid var(--warn, #e0a030); }
 .from-call { margin: 0 0 10px; }
 .from-call .btn { width: auto; }
 #psy-link { margin: 0 0 4px; }
+
+.resume-card { display: block; background: var(--accent); color: #061018; border-radius: var(--radius); padding: 18px 16px; margin-bottom: 12px; box-shadow: 0 0 0 3px rgba(255,255,255,.12); }
+.resume-card[hidden] { display: none; }
+.resume-card strong { display: block; font-size: 1.25rem; }
+.resume-card span { display: block; font-weight: 600; margin-top: 4px; overflow-wrap: anywhere; }
+.resume-card span:empty { display: none; }
+.resume-card small { display: block; margin-top: 6px; opacity: .8; }
+.tile-group { margin-top: 20px; }
+.group-title { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 -6px; }
+.card-preview { margin-top: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
+.card-preview summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.card-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; margin: 8px 0 0; max-height: 50vh; overflow: auto; }

@@ -42,6 +42,7 @@
   function $(sel, el) { return (el || document).querySelector(sel); }
   function $all(sel, el) { return Array.from((el || document).querySelectorAll(sel)); }
 
+  self.stToast = (m) => toast(m);
   function toast(msg) {
     let t = $("#toast");
     if (!t) {
@@ -68,6 +69,14 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     if (data && String(data.techName || "").trim()) try { localStorage.setItem(TECH_KEY, String(data.techName).trim()); } catch (_) { /* ignore */ }
     try { document.dispatchEvent(new CustomEvent("st:draft")); } catch (_) { /* ignore */ }
+    updatePreview(data);
+  }
+
+  /** Collapsible preview of exactly what Copy will produce. */
+  function updatePreview(data) {
+    const pre = $("#card-preview-text");
+    if (!pre || !data) return;
+    try { pre.textContent = buildCard(data, data.step); } catch (_) { /* ignore */ }
   }
 
   function rememberedTech() {
@@ -213,8 +222,9 @@
     const d = loadDraft();
     if (!draftHasContent(d)) return;
     const what = [d.site, d.equipment, d.symptom && d.symptom.slice(0, 40)].filter(Boolean).join(" · ");
-    btn.querySelector("span").textContent = what ? " — " + what : "";
+    btn.querySelector("span").textContent = what;
     btn.hidden = false;
+    const nc = $("#new-call"); if (nc) { nc.className = "btn btn-secondary"; nc.textContent = "Start a new call"; }
   }
 
   function showStep(name) {
@@ -236,6 +246,8 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
     fillForm(d);
     showStep(d.step || "open");
+    $("#card-preview")?.addEventListener("toggle", () => updatePreview(readFormIntoDraft(d)));
+    updatePreview(d);
     $all(".step-pill").forEach((pill) => {
       pill.addEventListener("click", () => {
         d = readFormIntoDraft(d);
@@ -390,8 +402,8 @@
     window.addEventListener("offline", updateIndicator);
     updateIndicator();
     // Retry queued "Send missing model" posts at app start and whenever the phone comes back online.
-    import("./tools/missing-model.js?v=35").then((m) => m.startMissingSender()).catch(() => {});
-    import("./tools/feedback.js?v=35").then((m) => m.startFeedbackSender()).catch(() => {});
+    import("./tools/missing-model.js?v=36").then((m) => m.startMissingSender()).catch(() => {});
+    import("./tools/feedback.js?v=36").then((m) => m.startFeedbackSender()).catch(() => {});
     if (!("serviceWorker" in navigator) || window.__stSwRegistered) return;
     window.__stSwRegistered = true;
     const hadController = !!navigator.serviceWorker.controller;
