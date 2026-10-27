@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<!-- SYNTHETIC test file - not a real export -->
+<session refrigerant="R-32">
+  <reading time="2026-10-26T14:00:00"><lp unit="bar">8.1</lp><hp unit="bar">23.0</hp><ts unit="°C">10.5</ts><tl unit="°C">34.2</tl></reading>
+  <reading time="2026-10-26T14:00:10"><lp unit="bar">8.2</lp><hp unit="bar">23.1</hp><ts unit="°C">10.6</ts><tl unit="°C">34.0</tl></reading>
+</session>

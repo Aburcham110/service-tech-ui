@@ -9,16 +9,16 @@
    - Any other same-origin GET: network-first, falling back to cache.
    - Navigations to pages not in the cache while offline: offline.html.
    - Cross-origin (Notion, GitHub): not handled, network only. */
-importScripts("./version.js?v=27");
-const VERSION = self.APP_VERSION; // "v27": one constant for the cache name and the footer label
+importScripts("./version.js?v=28");
+const VERSION = self.APP_VERSION; // "v28": one constant for the cache name and the footer label
 const CACHE = "service-tech-" + VERSION;
 const OFFLINE_URL = "./offline.html";
 
-// Exact URLs the pages request (versioned ones include ?v=27).
+// Exact URLs the pages request (versioned ones include ?v=28).
 const ASSETS = [
   "./",
   "./index.html",
-  "./version.js?v=27",
+  "./version.js?v=28",
   "./call.html",
   "./toolkit.html",
   "./tool.html",
@@ -26,51 +26,59 @@ const ASSETS = [
   "./manuals.html",
   "./docs.html",
   "./help.html",
-  "./tools/help-app.js?v=27",
-  "./tools/feedback.js?v=27",
+  "./tools/help-app.js?v=28",
+  "./tools/feedback.js?v=28",
+  "./share.html",
+  "./tools/gauge-parse.js?v=28",
+  "./tools/gauge-import.js?v=28",
+  "./tools/call-gauge.js?v=28",
+  // Gauge report import (lazy import() only for PDF / XLSX; see vendor/README-gauge.md):
+  "./vendor/pdfjs/pdf.min.mjs",
+  "./vendor/pdfjs/pdf.worker.min.mjs",
+  "./vendor/fflate/fflate.mjs",
   OFFLINE_URL,
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
   "./apple-touch-icon.png",
-  "./styles.css?v=27",
-  "./app.js?v=27",
+  "./styles.css?v=28",
+  "./app.js?v=28",
   // Every tools/*.js module:
-  "./tools/tool-app.js?v=27",
+  "./tools/tool-app.js?v=28",
   "./tools/registry.js",
   "./tools/registry-a.js",
   "./tools/registry-b.js",
-  "./tools/logic.js?v=27",
-  "./tools/logic-1.js?v=27",
+  "./tools/logic.js?v=28",
+  "./tools/logic-1.js?v=28",
   "./tools/logic-1b.js",
   "./tools/logic-2.js",
   "./tools/logic-2a.js",
   "./tools/logic-2b.js",
-  "./tools/pt-tables.js?v=27",
-  "./tools/plate-parse.js?v=27",
-  "./tools/plate-heatcraft.js?v=27",
-  "./tools/plate-image.js?v=27",
-  "./tools/plate-scan.js?v=27",
-  "./tools/plate-crop.js?v=27",
-  "./tools/call-scan.js?v=27",
-  "./tools/manuals.js?v=27",
-  "./tools/trees.js?v=27",
-  "./tools/tree-app.js?v=27",
-  "./tools/tree-pick.js?v=27",
-  "./tools/card-plate.js?v=27",
-  "./tools/error-codes.js?v=27",
+  "./tools/pt-tables.js?v=28",
+  "./tools/plate-parse.js?v=28",
+  "./tools/plate-heatcraft.js?v=28",
+  "./tools/plate-image.js?v=28",
+  "./tools/plate-scan.js?v=28",
+  "./tools/plate-crop.js?v=28",
+  "./tools/call-scan.js?v=28",
+  "./tools/manuals.js?v=28",
+  "./tools/trees.js?v=28",
+  "./tools/tree-app.js?v=28",
+  "./tools/tree-pick.js?v=28",
+  "./tools/card-plate.js?v=28",
+  "./tools/error-codes.js?v=28",
   "./tools/official-domains.js",
-  "./data/error-codes.json?v=27",
-  "./tools/prefill.js?v=27",
-  "./tools/call-card.js?v=27",
-  "./tools/manuals-helper.js?v=27",
-  "./tools/manuals-helper-app.js?v=27",
-  "./tools/last-plate.js?v=27",
-  "./tools/scan-flow.js?v=27",
-  "./tools/missing-model.js?v=27",
-  "./tools/heic.js?v=27",
+  "./data/error-codes.json?v=28",
+  "./tools/prefill.js?v=28",
+  "./tools/call-card.js?v=28",
+  "./tools/manuals-helper.js?v=28",
+  "./tools/manuals-helper-app.js?v=28",
+  "./tools/last-plate.js?v=28",
+  "./tools/scan-flow.js?v=28",
+  "./tools/missing-model.js?v=28",
+  "./tools/heic.js?v=28",
   // Manual links index (generated from the Notion Manuals page + OEM sources map).
-  "./data/manuals-index.json?v=27",
+  "./data/manuals-index.json?v=28",
   // On-device OCR (vendored Tesseract.js 7.0.0, ~15 MB; see vendor/tesseract/README.md).
   // All three LSTM core builds: the worker picks one from the device's wasm SIMD support.
   "./vendor/tesseract/tesseract.min.js",
@@ -134,8 +142,26 @@ function networkFirst(req) {
     .catch(() => caches.match(req).then((hit) => hit || Promise.reject(new Error("offline"))));
 }
 
+// Android "Share" -> Service Tech (manifest share_target): keep the file on this phone in a cache,
+// then open share.html to choose where the readings go. Nothing is uploaded.
+const SHARE_CACHE = "st-share"; // not "service-tech-*", so activate() doesn't delete it
+const SHARE_KEY = "./__shared-gauge-report";
+function handleShare(req) {
+  return req.formData().then((fd) => {
+    const file = fd.get("report");
+    if (!file || typeof file === "string") return Response.redirect("./share.html?none=1", 303);
+    return caches.open(SHARE_CACHE)
+      .then((c) => c.put(SHARE_KEY, new Response(file, { headers: { "content-type": file.type || "application/octet-stream", "x-file-name": encodeURIComponent(file.name || "report") } })))
+      .then(() => Response.redirect("./share.html", 303));
+  }).catch(() => Response.redirect("./share.html?none=1", 303));
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
+  if (req.method === "POST" && new URL(req.url).pathname.endsWith("/share-target")) {
+    event.respondWith(handleShare(req));
+    return;
+  }
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // network only

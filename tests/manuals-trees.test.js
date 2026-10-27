@@ -136,8 +136,8 @@ test("chooseTree picks by equipment / scanned unit type", () => {
 
 test("offline: new files are precached and the cache is bumped", () => {
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  for (const f of ["./tree.html", "./tools/manuals.js?v=27", "./tools/trees.js?v=27", "./tools/tree-app.js?v=27", "./data/manuals-index.json?v=27", "./manuals.html", "./tools/prefill.js?v=27", "./tools/call-card.js?v=27", "./tools/manuals-helper.js?v=27", "./tools/manuals-helper-app.js?v=27", "./tools/last-plate.js?v=27", "./tools/scan-flow.js?v=27", "./tools/missing-model.js?v=27", "./tools/tree-pick.js?v=27", "./tools/card-plate.js?v=27", "./tools/error-codes.js?v=27", "./data/error-codes.json?v=27", "./tools/heic.js?v=27", "./tools/plate-heatcraft.js?v=27", "./vendor/libheif/libheif-bundle.mjs", "./help.html", "./tools/help-app.js?v=27", "./tools/feedback.js?v=27"]) assert.ok(sw.includes('"' + f + '"'), f);
-  assert.match(readFileSync(new URL("../version.js", import.meta.url), "utf8"), /self.APP_VERSION = "v27"/);
+  for (const f of ["./tree.html", "./tools/manuals.js?v=28", "./tools/trees.js?v=28", "./tools/tree-app.js?v=28", "./data/manuals-index.json?v=28", "./manuals.html", "./tools/prefill.js?v=28", "./tools/call-card.js?v=28", "./tools/manuals-helper.js?v=28", "./tools/manuals-helper-app.js?v=28", "./tools/last-plate.js?v=28", "./tools/scan-flow.js?v=28", "./tools/missing-model.js?v=28", "./tools/tree-pick.js?v=28", "./tools/card-plate.js?v=28", "./tools/error-codes.js?v=28", "./data/error-codes.json?v=28", "./tools/heic.js?v=28", "./tools/plate-heatcraft.js?v=28", "./vendor/libheif/libheif-bundle.mjs", "./help.html", "./tools/help-app.js?v=28", "./tools/feedback.js?v=28", "./share.html", "./tools/gauge-parse.js?v=28", "./tools/gauge-import.js?v=28", "./tools/call-gauge.js?v=28", "./vendor/pdfjs/pdf.min.mjs", "./vendor/pdfjs/pdf.worker.min.mjs", "./vendor/fflate/fflate.mjs"]) assert.ok(sw.includes('"' + f + '"'), f);
+  assert.match(readFileSync(new URL("../version.js", import.meta.url), "utf8"), /self.APP_VERSION = "v28"/);
 });
 
 const count = (b) => INDEX.brands[b].oem.length;
