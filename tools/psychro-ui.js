@@ -1,7 +1,7 @@
 /* Psychrometrics screen logic (pure, no DOM): parse the form values, run tools/psychro.js,
  * build input-sanity warnings ("check probes", NOT standards), cited hints, and the copy text.
  * Only cited hints are shipped: BPA PTCS 325–500 cfm/ton and "most manufacturers suggest 0.5 inH₂O or less". */
-import { analyze } from "./psychro.js?v=37";
+import { analyze } from "./psychro.js?v=39";
 
 export const BPA_URL = "https://www.bpa.gov/-/media/Aep/energy-efficiency/residential/residential-ptcs-essentials/ptcs-esp-cfm-lookup-tables-final.pdf";
 export const BPA_SOURCE = "BPA PTCS External Static Pressure – CFM Manufacturer Lookup Tables";

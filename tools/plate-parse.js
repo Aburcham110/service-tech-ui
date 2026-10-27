@@ -11,7 +11,8 @@
  * or defaulted: a field that isn't on the plate stays absent (blank).
  */
 
-import { assignIdsByPattern, parseHeaderRow, partNumbers, fixHeatcraftModel, HEATCRAFT_MODEL, HEATCRAFT_SERIAL, parseRefrigerantTable, gridFields } from "./plate-heatcraft.js?v=37";
+import { parseLoadTable, voltPhHz } from "./plate-loadtable.js?v=39";
+import { assignIdsByPattern, parseHeaderRow, partNumbers, fixHeatcraftModel, HEATCRAFT_MODEL, HEATCRAFT_SERIAL, parseRefrigerantTable, gridFields } from "./plate-heatcraft.js?v=39";
 
 export const LOW_CONFIDENCE = 0.6;
 /** Stricter bar for identifiers: a wrong model/serial costs a wrong part or warranty lookup. */
@@ -30,7 +31,7 @@ const BRANDS = [
   ["Goodman", /\bGOODMAN\b/], ["Amana", /\bAMANA\b/], ["Daikin", /\bDA[I1l]K[I1l]N\b/],
   ["Lennox", /\bLENNOX\b/], ["Rheem", /\bRHEEM\b/], ["Ruud", /\bRUUD\b/],
   ["Emerson / Copeland", /\bEMERSON\b[\s\S]{0,80}\bCOPELAND\b|\bCOPELAND\b[\s\S]{0,80}\bEMERSON\b/], ["Copeland", /\bCOPELAND\b/],
-  ["Emerson / Copeland", /\bEMERSON\b/], ["Unitary Products Group (York/Coleman)", /\bUN[I1l]T[AE]RY\s+PRODUCTS\b|\bPRODUCTS\s+GROUP\b|\bNORMAN\s*[,.]?\s*OK(?:LAHOMA)?\b|\d+\s+YORK\s+(?:DR|DRIVE)\b/], ["Heatcraft", /\bHEATCRAFT\b/], ["Bohn", /\bBOHN\b/],
+  ["Emerson / Copeland", /\bEMERSON\b/], ["Unitary Products Group (York/Coleman)", /\bUN[I1l]T[AE]RY\s+PRODUCTS\b|\bPRODUCTS\s+GROUP\b|\bNORMAN\s*[,.]?\s*OK(?:LAHOMA)?\b|\d+\s+YORK\s+(?:DR|DRIVE)\b|\b73069\b/], ["Heatcraft", /\bHEATCRAFT\b/], ["Bohn", /\bBOHN\b/],
   ["Larkin", /\bLARKIN\b/], ["Mitsubishi Electric", /\bM[I1l]TSUB[I1l]SH[I1l]\b/],
   ["Fujitsu", /\bFUJ[I1l]TSU\b/], ["York", /(?<!\d\s{0,3})\bYORK\b(?!\s*(?:,\s*PA|DR\b|DRIVE|NORMAN|ROAD|RD\b|ST\b))/], ["LG", /\bLG\s+ELECTRONICS\b/],
   ["Samsung", /\bSAMSUNG\b/], ["Gree", /\bGREE\b/], ["Bosch", /\bBOSCH\b/],
@@ -349,7 +350,18 @@ function parseRefrigerant(lines) {
   let r = null, quality = 1;
   for (const l of lines) { const m = l.match(lab); if (m) { r = m; break; } }
   if (!r) for (const l of lines) { const m = l.match(withR); if (m) { r = m; quality = 0.85; break; } }
-  if (!r) return null;
+  if (!r) {
+    // "FACTORY CHARGED SYS #1 R4l0A": the code after a system number, snapped when one OCR slip from a unique known code.
+    for (const l of lines) {
+      const m = l.match(/\bSYS(?:TEM)?\.?\s*#?\s*\d\s*[:.\-]?\s*([A-Z0-9|][A-Z0-9|\-]{3,7})/i);
+      if (!m) continue;
+      const t = m[1].toUpperCase().replace(/-/g, "").replace(/[|L]/g, "1").replace(/O/g, "0");
+      const body = t.replace(/^R/, "");
+      const near = REFRIGERANTS.filter((c) => body.length === c.length && [...c].filter((ch, i) => ch !== body[i]).length <= 1);
+      if (near.length === 1 && /^R/.test(t)) return { value: "R-" + near[0], raw: m[0], quality: near[0] === body ? 0.85 : 0.55, note: near[0] === body ? "after SYS #" : "snapped from OCR " + m[1] + " after SYS #" };
+    }
+    return null;
+  }
   let code = r[1].toUpperCase(), note;
   if (!REFRIGERANTS.includes(code)) {
     const cand = REFRIGERANTS.filter((c) => c.startsWith(code) && c.length === code.length + 1);
@@ -367,10 +379,16 @@ function parseCharge(lines) {
   const reLbOz = new RegExp(NUM + "\\s*-?\\s*[\"'“”‘’]?\\s*(?:LBS?\\.?|[I1|]BS\\.?|POUNDS?|#)\\s*[,\\-]?\\s*(?:" + NUM + "\\s*(?:OZ\\.?|OUNCES?))?", "i");
   const reOz = new RegExp(NUM + "\\s*(?:OZ\\.?|OUNCES?)\\b", "i");
   const reKg = new RegExp(NUM + "\\s*KGS?\\b", "i");
-  const reG = new RegExp("(?<![.\\d])(\\d{2,5})\\s*G\\b(?!\\s*[A-Z])", "i");
+  // Grams only with a G/KG unit that isn't the start of PSIG/GPM ("23g/Psic" is 236 PSIG).
+  const reG = new RegExp("(?<![.\\d])(\\d{2,5})\\s*G\\b(?![\\s\\/]*[A-Z\\/])", "i");
+  // Metric-only values need a real charge label or a full refrigerant code on the line ("r 23" isn't one).
+  const strong = new RegExp("\\b(?:CHARGE[D]?|CHG|CHRG|REFRIG(?:ERANT)?)\\b|\\b(?:R|HFC|HFO)\\s?-?\\s?(?:" + REFRIGERANTS.join("|") + ")\\b", "i");
+  // Motor rows (HP column) are never a charge.
+  const motor = /\bHP\b|\bH\.P\.|\bBLWR\b|\bBLOWER\b|\bFAN\b|\bMOTOR\b/i;
   const cands = [];
   lines.forEach((l, i) => {
     if (bad.test(l)) return;
+    if (motor.test(l) && !/\bCHARGE|\bCHG\b/i.test(l)) return;
     if (label.test(l)) cands.push({ l, q: 1 });
     else if (i > 0 && /\b(?:CHARGED?|CHG)\b\s*[:.]?\s*$/i.test(lines[i - 1])) cands.push({ l, q: 0.85 });
   });
@@ -380,10 +398,11 @@ function parseCharge(lines) {
     if (m) { lb = toNum(m[1]); oz = m[2] ? toNum(m[2]) : 0; raw = m[0]; }
     else { const mo = l.match(reOz); if (mo) { lb = 0; oz = toNum(mo[1]); raw = mo[0]; } }
     const mk = l.match(reKg);
-    if (mk) kg = toNum(mk[1]);
+    if (mk && (m || strong.test(l))) kg = toNum(mk[1]);
+    else if (!strong.test(l)) { /* no metric value without a charge label */ }
     else { const mg = l.match(reG); if (mg) { kg = toNum(mg[1]) / 1000; unitNote = "converted from g"; if (!raw) raw = mg[0]; } }
     if (lb == null && kg == null) continue;
-    if (lb == null && mk) raw = mk[0];
+    if (lb == null && mk && kg != null) raw = mk[0];
     let totalLb = round(lb != null ? lb + oz / 16 : kg * 2.20462, 2);
     if (!(totalLb > 0 && totalLb < 400)) continue;
     let quality = q * (lb != null ? 1 : 0.9);
@@ -433,6 +452,8 @@ function parseElectrical(lines) {
     for (let i = 0; i < lines.length && !v; i++) {
       const lm = lines[i].match(VOLT_LABEL);
       if (!lm) continue;
+      // "MIN/MAX VOLTAGE: 187V/252V" is the utilization range, not the rating.
+      if (/\bMIN\.?\s*\/?\s*MAX\.?\s*VOLT|\bMIN(?:IMUM)?\.?\s*VOLT|\bMAX(?:IMUM)?\.?\s*VOLT/i.test(lines[i])) continue;
       const rest = lines[i].slice(lm.index + lm[0].length);
       let m = rest.match(new RegExp("^\\s*(?:\\(V\\))?\\s*(?:AC)?\\s*[:.\\-]?\\s*" + V + "\\s*(?:V|VAC|VOLTS?)?\\b", "i"));
       if (!m && !rest.trim() && lines[i + 1]) { m = lines[i + 1].match(new RegExp("^\\s*" + V + "\\s*(?:V|VAC|VOLTS?)?\\b", "i")); q = 0.85; }
@@ -469,7 +490,9 @@ function parseElectrical(lines) {
 // Known model-number shapes per brand. A model that doesn't fit is flagged, never "fixed".
 export const MODEL_PATTERNS = {
   Fujitsu: /^A[SRUBO][UYHE]G\d{2}L[A-Z]{3}\d?$/,
-  "Unitary Products Group (York/Coleman)": /^[A-Z]{4}\d{4}[A-Z]{3}$/,
+  // Packaged RTUs: "ZS-04N13BTAZZ10001A" (family-tonnage, then option code).
+  "Unitary Products Group (York/Coleman)": /^[A-Z]{4}\d{4}[A-Z]{3}$|^[A-Z]{2}-?\d{2}[A-Z]\d{2}[A-Z0-9]{6,12}$/,
+  York: /^[A-Z]{2}-?\d{2}[A-Z]\d{2}[A-Z0-9]{6,12}$|^[A-Z]{4}\d{4}[A-Z]{3}$/,
   "Emerson / Copeland": /^(?:Z[A-Z]{1,2}\d{2,3}K[A-Z0-9-]+|[A-Z]{3,4}\d{2,3}[A-Z]\d[A-Z](?:-[A-Z0-9]{3}(?:-[A-Z0-9]{3})?)?)$/,
   Copeland: /^(?:Z[A-Z]{1,2}\d{2,3}K[A-Z0-9-]+|[A-Z]{3,4}\d{2,3}[A-Z]\d[A-Z](?:-[A-Z0-9]{3}(?:-[A-Z0-9]{3})?)?)$/,
   Carrier: /^\d{2}[A-Z]{2,4}[A-Z0-9]{4,12}$/,
@@ -722,6 +745,24 @@ export function parsePlate(input) {
   } else {
     put("model", identRaw.model);
     put("serial", identRaw.serial);
+    if (!fields.model) {
+      // No model label read at all: a token in the York/UPG dashed shape is shown, flagged.
+      const DASHED = /(?<![A-Z0-9-])([A-Z]{2}-\d{2}[A-Z]\d{2}[A-Z0-9]{6,12})(?![A-Z0-9-])/;
+      const hit = rawLines.map((l) => l.match(DASHED)).find(Boolean);
+      if (hit) { put("model", { value: hit[1], raw: hit[1], quality: 0.55, note: "no model label read; fits the York/UPG model shape — check it" }); fields.model.byLayout = true; }
+    }
+    if (!fields.model && fields.serial) {
+      // Model label unreadable ("Mossine:"): a dashed ID on a "word:" line next to the serial line, flagged.
+      const si = rawLines.findIndex((l) => SERIAL_LABEL.test(l));
+      for (let i = Math.max(0, si - 2); si >= 0 && i <= Math.min(rawLines.length - 1, si + 2); i++) {
+        if (i === si) continue;
+        const m = rawLines[i].match(/^\W{0,3}[A-Za-z]{3,10}\s*[:;]\s*([A-Z0-9]{1,4}-[A-Z0-9]{8,20})(?![A-Z0-9-])/);
+        if (!m || !/\d.*\d.*\d/.test(m[1]) || !/[A-Z].*[A-Z].*[A-Z]/.test(m[1])) continue;
+        put("model", { value: m[1], raw: m[1], quality: 0.6, note: "model label not read; dashed ID next to the serial — check it" });
+        fields.model.byLayout = true;
+        break;
+      }
+    }
   }
   const brandName = fields.brand && fields.brand.value;
   const isHC = brandName === "Heatcraft";
@@ -738,7 +779,8 @@ export function parsePlate(input) {
   for (const k of ID_FIELDS) if (fields[k] && [...partNos].some((p) => idn(p) === idn(fields[k].value))) { delete fields[k]; delete identRaw[k]; }
   for (const k of ID_FIELDS) if (fields[k] && [...partNos].some((p) => p.length >= 6 && idn(fields[k].value).startsWith(idn(p)))) { delete fields[k]; delete identRaw[k]; }
   if (fields.model && fields.serial && idn(fields.model.value) === idn(fields.serial.value)) for (const k of ID_FIELDS) { delete fields[k]; delete identRaw[k]; }
-  if (fields.model && !header && !byShape) checkModel(fields.model, brandName, rawLines);
+  if (fields.model && fields.model.byLayout) { fields.model.confidence = round(Math.min(fields.model.confidence, 0.6), 2); delete fields.model.byLayout; if (MODEL_PATTERNS[brandName] && !MODEL_PATTERNS[brandName].test(String(fields.model.value))) fields.model.confidence = round(Math.min(fields.model.confidence, 0.45), 2); }
+  else if (fields.model && !header && !byShape) checkModel(fields.model, brandName, rawLines);
   else if (fields.model && MODEL_PATTERNS[brandName] && !MODEL_PATTERNS[brandName].test(String(fields.model.value))) { fields.model.confidence = round(Math.min(fields.model.confidence, 0.45), 2); fields.model.note += "; doesn't fit the usual " + brandName + " model format"; }
   if (fields.serial) checkSerial(fields.serial, brandName);
   for (const [k, r] of [["model", identRaw.model], ["serial", identRaw.serial]]) {
@@ -825,9 +867,41 @@ export function parsePlate(input) {
       if (m) { const v = Number(m[1].replace(",", ".")); if (v > 0 && v < 15) { fields.fanFla = { value: v, raw: m[0], confidence: 0.85, note: "after the fan HP in the cond-fan row" }; break; } }
     }
   }
-  put("mca", numField(labelledAll(lines, /\b(?:MCA|M\.\s?C\.\s?A\.?|MIN(?:IMUM)?\.?\s*(?:SUPPLY\s*)?(?:CIRCUIT|CIR\.?|CKT\.?)\s*(?:AMP(?:ACITY|S)?|AMPS?)\.?)/, { prevLine: true })[0]));
+  // "29.9/29.9", "40/40": the same rating printed for both voltages counts once; differing pairs stay unread.
+  const ampLines = lines.map((l) => /AMPACITY|\bMCA\b|FUSE|BR?KR|BREAKER|MOCP|\bMOP\b/i.test(l) ? l.replace(/(?<![\d.\/])(\d{1,3}(?:\.\d)?)\s*\/\s*\1(?![\d.\/])/g, "$1") : l);
+  put("mca", numField(labelledAll(ampLines, /\b(?:MCA|M\.\s?C\.\s?A\.?|MIN(?:IMUM)?\.?\s*(?:SUPPLY\s*)?(?:CIRCUIT|CIR\.?|CKT\.?)\s*(?:AMP(?:ACITY|S)?|AMPS?)\.?)/, { prevLine: true })[0]));
   const STD_OCP = [3, 6, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 110, 125, 150, 175, 200, 225, 250, 300, 350, 400];
-  put("mop", numField(labelledAll(lines, /\b(?:MOCP|MOP|M\.\s?O\.\s?C\.?\s?P\.?|M\.\s?O\.\s?P\.?|MAX(?:IMUM)?\.?\s*(?:OVER\s*CURRENT\s*(?:PROT(?:ECTION|\.)?(?:\s*DEVICE)?)?|O\.?C\.?P\.?|FUSE(?:\s*(?:\/|OR)\s*(?:MAX\.?\s*)?(?:HACR\s*)?(?:TYPE\s*)?(?:CKT[.,]?\s*|CIRCUIT\s*)?(?:BKR[.,]?|BREAKER))?(?:\s*SIZE)?|(?:CKT[.,]?\s*|CIRCUIT\s*)?(?:BKR|BREAKER)))/, { skipParen: true, prevLine: true, marks: true }).filter((r) => STD_OCP.includes(r.num))[0]));
+  put("mop", numField(labelledAll(ampLines, /\b(?:MOCP|MOP|M\.\s?O\.\s?C\.?\s?P\.?|M\.\s?O\.\s?P\.?|MAX(?:IMUM)?\.?\s*(?:OVER\s*CURRENT\s*(?:PROT(?:ECTION|\.)?(?:\s*DEVICE)?)?|O\.?C\.?P\.?|FUSE(?:\s*(?:\/|OR)\s*(?:MAX\.?\s*)?(?:HACR\s*)?(?:TYPE\s*)?(?:CKT[.,]?\s*|CIRCUIT\s*)?(?:BKR[.,]?|BREAKER))?(?:\s*SIZE)?|(?:CKT[.,]?\s*|CIRCUIT\s*)?(?:BKR|BRKR|BREAKER)))/, { skipParen: true, prevLine: true, marks: true }).filter((r) => STD_OCP.includes(r.num))[0]));
+
+  // Load table (COMP / ID BLOWER / OD FAN / COMB BLWR rows): each value from its own row only.
+  const lt = isHC ? null : parseLoadTable(lines);
+  if (lt) {
+    // A value the line parsers took from another row ("7.6 FLA" of the ID blower as the fan) is dropped.
+    const rowText = (ks) => ks.map((k) => lt.rows[k] && lt.rows[k].text).filter(Boolean).join("\n");
+    const fromRow = (f, ks) => f && f.raw && rowText(ks).includes(String(f.raw).trim());
+    for (const k of ["rla", "lra", "fanFla"]) {
+      if (lt[k]) { delete fields[k]; put(k, lt[k]); continue; }
+      const own = k === "fanFla" ? ["odFan"] : ["comp"];
+      const others = ["comp", "idBlower", "odFan", "combBlower"].filter((r) => !own.includes(r));
+      if (fields[k] && fromRow(fields[k], others) && !fromRow(fields[k], own)) delete fields[k];
+      else if (fields[k] && lt.rows[own[0]] == null && k === "fanFla") delete fields[k];
+    }
+    if (!tbl.phase) {
+      // Unit phase: the UNIT VOLTAGE line, else the compressor row; never a 1-phase motor row.
+      let uv = null;
+      for (let i = 0; i < lines.length && !uv; i++) if (/\bUNIT\s+VOLT/i.test(lines[i])) uv = voltPhHz(lines[i] + " " + (lines[i + 1] || ""));
+      const v = uv ? { ...uv, note: "UNIT VOLTAGE line" } : lt.vph;
+      if (v) {
+        delete fields.voltage; delete fields.phase; delete fields.hz;
+        put("voltage", { value: v.voltage, raw: v.raw, quality: uv ? 0.95 : 0.85, note: v.note });
+        put("phase", { value: v.phase, raw: v.raw, quality: uv ? 0.95 : 0.85, note: v.note });
+        put("hz", { value: v.hz, raw: v.raw, quality: uv ? 0.95 : 0.85, note: v.note });
+      } else {
+        const el2 = parseElectrical(lines.filter((_, i) => !lt.spans.has(i)));
+        for (const k of ["voltage", "phase", "hz"]) { delete fields[k]; put(k, el2[k]); }
+      }
+    }
+  }
 
   // Cross-checks: implausible combinations lower confidence (values are never changed).
   const chk = (cond, names, note) => {
@@ -945,6 +1019,15 @@ export function mergeParses(list) {
       // Never merge silently: offer every distinct reading, most votes first, for the user to pick.
       best.candidates = distinct.map((d) => ({ value: got.find((f) => key(f, n) === d).value, votes: got.filter((f) => key(f, n) === d).length, weight: round(tally.get(d), 2) }))
         .sort((a, b) => b.weight - a.weight || b.votes - a.votes);
+    }
+    // Serial/model: the exact characters in two or more passes' raw text is independent evidence.
+    if (distinct.length === 1 && ID_FIELDS.includes(n) && String(best.value).length >= 8) {
+      const v = String(best.value).toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const seen = list.filter((p) => (p.parsed.text || "").split(/\n/).some((l) => l.toUpperCase().replace(/[^A-Z0-9]/g, "").includes(v))).length;
+      if (seen >= 2 && best.confidence < 0.8 && best.formatOk !== false) {
+        best.confidence = 0.8;
+        best.note = (best.note ? best.note + "; " : "") + "same characters in " + seen + " OCR passes";
+      }
     }
     if (distinct.length > 1 && ID_FIELDS.includes(n)) {
       best.confidence = round(Math.min(best.confidence, LOW_CONFIDENCE_ID - 0.01), 2);
