@@ -2,7 +2,7 @@
  *  Everything is parsed on this phone. pdf.js / fflate are import()ed only for PDF / XLSX files.
  *  Nothing is written to the form until the tech taps "Looks right — fill". */
 import { BRANDS, FIELDS, PRESSURE_UNITS, TEMP_UNITS, fileKind, parseCSV, toTable, parseXLSX, parseXML,
-  pdfLinesToTable, itemsToLines, unitFor, mappingFits, loadMapping, saveMapping, buildPreview, fillValues } from "./gauge-parse.js?v=34";
+  pdfLinesToTable, itemsToLines, unitFor, mappingFits, loadMapping, saveMapping, buildPreview, fillValues } from "./gauge-parse.js?v=35";
 
 export const SHARE_CACHE = "st-share";
 export const SHARE_KEY = "./__shared-gauge-report";

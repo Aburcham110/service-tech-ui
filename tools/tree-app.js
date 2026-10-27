@@ -1,11 +1,12 @@
 /** tree.html: walks a troubleshooting tree (tools/trees.js) one step at a time. */
-import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=34";
+import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=35";
 import { getTool } from "./registry.js";
-import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=34";
-import { getCardPlate } from "./card-plate.js?v=34";
-import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=34";
-import { loadManualsIndex } from "./manuals.js?v=34";
-import { findCodeSet, lookupCode, sourceLink, rowLabel, loadErrorCodes } from "./error-codes.js?v=34";
+import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=35";
+import { getCardPlate } from "./card-plate.js?v=35";
+import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=35";
+import { loadManualsIndex } from "./manuals.js?v=35";
+import { mountAddToCall, treeNote } from "./call-notes.js?v=35";
+import { findCodeSet, lookupCode, sourceLink, rowLabel, loadErrorCodes } from "./error-codes.js?v=35";
 
 const params = new URLSearchParams(location.search);
 const TYPE_KEY = "serviceTechTreeType_v1"; // last equipment type picked here
@@ -185,6 +186,7 @@ function render() {
     const log = el("a", "btn btn-secondary tree-log", "Log this in job notes →"); log.id = "tree-log";
     log.href = jobLogHref(treeId, path, plate || {});
     card.appendChild(log);
+    mountAddToCall(card, () => treeNote(tree, path), { id: "tree-add-call" });
   }
   root.appendChild(card);
   const nav = el("div", "nav-row");

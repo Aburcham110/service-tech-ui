@@ -138,12 +138,12 @@ function findManualsOld(index, { brand, model, family } = {}) {
 
 let cached = null;
 /** Loads the bundled index (precached by sw.js, so it works offline). */
-export function loadManualsIndex(url = new URL("../data/manuals-index.json?v=34", import.meta.url).href) {
+export function loadManualsIndex(url = new URL("../data/manuals-index.json?v=35", import.meta.url).href) {
   if (!cached) cached = fetch(url).then((r) => { if (!r.ok) throw new Error("manuals index " + r.status); return r.json(); }).catch((e) => { cached = null; throw e; });
   return cached;
 }
 
-import { renderSendButton } from "./missing-model.js?v=34";
+import { renderSendButton } from "./missing-model.js?v=35";
 
 /** Renders the result of findManuals into host (DOM). */
 export function renderManuals(host, res, { brand, model } = {}) {
