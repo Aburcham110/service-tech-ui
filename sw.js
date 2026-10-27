@@ -9,7 +9,8 @@
    - Any other same-origin GET: network-first, falling back to cache.
    - Navigations to pages not in the cache while offline: offline.html.
    - Cross-origin (Notion, GitHub): not handled, network only. */
-const VERSION = "v25";
+importScripts("./version.js?v=25");
+const VERSION = self.APP_VERSION; // "v25": one constant for the cache name and the footer label
 const CACHE = "service-tech-" + VERSION;
 const OFFLINE_URL = "./offline.html";
 
@@ -17,6 +18,7 @@ const OFFLINE_URL = "./offline.html";
 const ASSETS = [
   "./",
   "./index.html",
+  "./version.js?v=25",
   "./call.html",
   "./toolkit.html",
   "./tool.html",
