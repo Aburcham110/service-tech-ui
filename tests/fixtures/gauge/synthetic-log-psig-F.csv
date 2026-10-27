@@ -1,0 +1,4 @@
+SYNTHETIC test file - not a real export
+Time,Low Pressure (psig),High Pressure (psig),T1 (°F),T2 (°F),Refrigerant
+2026-10-26 14:00:00,118.0,330.5,52.1,95.0,R410A
+2026-10-26 14:00:01,118.4,331.0,52.3,94.8,R410A
