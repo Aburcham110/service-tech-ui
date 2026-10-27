@@ -21,14 +21,14 @@ function env() {
 
 test("Code.gs: feedback creates the Feedback tab with headers and appends Status New", () => {
   const { post, sheets } = env();
-  assert.deepEqual(post({ type: "feedback", message: "Great app", version: "v28" }), { ok: true });
+  assert.deepEqual(post({ type: "feedback", message: "Great app", version: "v29" }), { ok: true });
   assert.deepEqual(sheets.Feedback.rows[0], ["Timestamp", "Message", "App version", "Status"]);
   const r = sheets.Feedback.rows[1];
   assert.ok(r[0] instanceof Date || typeof r[0] === "object");
-  assert.deepEqual(r.slice(1), ["Great app", "v28", "New"]);
-  post({ type: "feedback", message: "=HYPERLINK(1)", version: "v28" });
+  assert.deepEqual(r.slice(1), ["Great app", "v29", "New"]);
+  post({ type: "feedback", message: "=HYPERLINK(1)", version: "v29" });
   assert.equal(sheets.Feedback.rows[2][1], "'=HYPERLINK(1)", "formulas are neutralized");
-  assert.deepEqual(post({ type: "feedback", message: "  ", version: "v28" }), { ok: false });
+  assert.deepEqual(post({ type: "feedback", message: "  ", version: "v29" }), { ok: false });
   assert.equal(sheets.Feedback.rows.length, 3, "headers written once");
   assert.equal(sheets.Submissions.rows.length, 0, "feedback never lands in Submissions");
 });

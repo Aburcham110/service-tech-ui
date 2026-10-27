@@ -317,3 +317,14 @@ textarea { min-height: 96px; resize: vertical; }
 .gi-preview tr.gi-flag { color: var(--warn, #e0a030); }
 .gi-preview tr.gi-flag .gi-why::before { content: "check: "; font-weight: 700; }
 input.imported, select.imported { outline: 2px solid var(--warn, #e0a030); }
+
+/* Call wizard: header, inline SH/SC, amps %, phrase chips, total time */
+.call-header { border-bottom: 1px solid var(--muted); margin-bottom: 10px; padding-bottom: 4px; }
+.shsc-inline { margin: 4px 0 12px; padding: 10px; border-radius: 10px; background: var(--surface); }
+.shsc-inline[data-state="incomplete"] { opacity: 0.8; font-size: 0.9rem; }
+.shsc-val { margin: 2px 0; font-size: 1.15rem; }
+.shsc-basis { display: block; margin-top: 4px; opacity: 0.8; }
+.amps-pct { margin: -4px 0 10px; font-size: 0.95rem; }
+.phrase-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
+.phrase-chip { min-height: 40px; cursor: pointer; color: inherit; }
+.total-time { font-weight: 600; }
