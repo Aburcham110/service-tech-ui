@@ -3,7 +3,7 @@
  * Pure helpers: which table covers a scanned unit, and which rows a typed code matches.
  * Text is shown exactly as transcribed; an empty remedy means the manual gives none.
  */
-export const ERROR_CODES_URL = "./data/error-codes.json?v=23";
+export const ERROR_CODES_URL = "./data/error-codes.json?v=24";
 // Brand spellings that share a table's literature.
 const ALIASES = { mitsubishi: "mitsubishielectric", coleman: "york", luxaire: "york", upg: "york", americanstandard: "trane", ruud: "rheem", lgelectronics: "lg", fujitsugeneral: "fujitsu", airstage: "fujitsu" };
 const norm = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");

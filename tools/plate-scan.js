@@ -7,10 +7,11 @@
  * Nothing is stored (not even localStorage) until the user taps Confirm, and
  * then only the onConfirm callback decides what to keep.
  */
-import { mountGuide, renderReviewSummary, progressLine, INSTRUCTIONS } from "./scan-flow.js?v=23";
-import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=23";
-import { cropStep } from "./plate-crop.js?v=23";
-import { findLabelBox, deglare, clahe } from "./plate-image.js?v=23";
+import { mountGuide, renderReviewSummary, progressLine, INSTRUCTIONS } from "./scan-flow.js?v=24";
+import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=24";
+import { cropStep } from "./plate-crop.js?v=24";
+import { findLabelBox, deglare, clahe } from "./plate-image.js?v=24";
+import { isHeic, heicToFile } from "./heic.js?v=24";
 
 const VENDOR = "vendor/tesseract/";
 const DECODE_SIDE = 4000;   // decode cap (keeps the label's detail before cropping)
@@ -81,14 +82,15 @@ function browserAppliesExif() {
  */
 /** The browser can't decode this image (e.g. HEIC outside Safari). */
 export class UndecodableImageError extends Error {
-  constructor(file) {
-    super(undecodableMessage(file));
+  constructor(file, damaged = false) {
+    super(undecodableMessage(file, damaged));
     this.name = "UndecodableImageError";
   }
 }
-export function undecodableMessage(file) {
-  const heic = /\.(heic|heif)$/i.test((file && file.name) || "") || /hei[cf]/i.test((file && file.type) || "");
-  return (heic ? "This browser can't open HEIC/HEIF photos." : "This browser can't open that image format.") +
+export function undecodableMessage(file, damaged = false) {
+  const heic = damaged || /\.(heic|heif)$/i.test((file && file.name) || "") || /hei[cf]/i.test((file && file.type) || "");
+  return (damaged ? "Couldn't decode this HEIC/HEIF photo — the file may be damaged or incomplete."
+    : heic ? "This browser can't open HEIC/HEIF photos." : "This browser can't open that image format.") +
     " Save the photo as JPEG (or take a screenshot of it) and upload that.";
 }
 export const UPLOAD_ACCEPT = "image/*,.heic,.heif";
@@ -574,7 +576,7 @@ export function mountPlateScan(container, onConfirm, { confirmLabel = "Fill call
   container.appendChild(box);
 
   const onPick = (inp, source) => async () => {
-    const file = inp.files && inp.files[0];
+    let file = inp.files && inp.files[0];
     inp.value = ""; // drop the reference to the photo
     if (!file) return;
     box.__lastSource = source; // "camera" | "upload" (tests only)
@@ -584,6 +586,12 @@ export function mountPlateScan(container, onConfirm, { confirmLabel = "Fill call
     bar.hidden = false;
     status.textContent = "Reading plate on this phone…"; status.classList.remove("plate-format-error");
     try {
+      if (await isHeic(file)) {
+        // Android Chrome can't decode HEIC natively: convert on the phone with the self-hosted decoder.
+        status.textContent = "Converting HEIC photo on this phone…";
+        try { file = await heicToFile(file); } catch (e) { console.error(e); throw new UndecodableImageError(file, true); }
+        box.__lastHeic = true; // tests only
+      } else box.__lastHeic = false;
       const opts = Object.assign({}, globalThis.__plateScanOpts || {});
       if (opts.cropStep !== false) {
         guide.set("crop");
