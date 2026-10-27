@@ -1,5 +1,5 @@
 /** Dispatcher — educational tool logic keyed by tool id */
-import { runSuperheatSubcool, runAirflowDeltaT, runPsychrometrics, runChargeRecovery } from "./logic-1.js?v=27";
+import { runSuperheatSubcool, runAirflowDeltaT, runPsychrometrics, runChargeRecovery } from "./logic-1.js?v=28";
 import { runLeakRate, runElectrical, runBoxLoad, runDuctStatic } from "./logic-1b.js";
 import { runCompressorDiag, runTxvEev, runVacuumCoach } from "./logic-2a.js";
 import { runA2lChecklist, runDefrostChecklist, runOilRack, runCaseController } from "./logic-2.js";
