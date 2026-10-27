@@ -28,6 +28,14 @@ const ASSETS = [
   "./help.html",
   "./tools/help-app.js?v=27",
   "./tools/feedback.js?v=27",
+  "./share.html",
+  "./tools/gauge-parse.js?v=27",
+  "./tools/gauge-import.js?v=27",
+  "./tools/call-gauge.js?v=27",
+  // Gauge report import (lazy import() only for PDF / XLSX; see vendor/README-gauge.md):
+  "./vendor/pdfjs/pdf.min.mjs",
+  "./vendor/pdfjs/pdf.worker.min.mjs",
+  "./vendor/fflate/fflate.mjs",
   OFFLINE_URL,
   "./manifest.json",
   "./icon-192.png",
@@ -134,8 +142,26 @@ function networkFirst(req) {
     .catch(() => caches.match(req).then((hit) => hit || Promise.reject(new Error("offline"))));
 }
 
+// Android "Share" -> Service Tech (manifest share_target): keep the file on this phone in a cache,
+// then open share.html to choose where the readings go. Nothing is uploaded.
+const SHARE_CACHE = "st-share"; // not "service-tech-*", so activate() doesn't delete it
+const SHARE_KEY = "./__shared-gauge-report";
+function handleShare(req) {
+  return req.formData().then((fd) => {
+    const file = fd.get("report");
+    if (!file || typeof file === "string") return Response.redirect("./share.html?none=1", 303);
+    return caches.open(SHARE_CACHE)
+      .then((c) => c.put(SHARE_KEY, new Response(file, { headers: { "content-type": file.type || "application/octet-stream", "x-file-name": encodeURIComponent(file.name || "report") } })))
+      .then(() => Response.redirect("./share.html", 303));
+  }).catch(() => Response.redirect("./share.html?none=1", 303));
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
+  if (req.method === "POST" && new URL(req.url).pathname.endsWith("/share-target")) {
+    event.respondWith(handleShare(req));
+    return;
+  }
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // network only
