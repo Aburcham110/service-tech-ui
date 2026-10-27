@@ -1,11 +1,11 @@
 /** tree.html: walks a troubleshooting tree (tools/trees.js) one step at a time. */
-import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=32";
+import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=33";
 import { getTool } from "./registry.js";
-import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=32";
-import { getCardPlate } from "./card-plate.js?v=32";
-import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=32";
-import { loadManualsIndex } from "./manuals.js?v=32";
-import { findCodeSet, lookupCode, sourceLink, rowLabel, loadErrorCodes } from "./error-codes.js?v=32";
+import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=33";
+import { getCardPlate } from "./card-plate.js?v=33";
+import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=33";
+import { loadManualsIndex } from "./manuals.js?v=33";
+import { findCodeSet, lookupCode, sourceLink, rowLabel, loadErrorCodes } from "./error-codes.js?v=33";
 
 const params = new URLSearchParams(location.search);
 const TYPE_KEY = "serviceTechTreeType_v1"; // last equipment type picked here

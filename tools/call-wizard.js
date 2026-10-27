@@ -1,7 +1,7 @@
 /** Call card (call.html) extras: inline SH/SC on Readings, amps % of plate RLA/FLA, total time on Close,
  *  quick-phrase chips on Mid/Close, and the extra Copy lines (app.js calls self.stCallCopyExtras). Offline only. */
-import { inlineShSc, shScLines, ampsReference, ampsPercent, ampsLine, totalTime, PHRASES, appendPhrase, headerLines, readingsExtraLines } from "./call-extras.js?v=32";
-import { DRAFT_KEY, CARD_SCAN_KEY } from "./card-plate.js?v=32";
+import { inlineShSc, shScLines, ampsReference, ampsPercent, ampsLine, totalTime, PHRASES, CLOSE_PHRASES, appendPhrase, parseParts, partsLines, headerLines, readingsExtraLines } from "./call-extras.js?v=33";
+import { DRAFT_KEY, CARD_SCAN_KEY } from "./card-plate.js?v=33";
 
 const read = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null") || null; } catch (e) { return null; } };
 const $ = (id) => document.getElementById(id);
@@ -49,7 +49,7 @@ function chips() {
   document.querySelectorAll(".phrase-chips").forEach((box) => {
     const ta = $(box.dataset.for);
     if (!ta || box.children.length) return;
-    for (const ph of PHRASES) {
+    for (const ph of (box.dataset.set === "close" ? CLOSE_PHRASES : PHRASES)) {
       const b = document.createElement("button");
       b.type = "button"; b.className = "chip phrase-chip"; b.textContent = ph;
       b.addEventListener("click", () => {
@@ -64,10 +64,53 @@ function chips() {
   });
 }
 
+/* Parts list: rows live in the hidden #partsList (JSON) so app.js saves/fills it like any field. */
+function partsSave(rows) {
+  const h = $("partsList"); if (!h) return;
+  h.value = JSON.stringify(rows);
+  const old = $("partsUsed"); if (old) old.value = ""; // migrated into rows
+  h.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function partsRender() {
+  const host = $("parts-rows"); if (!host) return;
+  const rows = parseParts({ partsList: val("partsList"), partsUsed: val("partsUsed") });
+  host.innerHTML = "";
+  rows.forEach((r, i) => {
+    const row = document.createElement("div"); row.className = "part-row"; row.dataset.i = i;
+    const f = (k, label, cls, mode) => {
+      const l = document.createElement("label"); l.className = "field " + cls;
+      const sp = document.createElement("span"); sp.textContent = label;
+      const inp = document.createElement("input"); inp.className = "part-" + k; inp.value = r[k]; inp.autocomplete = "off"; if (mode) inp.inputMode = mode;
+      inp.addEventListener("input", () => { const cur = parseParts({ partsList: val("partsList"), partsUsed: val("partsUsed") }); cur[i][k] = inp.value; partsSave(cur); });
+      l.append(sp, inp); return l;
+    };
+    const top = document.createElement("div"); top.className = "row";
+    top.append(f("part", "Part " + (i + 1), "pf-name"), f("qty", "Qty (ea)", "pf-qty", "decimal"));
+    const rm = document.createElement("button"); rm.type = "button"; rm.className = "link-btn part-remove"; rm.textContent = "Remove part " + (i + 1);
+    rm.addEventListener("click", () => { const cur = parseParts({ partsList: val("partsList"), partsUsed: val("partsUsed") }); cur.splice(i, 1); partsSave(cur); partsRender(); });
+    row.append(top, f("note", "Note (optional)", "pf-note"), rm);
+    host.appendChild(row);
+  });
+}
+function partsInit() {
+  const add = $("parts-add"); if (!add) return;
+  add.addEventListener("click", () => {
+    const cur = parseParts({ partsList: val("partsList"), partsUsed: val("partsUsed") }); cur.push({ part: "", qty: "1", note: "" });
+    partsSave(cur); partsRender();
+    const ins = document.querySelectorAll("#parts-rows .part-part"); if (ins.length) ins[ins.length - 1].focus();
+  });
+  partsRender();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => setTimeout(partsRender, 0)); else setTimeout(partsRender, 0); // after app.js fills the form
+  // Clear draft / other tabs: re-render when the hidden value no longer matches the rows on screen.
+  document.addEventListener("st:draft", () => setTimeout(() => { const n = document.querySelectorAll("#parts-rows .part-row").length; if (n !== parseParts({ partsList: val("partsList"), partsUsed: val("partsUsed") }).length) partsRender(); }, 0));
+}
+self.stCallPartsLines = (d) => partsLines(parseParts(d));
+
 self.stCallCopyExtras = (d) => ({ header: headerLines(d), readings: readingsExtraLines(d, read(CARD_SCAN_KEY)) });
 
 function init() {
   chips();
+  partsInit();
   render();
   document.addEventListener("input", render);
   document.addEventListener("change", render);

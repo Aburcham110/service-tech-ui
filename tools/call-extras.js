@@ -1,8 +1,8 @@
 /** Call wizard extras (pure, node-testable): inline SH/SC from the SH/SC tool's code, amps as % of plate
  *  RLA/FLA, job times, quick phrases, and the extra lines for "Copy for Service Tech". No DOM, no network. */
-import { shScValues } from "./logic-1.js?v=32";
-import { PT } from "./pt-tables.js?v=32";
-import { cardPlate } from "./card-plate.js?v=32";
+import { shScValues } from "./logic-1.js?v=33";
+import { PT } from "./pt-tables.js?v=33";
+import { cardPlate } from "./card-plate.js?v=33";
 
 export const TECH_KEY = "serviceTechTechName_v1";
 
@@ -109,6 +109,28 @@ export function totalTime(startTime, endTime, startDate, endDate) {
 /* ---------- quick phrases ---------- */
 export const PHRASES = ["Replaced filter-drier", "Adjusted TXV", "Cleaned condenser coil", "Checked/cleared drain", "Replaced contactor",
   "Replaced capacitor", "Leak checked", "Evacuated to ___ microns", "Recharged by weight"];
+
+/** Resolution phrases for the Close step's "Fixed" box (wording only, no specs or targets). */
+export const CLOSE_PHRASES = ["Verified operation after repair", "Box/space temp pulling down", "Monitored ___ min after repair",
+  "Leak repaired and verified", "Customer/manager notified", "Parts on order: ___", "Return visit needed: ___", "Left unit running", "Temporary repair: ___"];
+
+/* ---------- parts list ---------- */
+/** Parts rows from the draft: JSON in d.partsList ([{part, qty, note}]); an old free-text d.partsUsed becomes one row. */
+export function parseParts(d) {
+  d = d || {};
+  let rows = [];
+  try { const j = JSON.parse(d.partsList || "[]"); if (Array.isArray(j)) rows = j; } catch (e) { rows = []; }
+  rows = rows.map((r) => ({ part: String((r && r.part) || ""), qty: String((r && r.qty) || ""), note: String((r && r.note) || "") }));
+  if (!rows.length && String(d.partsUsed || "").trim()) rows = [{ part: String(d.partsUsed).trim(), qty: "", note: "" }];
+  return rows;
+}
+/** Copy lines for the parts list: "- part × qty ea (note)"; rows with no part are skipped. */
+export function partsLines(rows) {
+  return (rows || []).filter((r) => String(r.part || "").trim()).map((r) => {
+    const q = String(r.qty || "").trim(), n = String(r.note || "").trim();
+    return "- " + r.part.trim() + (q ? " × " + q + " ea" : "") + (n ? " (" + n + ")" : "");
+  });
+}
 
 /** Append a phrase as its own line. Returns { value, selStart, selEnd }: the "___" blank is selected
  *  (typing replaces it); otherwise the caret goes to the end. */
