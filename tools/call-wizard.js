@@ -1,12 +1,13 @@
 /** Call card (call.html) extras: inline SH/SC on Readings, amps % of plate RLA/FLA, total time on Close,
  *  quick-phrase chips on Mid/Close, and the extra Copy lines (app.js calls self.stCallCopyExtras). Offline only. */
-import { inlineShSc, shScLines, ampsReference, ampsPercent, ampsLine, totalTime, PHRASES, CLOSE_PHRASES, appendPhrase, parseParts, partsLines, headerLines, readingsExtraLines } from "./call-extras.js?v=33";
-import { DRAFT_KEY, CARD_SCAN_KEY } from "./card-plate.js?v=33";
+import { inlineShSc, shScLines, ampsReference, ampsPercent, ampsLine, totalTime, PHRASES, CLOSE_PHRASES, appendPhrase, parseParts, partsLines, headerLines, readingsExtraLines } from "./call-extras.js?v=34";
+import { psychroHref, carried } from "./psychro-link.js?v=34";
+import { DRAFT_KEY, CARD_SCAN_KEY } from "./card-plate.js?v=34";
 
 const read = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null") || null; } catch (e) { return null; } };
 const $ = (id) => document.getElementById(id);
 const val = (id) => ($(id) || {}).value || "";
-const FORM = ["refrigerant", "suctionPsig", "suctionTemp", "liquidPsig", "liquidTemp", "amps", "fla", "plate", "startDate", "startTime", "endDate", "endTime", "workOrder", "techName"];
+const FORM = ["supplyTemp", "returnTemp", "refrigerant", "suctionPsig", "suctionTemp", "liquidPsig", "liquidTemp", "amps", "fla", "plate", "startDate", "startTime", "endDate", "endTime", "workOrder", "techName"];
 /** Current values from the form (falls back to the saved draft for fields not on the page). */
 function current() {
   const d = Object.assign({}, read(DRAFT_KEY) || {});
@@ -37,6 +38,12 @@ function render() {
     const p = ampsPercent(d.amps, ampsReference(d, read(CARD_SCAN_KEY)));
     ap.textContent = p ? ampsLine(p) : "";
     ap.hidden = !p;
+  }
+  const pl = $("psy-link");
+  if (pl) {
+    pl.href = psychroHref(d);
+    const c = carried(d);
+    $("psy-link-note").textContent = c.ret && c.sup ? "Carries supply and return dry bulb (°F). Add RH or wet bulb there." : "Fill supply and return air (°F) first, or open it and type them.";
   }
   const tt = $("total-time");
   if (tt) {

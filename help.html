@@ -8,7 +8,7 @@
   <link rel="icon" href="icon-192.png" type="image/png" />
   <meta http-equiv="Cache-Control" content="no-cache" />
   <title>Help — Service Tech</title>
-  <link rel="stylesheet" href="styles.css?v=33" />
+  <link rel="stylesheet" href="styles.css?v=34" />
 </head>
 <body>
   <div class="app help">
@@ -85,6 +85,7 @@
       <li><strong>Air</strong>: altitude (ft) or barometer (inHg or psia; blank = sea level), airflow (cfm), and where the cfm was measured (supply by default). TESP (inH₂O) and rated tons are optional.</li>
       <li><strong>Results</strong>: total, sensible and latent Btu/h, tons, SHR, cfm/ton, coil leaving dew point and every point property. A <strong>psychrometric chart</strong> at your pressure shows R → S, the supply dew-point projection, RH, wet-bulb and enthalpy lines. Tap it (or ⤢ Full screen) to enlarge; points below 32 °F extend the range automatically, or tick <em>Low-temp range</em>. <strong>Copy results</strong> puts the text on the clipboard.</li>
     </ol>
+    <p><strong>From a call</strong>: on the call card's <strong>Readings</strong> step, tap <strong>Analyze in Psychrometrics →</strong>. The supply and return dry bulb (°F) carry over; add RH (%) or wet bulb (°F) here. Tap <strong>← Back to call</strong> to return to the same call.</p>
     <p>When you enter altitude or a barometer reading, the density-corrected total is shown first. The 4.5 / 1.08 / 0.68 numbers are labeled <em>standard air</em>. The default SHR is sensible ÷ standard-air total; the alternative (sensible ÷ (sensible + latent)) is shown and labeled.</p>
     <p>Orange <strong>Check probes</strong> notes mean a reading looks physically off (supply not colder than return, RH at or near 100%, wet bulb above dry bulb). They are not standards. The only range notes are cited from the BPA PTCS document (325–500 cfm/ton; most manufacturers suggest 0.5 inH₂O TESP or less). Numbers only. Compare with OEM data.</p>
   </details>
@@ -112,8 +113,8 @@
     </form>
   </details>
   </div>
-  <script src="version.js?v=33"></script>
-  <script src="app.js?v=33"></script>
-  <script type="module" src="tools/help-app.js?v=33"></script>
+  <script src="version.js?v=34"></script>
+  <script src="app.js?v=34"></script>
+  <script type="module" src="tools/help-app.js?v=34"></script>
 </body>
 </html>

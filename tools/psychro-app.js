@@ -1,6 +1,7 @@
 /* psychro.html: 4 steps (Return, Supply, Air, Results). Values persist on this phone. */
-import { evaluate, pointRows, copyText } from "./psychro-ui.js?v=33";
-import { buildChart } from "./psychro-chart.js?v=33";
+import { evaluate, pointRows, copyText } from "./psychro-ui.js?v=34";
+import { buildChart } from "./psychro-chart.js?v=34";
+import { prefillFromQuery } from "./psychro-link.js?v=34";
 
 const STEPS = ["return", "supply", "air", "results"];
 const FIELDS = ["retDb", "retHumMode", "retHum", "supDb", "supHumMode", "supHum", "pressureMode", "pressureValue", "cfm", "airflowAt", "tesp", "ratedTons"];
@@ -89,7 +90,18 @@ function go(i) {
   window.scrollTo(0, 0);
 }
 
-load(); labels();
+load();
+const fromCall = prefillFromQuery(location.search);
+if (fromCall) {
+  for (const [k, v] of Object.entries(fromCall)) $(k).value = v;
+  save();
+  const b = $("psy-from-call"); b.hidden = false;
+  const missing = ["ret", "sup"].filter((s) => s + "Db" in fromCall && fromCall[s + "Hum"] === "").map((s) => (s === "ret" ? "return" : "supply"));
+  $("psy-from-call-note").textContent = "Dry bulb filled from the call." + (missing.length ? " Add " + missing.join(" and ") + " RH (%) or wet bulb (°F)." : " Humidity filled too.");
+  history.replaceState(null, "", "psychro.html?from=call");
+}
+if (new URLSearchParams(location.search).get("from") === "call") $("psy-from-call").hidden = false;
+labels();
 for (const k of FIELDS) $(k).addEventListener("input", () => { labels(); save(); });
 for (const k of FIELDS) $(k).addEventListener("change", () => { labels(); save(); if (STEPS[step] === "results") render(); });
 document.querySelectorAll(".step-pill").forEach((p) => p.addEventListener("click", () => go(STEPS.indexOf(p.dataset.step))));
