@@ -86,3 +86,17 @@ test("sw precaches every tools/ module the app imports (offline scanner)", () =>
     }
   }
 });
+
+test("york live OCR: compas row, lost dual-volt slash, unlabelled dashed model, MIN/MAX volts ignored", async () => {
+  const { parsePlate } = await import("../tools/plate-parse.js");
+  const f = parsePlate("MIN/MAX VOLTAGE 187V/252V\nwon ZS-04N13BTAZZ10001A\n1 compas \\208230-3-60 16.0 RLA 120 LRA\nID BLO 208/230-3-60 5.6 FLA\n").fields;
+  assert.equal(f.voltage.value, "208/230"); assert.equal(f.phase.value, 3);
+  assert.equal(f.rla.value, 16); assert.equal(f.lra.value, 120);
+  assert.equal(f.model.value, "ZS-04N13BTAZZ10001A"); assert.ok(f.model.confidence < 0.6);
+  assert.equal(parsePlate("MIN/MAX VOLTAGE 187V/252V\n").fields.voltage, undefined);
+});
+test("squareProbeBox: tall plates probe a centered square, normal ones the full frame", async () => {
+  const { squareProbeBox } = await import("../tools/plate-scan.js");
+  assert.deepEqual(squareProbeBox(1868, 4000), { x: 0, y: 1066, s: 1868 });
+  assert.equal(squareProbeBox(1200, 1000), null);
+});

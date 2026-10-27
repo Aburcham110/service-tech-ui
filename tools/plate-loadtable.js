@@ -9,7 +9,7 @@
 // Sparse OCR (PSM 11) splits a row over several lines; those are joined until the next row label.
 
 const ROWS = [
-  ["comp", /\bCOMP(?:RESSOR)?\b\.?,?\s*(?:#|NO\.?)?\s*\d?/i],
+  ["comp", /\bCOMP(?:RESSOR|\w{0,3})\b\.?,?\s*(?:#|NO\.?)?\s*\d?/i],
   ["idBlower", /\b(?:[I1l|]\.?\s?D\.?|INDOOR|EVAP(?:ORATOR)?\.?)\s*(?:BLO\w*|FAN)\b|\bVENT\.?\s*INT\b/i],
   ["odFan", /\b(?:[O0Q]\.?\s?D\.?|OUTDOOR|COND(?:ENSER)?\.?)\s*FAN\b|\bVENT\.?\s*EXT\b/i],
   ["combBlower", /\bCOMB(?:USTION)?\.?\s*(?:BL\w*|FAN)\b|\bINDUCER\b|\bDRAFT\s*(?:INDUCER|BLOWER)\b|\bVENT\.?\s*DEVAC\b/i],
@@ -23,6 +23,8 @@ const kindOf = (l) => (ROWS.find(([, re]) => re.test(l)) || [null])[0];
 
 /** "208/230-3-60", "208:230-3-60", "208/230-  3-60" (also split over joined sparse lines). */
 export function voltPhHz(s) {
+  // "\\208230-3-60": the slash between dual voltages can be lost.
+  s = String(s).replace(/(?<!\d)(\d{3})(\d{3})(?=\s*-\s*[13]\s*-)/g, "$1/$2");
   const m = String(s).match(/\b(\d{3})\s*[\/:]\s*(\d{3})\s*[-\/]\s*([13])\s*[-\/.]\s*(50|60)\b|\b(\d{3})\s*[-\/]\s*([13])\s*[-\/]\s*(50|60)\b/);
   if (!m) return null;
   const volts = m[1] ? [m[1], m[2]] : [m[5]];
@@ -50,7 +52,8 @@ export function parseLoadTable(lines) {
   // A table needs the compressor row and at least one motor row.
   // A table: the compressor row plus a motor row, or an outdoor-fan row beside other load rows
   // (a pass that lost the COMP label still must not read the blower's FLA as the fan's).
-  const otherLoad = lines.some((l) => kindOf(l) !== "odFan" && /\b(?:BLO\w*|BLWR|COMP\w*)\b/i.test(l));
+  const otherLoad = lines.some((l) => kindOf(l) !== "odFan" && /\b(?:BLO\w*|BLWR|COMP\w*)\b/i.test(l))
+    || lines.join(" ").split(/F\s?L\s?A\b/i).length > 2; // two or more FLA rows
   if (!(kinds.has("comp") && MOTORS.some((k) => kinds.has(k))) && !(kinds.has("odFan") && otherLoad)) return null;
   const rows = {}, spans = new Set();
   starts.forEach((s, j) => {

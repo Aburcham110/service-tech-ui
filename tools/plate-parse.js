@@ -11,8 +11,8 @@
  * or defaulted: a field that isn't on the plate stays absent (blank).
  */
 
-import { parseLoadTable, voltPhHz } from "./plate-loadtable.js?v=37";
-import { assignIdsByPattern, parseHeaderRow, partNumbers, fixHeatcraftModel, HEATCRAFT_MODEL, HEATCRAFT_SERIAL, parseRefrigerantTable, gridFields } from "./plate-heatcraft.js?v=37";
+import { parseLoadTable, voltPhHz } from "./plate-loadtable.js?v=38";
+import { assignIdsByPattern, parseHeaderRow, partNumbers, fixHeatcraftModel, HEATCRAFT_MODEL, HEATCRAFT_SERIAL, parseRefrigerantTable, gridFields } from "./plate-heatcraft.js?v=38";
 
 export const LOW_CONFIDENCE = 0.6;
 /** Stricter bar for identifiers: a wrong model/serial costs a wrong part or warranty lookup. */
@@ -452,6 +452,8 @@ function parseElectrical(lines) {
     for (let i = 0; i < lines.length && !v; i++) {
       const lm = lines[i].match(VOLT_LABEL);
       if (!lm) continue;
+      // "MIN/MAX VOLTAGE: 187V/252V" is the utilization range, not the rating.
+      if (/\bMIN\.?\s*\/?\s*MAX\.?\s*VOLT|\bMIN(?:IMUM)?\.?\s*VOLT|\bMAX(?:IMUM)?\.?\s*VOLT/i.test(lines[i])) continue;
       const rest = lines[i].slice(lm.index + lm[0].length);
       let m = rest.match(new RegExp("^\\s*(?:\\(V\\))?\\s*(?:AC)?\\s*[:.\\-]?\\s*" + V + "\\s*(?:V|VAC|VOLTS?)?\\b", "i"));
       if (!m && !rest.trim() && lines[i + 1]) { m = lines[i + 1].match(new RegExp("^\\s*" + V + "\\s*(?:V|VAC|VOLTS?)?\\b", "i")); q = 0.85; }
@@ -743,6 +745,12 @@ export function parsePlate(input) {
   } else {
     put("model", identRaw.model);
     put("serial", identRaw.serial);
+    if (!fields.model) {
+      // No model label read at all: a token in the York/UPG dashed shape is shown, flagged.
+      const DASHED = /(?<![A-Z0-9-])([A-Z]{2}-\d{2}[A-Z]\d{2}[A-Z0-9]{6,12})(?![A-Z0-9-])/;
+      const hit = rawLines.map((l) => l.match(DASHED)).find(Boolean);
+      if (hit) { put("model", { value: hit[1], raw: hit[1], quality: 0.55, note: "no model label read; fits the York/UPG model shape — check it" }); fields.model.byLayout = true; }
+    }
     if (!fields.model && fields.serial) {
       // Model label unreadable ("Mossine:"): a dashed ID on a "word:" line next to the serial line, flagged.
       const si = rawLines.findIndex((l) => SERIAL_LABEL.test(l));
