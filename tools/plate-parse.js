@@ -11,6 +11,8 @@
  * or defaulted: a field that isn't on the plate stays absent (blank).
  */
 
+import { parseHeaderRow, partNumbers, fixHeatcraftModel, HEATCRAFT_MODEL, HEATCRAFT_SERIAL, parseRefrigerantTable, gridFields } from "./plate-heatcraft.js?v=25";
+
 export const LOW_CONFIDENCE = 0.6;
 /** Stricter bar for identifiers: a wrong model/serial costs a wrong part or warranty lookup. */
 export const LOW_CONFIDENCE_ID = 0.75;
@@ -267,7 +269,7 @@ function digitGroups(rest) {
   return { value: fixed, raw: t, joined: /\s/.test(t), corrected: fixed !== joined };
 }
 
-function parseIdent(rawLines, labelRe, otherLabelRe, which, sparse) {
+function parseIdent(rawLines, labelRe, otherLabelRe, which, sparse, partNos) {
   for (let i = 0; i < rawLines.length; i++) {
     const line = rawLines[i];
     const m = line.match(labelRe);
@@ -318,7 +320,9 @@ function parseIdent(rawLines, labelRe, otherLabelRe, which, sparse) {
       // Barcode caption "S<serial>" elsewhere on the plate confirms the reading.
       const canon = (x) => x.toUpperCase().replace(/O/g, "0").replace(/[Il]/g, "1");
       const target = canon(r.value);
-      if (rawLines.some((l, j) => j !== i && l.split(/\s+/).some((t) => { const c = canon(t.replace(/[^A-Za-z0-9]/g, "")); return c === target || c === "S" + target || c === "5" + target; }))) {
+      // Never for a part number: the side sticker prints "P/N <number>" under its own barcode.
+      const isPart = (partNos && [...partNos].some((p) => canon(p) === target)) || /^\d{8}$/.test(target) && rawLines.some((l) => /\bP\s*\/\s*N\b|\bPART\s*N/i.test(l) && l.includes(r.value));
+      if (!isPart && rawLines.some((l, j) => j !== i && !/\bP\s*\/\s*N\b/i.test(l) && l.split(/\s+/).some((t) => { const c = canon(t.replace(/[^A-Za-z0-9]/g, "")); return c === target || c === "S" + target || c === "5" + target; }))) {
         quality = Math.min(1, quality / 0.55 * 0.8); notes.push("matches barcode caption");
       }
     }
@@ -468,6 +472,7 @@ export const MODEL_PATTERNS = {
   Copeland: /^(?:Z[A-Z]{1,2}\d{2,3}K[A-Z0-9-]+|[A-Z]{3,4}\d{2,3}[A-Z]\d[A-Z](?:-[A-Z0-9]{3}(?:-[A-Z0-9]{3})?)?)$/,
   Carrier: /^\d{2}[A-Z]{2,4}[A-Z0-9]{4,12}$/,
   Goodman: /^[A-Z]{3,5}\d{2,4}[A-Z0-9]{2,10}$/,
+  Heatcraft: HEATCRAFT_MODEL, // LCH0055LBACZA0300: family, capacity, options, 4-digit tail
 };
 const CONF_MAP = { O: "0", Q: "0", D: "0", I: "1", L: "1", S: "5", B: "8", "3": "8", Z: "2", G: "6" };
 const confNorm = (x) => x.toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/[OQDILSB3ZG]/g, (c) => CONF_MAP[c]);
@@ -499,6 +504,7 @@ export const SERIAL_PATTERNS = {
   Rheem: /^[A-Z]{1,2}\d{8,10}[A-Z]?$/, Ruud: /^[A-Z]{1,2}\d{8,10}[A-Z]?$/,
   Fujitsu: /^\d{6}$/, // the "WWB"/"WWP" before it is label text, not part of the serial
   Daikin: /^(?=[A-Z0-9]*\d{6})[A-Z0-9]{7,11}$/,
+  Heatcraft: HEATCRAFT_SERIAL, // letter + 2 digits + letter + digits (T21C05997)
 };
 
 /**
@@ -519,6 +525,7 @@ export function reviewReasons(name, f, brand) {
 
 function checkSerial(f, brand) {
   const pat = brand && SERIAL_PATTERNS[brand];
+  if (pat) f.formatOk = pat.test(String(f.value).toUpperCase());
   if (pat && !pat.test(String(f.value).toUpperCase())) {
     f.confidence = round(Math.min(f.confidence, 0.5), 2);
     f.note = (f.note ? f.note + "; " : "") + "doesn't fit the usual " + brand + " serial format";
@@ -688,11 +695,34 @@ export function parsePlate(input) {
   put("brand", parseBrand(rawLines));
   const ut = parseUnitType(rawLines.join("\n"));
   if (ut) fields.unitType = { value: ut.value, confidence: ut.quality, quality: ut.quality, ocr: null, raw: ut.raw };
-  const identRaw = { model: parseIdent(rawLines, MODEL_LABEL, SERIAL_LABEL, "first", sparse), serial: parseIdent(rawLines, SERIAL_LABEL, MODEL_LABEL, "second", sparse) };
-  put("model", identRaw.model);
-  put("serial", identRaw.serial);
+  const header = parseHeaderRow(rawLines);
+  const partNos = partNumbers(rawLines, header);
+  const identRaw = header ? {} : { model: parseIdent(rawLines, MODEL_LABEL, SERIAL_LABEL, "first", sparse, partNos), serial: parseIdent(rawLines, SERIAL_LABEL, MODEL_LABEL, "second", sparse, partNos) };
+  if (header) {
+    // PART NO | MODEL NO | SERIAL NO header row: values by column, in the order printed.
+    put("partNo", { value: header.part, raw: header.part, quality: 0.9, note: "PART NO column" });
+    put("model", { value: header.model, raw: header.model, quality: 0.95, note: "MODEL NO column" });
+    put("serial", { value: header.serial, raw: header.serial, quality: 0.95, note: "SERIAL NO column" });
+  } else {
+    put("model", identRaw.model);
+    put("serial", identRaw.serial);
+  }
   const brandName = fields.brand && fields.brand.value;
-  if (fields.model) checkModel(fields.model, brandName, rawLines);
+  const isHC = brandName === "Heatcraft";
+  if (isHC && fields.model) {
+    const fx = fixHeatcraftModel(fields.model.value);
+    if (fx.changed) {
+      fields.model.note = (fields.model.note ? fields.model.note + "; " : "") + "fixed O->0/S->5 in the number slots (OCR read " + fields.model.value + ")";
+      fields.model.value = fx.value;
+      fields.model.confidence = round(Math.min(fields.model.confidence, 0.7), 2);
+    }
+  }
+  // A part number is never the model or serial, and one value never fills both.
+  const idn = (v) => String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  for (const k of ID_FIELDS) if (fields[k] && [...partNos].some((p) => idn(p) === idn(fields[k].value))) { delete fields[k]; delete identRaw[k]; }
+  if (fields.model && fields.serial && idn(fields.model.value) === idn(fields.serial.value)) for (const k of ID_FIELDS) { delete fields[k]; delete identRaw[k]; }
+  if (fields.model && !header) checkModel(fields.model, brandName, rawLines);
+  else if (fields.model && MODEL_PATTERNS[brandName] && !MODEL_PATTERNS[brandName].test(String(fields.model.value))) { fields.model.confidence = round(Math.min(fields.model.confidence, 0.45), 2); fields.model.note += "; doesn't fit the usual " + brandName + " model format"; }
   if (fields.serial) checkSerial(fields.serial, brandName);
   for (const [k, r] of [["model", identRaw.model], ["serial", identRaw.serial]]) {
     const f = fields[k];
@@ -716,6 +746,23 @@ export function parsePlate(input) {
   put("compA", parseCoolHeat(lines, /\bCOMPRESSOR\s*(?:A|AMPS?)\b|\bCOMP\.?\s*A\b/i, 0.5, 80));
   put("totalA", parseCoolHeat(lines, /\bTOTAL\s*(?:A|AMPS?|CURRENT)\b/i, 0.5, 120));
   put("capacity", parseCoolHeat(lines, /\bCAPACITY\b|\bBTU\s*\/?\s*H/i, 3000, 200000));
+  if (isHC) {
+    // Grid plate: each value sits below its label cell. These override the line parsers.
+    const gf = gridFields(words);
+    for (const k of Object.keys(gf)) put(k, gf[k]);
+    if (/WALK\s*[-\u2010-\u2014]?\s*IN\b/i.test(text) || /CONDENSING/i.test(text)) {
+      const app = (text.match(/WALK\s*[-\u2010-\u2014]?\s*IN\s+(FREEZER|COOLER)/i) || [])[1];
+      const outdoor = /OUT\s*DOOR\s+USE/i.test(text);
+      fields.unitType = { value: "condensing unit", confidence: 0.85, quality: 0.85, ocr: null, raw: "Heatcraft condensing unit", note: "walk-in refrigeration" + (outdoor ? "; for outdoor use" : "") };
+      if (app || outdoor) fields.application = { value: [app ? "walk-in " + app.toLowerCase() : null, outdoor ? "outdoor" : null].filter(Boolean).join(", "), confidence: 0.85, quality: 0.85, ocr: null, raw: app || "FOR OUTDOOR USE" };
+    }
+  }
+  const rt = parseRefrigerantTable(rawLines);
+  if (rt && (isHC || rt.rows.length >= 2)) {
+    // Approved-refrigerant table: list them all, or leave it blank when any row can't be read.
+    delete fields.refrigerant;
+    if (!rt.unread.length && rt.rows.length) { put("refrigerant", { value: rt.value, raw: rt.rows.map((r) => r.raw).join(" "), quality: 0.9, note: "approved refrigerants (" + rt.rows.length + " rows)" }); fields.refrigerant.list = rt.list; }
+  }
   if (/THERMALLY\s+PROTECTED/i.test(text)) fields.protection = { value: "thermally protected", confidence: 1, quality: 1, ocr: null, raw: "THERMALLY PROTECTED" };
 
   const COMP = "(?:COMP(?:RESSOR)?\\.?\\s*(?:NO\\.?\\s*|#\\s*)?(?:[1-4]\\s*)?[:.\\-]?\\s*)?";
@@ -801,6 +848,19 @@ export function mergeParses(list) {
       const explicit = got.filter((f) => !INFERRED.test(f.note || ""));
       if (explicit.length < got.length) got = explicit;
     }
+    // Amps read without the decimal point ("247" for 24.7): restore it when another pass read N/10.
+    if (AMP_FIELDS.includes(n)) {
+      const vals = got.map((f) => f.value);
+      got = got.map((f) => (typeof f.value === "number" && Number.isInteger(f.value) && f.value >= 100 && vals.some((v) => Math.abs(v * 10 - f.value) < 1e-6)
+        ? { ...f, value: f.value / 10, note: (f.note ? f.note + "; " : "") + "decimal point restored (other passes read " + f.value / 10 + ")" } : f));
+    }
+    // Serial/model: readings that fit the brand's format beat ones that don't.
+    if (ID_FIELDS.includes(n) && got.some((f) => f.formatOk === true) && got.some((f) => f.formatOk === false)) got = got.filter((f) => f.formatOk !== false);
+    // Approved-refrigerant lists: a pass that missed rows is a subset, not a disagreement.
+    if (n === "refrigerant" && got.length > 1 && got.every((f) => Array.isArray(f.list))) {
+      const big = got.slice().sort((a, b) => b.list.length - a.list.length)[0];
+      if (got.every((f) => f.list.every((r) => big.list.includes(r)))) got = got.filter((f) => f.value === big.value);
+    }
     // Most confident first; ties go to PSM 6 (block layout keeps label and value on one line).
     got.sort((a, b) => b.confidence - a.confidence || isPsm6(b.pass) - isPsm6(a.pass));
     // Majority value wins (ties: most confident); a lone confident misread loses to agreement.
@@ -820,6 +880,11 @@ export function mergeParses(list) {
         best.confidence = round(best.confidence * 0.55, 2);
         best.note = (best.note ? best.note + "; " : "") + "passes disagree: " + distinct.map((d) => JSON.parse(d)).join(" vs ");
       }
+    }
+    // A big amp value with no decimal that no other pass read ("247" alone) is flagged.
+    if (["rla", "mca", "fanFla"].includes(n) && Number.isInteger(best.value) && best.value >= 100 && got.filter((f) => f.value === best.value).length < 2) {
+      best.confidence = round(Math.min(best.confidence, 0.45), 2);
+      best.note = (best.note ? best.note + "; " : "") + "no decimal point and no other pass agrees";
     }
     delete best.w;
     best.passes = got.length;

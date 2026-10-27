@@ -7,11 +7,11 @@
  * Nothing is stored (not even localStorage) until the user taps Confirm, and
  * then only the onConfirm callback decides what to keep.
  */
-import { mountGuide, renderReviewSummary, progressLine, INSTRUCTIONS } from "./scan-flow.js?v=24";
-import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=24";
-import { cropStep } from "./plate-crop.js?v=24";
-import { findLabelBox, deglare, clahe } from "./plate-image.js?v=24";
-import { isHeic, heicToFile } from "./heic.js?v=24";
+import { mountGuide, renderReviewSummary, progressLine, INSTRUCTIONS } from "./scan-flow.js?v=25";
+import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=25";
+import { cropStep } from "./plate-crop.js?v=25";
+import { findLabelBox, deglare, clahe } from "./plate-image.js?v=25";
+import { isHeic, heicToFile } from "./heic.js?v=25";
 
 const VENDOR = "vendor/tesseract/";
 const DECODE_SIDE = 4000;   // decode cap (keeps the label's detail before cropping)
@@ -21,12 +21,14 @@ const FIND_SIDE = 600;      // label-finder working size
 
 export const FIELDS = [
   ["brand", "Brand"], ["unitType", "Unit type"],
-  ["model", "Model"], ["serial", "Serial"], ["outdoorUnit", "Matching outdoor unit"], ["indoorUnit", "Matching indoor unit"],
+  ["model", "Model"], ["serial", "Serial"], ["partNo", "Part no."], ["application", "Application"], ["outdoorUnit", "Matching outdoor unit"], ["indoorUnit", "Matching indoor unit"],
   ["refrigerant", "Refrigerant"], ["charge", "Factory charge (lb)"],
   ["voltage", "Voltage"], ["phase", "Phase"], ["hz", "Hz"],
   ["rla", "Compressor RLA"], ["lra", "Compressor LRA"], ["compA", "Compressor A (cool/heat)"],
-  ["fanFla", "Fan FLA"], ["mca", "MCA"], ["mop", "MOP / max fuse"],
+  ["fanFla", "Fan FLA"], ["fanQty", "Condenser fans (qty)"], ["fanHp", "Fan motor HP"], ["crankcaseW", "Crankcase heater (W)"],
+  ["evapFanA", "Evap fan max amps"], ["defrostA", "Defrost heater max amps"], ["mca", "MCA"], ["mop", "MOP / max fuse"],
   ["designHigh", "Design pressure high (psig)"], ["designLow", "Design pressure low (psig)"], ["oil", "Oil (as printed)"],
+  ["tempRange", "Temp range"], ["awef", "AWEF"],
 ];
 
 function abs(rel) { return new URL(rel, document.baseURI).href; }
@@ -433,7 +435,7 @@ function buildConfirm(parsed, onConfirm, onCancel, passes, onRetake, confirmLabe
   FIELDS.forEach(([name, label]) => {
     const f = parsed.fields[name];
     // Optional/rare fields only appear when the plate has them.
-    if (!f && ["brand", "unitType", "outdoorUnit", "indoorUnit", "compA", "designHigh", "designLow", "oil"].includes(name)) return;
+    if (!f && ["brand", "unitType", "outdoorUnit", "indoorUnit", "compA", "designHigh", "designLow", "oil", "partNo", "application", "fanQty", "fanHp", "crankcaseW", "evapFanA", "defrostA", "tempRange", "awef"].includes(name)) return;
     const lab = el("label", "field");
     const span = el("span", null, label);
     const reasons = reviewReasons(name, f, brand);
@@ -538,7 +540,8 @@ export function plateSummary(v) {
   else if (v.charge) parts.push("Charge " + v.charge + " lb");
   const elec = [v.voltage && v.voltage + "V", v.phase && v.phase + "ph", v.hz && v.hz + "Hz"].filter(Boolean).join(" ");
   if (elec) parts.push(elec);
-  [["rla", "RLA"], ["lra", "LRA"], ["compA", "Comp A"], ["fanFla", "Fan FLA"], ["mca", "MCA"], ["mop", "MOP"],
+  [["rla", "RLA"], ["lra", "LRA"], ["compA", "Comp A"], ["fanFla", "Fan FLA"], ["fanQty", "Condenser fans (qty)"], ["fanHp", "Fan motor HP"], ["crankcaseW", "Crankcase heater (W)"],
+  ["evapFanA", "Evap fan max amps"], ["defrostA", "Defrost heater max amps"], ["mca", "MCA"], ["mop", "MOP"],
     ["designHigh", "DP high"], ["designLow", "DP low"], ["oil", "Oil"], ["outdoorUnit", "OD unit"], ["indoorUnit", "ID unit"]]
     .forEach(([k, l]) => { if (v[k]) parts.push(l + " " + v[k]); });
   return parts.join(" | ");
