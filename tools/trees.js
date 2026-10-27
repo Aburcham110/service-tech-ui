@@ -186,6 +186,7 @@ export const TREES = {
 export function chooseTree({ equipment, unitType, brand, model } = {}) {
   const ut = String(unitType || "").toLowerCase();
   if (ut === "compressor") return "compressor";
+  if (ut === "condensing unit") return "walk-in";
   const eq = String(equipment || "").toLowerCase();
   if (eq === "mini-split") return "mini-split";
   if (["cooler", "freezer", "rack"].includes(eq)) return "walk-in";

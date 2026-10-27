@@ -8,7 +8,7 @@
  * Returns { tree, certain, choices, why }. When not certain, choices holds the 2–3 likely trees.
  * Generic routing only: no model-specific codes or specs live here.
  */
-import { brandKey, matchModel } from "./manuals.js?v=24";
+import { brandKey, matchModel } from "./manuals.js?v=25";
 
 export const TREE_LABELS = {
   "mini-split": "Ductless mini-split",
@@ -68,6 +68,7 @@ export function pickTree({ brand, model, unitType, equipment } = {}, index = nul
   const ut = String(unitType || "").toLowerCase();
   const eq = EQUIP[String(equipment || "").toLowerCase()] || null;
   if (ut === "compressor") return sure("compressor", "Scanner read a compressor nameplate");
+  if (ut === "condensing unit") return sure("walk-in", "Scanner read a walk-in condensing unit plate");
   const b = scanBrand(index, { brand, model });
   const m = norm(model);
   const p = b && m && PATTERNS.find((x) => x.brand === b && x.re.test(m));
