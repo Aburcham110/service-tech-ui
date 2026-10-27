@@ -1,5 +1,6 @@
 /* psychro.html: 4 steps (Return, Supply, Air, Results). Values persist on this phone. */
-import { evaluate, pointRows, copyText } from "./psychro-ui.js?v=31";
+import { evaluate, pointRows, copyText } from "./psychro-ui.js?v=32";
+import { buildChart } from "./psychro-chart.js?v=32";
 
 const STEPS = ["return", "supply", "air", "results"];
 const FIELDS = ["retDb", "retHumMode", "retHum", "supDb", "supHumMode", "supHum", "pressureMode", "pressureValue", "cfm", "airflowAt", "tesp", "ratedTons"];
@@ -23,6 +24,23 @@ function table(rows, id) {
   return t;
 }
 
+let lowTemp = false, zoomed = false;
+function chartBlock(ev) {
+  const wrap = el("div", "psy-chart-wrap" + (zoomed ? " zoom" : "")); wrap.id = "psy-chart-wrap";
+  const bar = el("div", "psy-chart-bar");
+  const lt = el("label", "check"); const cb = el("input"); cb.type = "checkbox"; cb.id = "psy-lowtemp"; cb.checked = lowTemp;
+  cb.addEventListener("change", () => { lowTemp = cb.checked; render(); });
+  lt.append(cb, el("span", "", "Low-temp range (to −20 °F)"));
+  const zb = el("button", "btn btn-secondary psy-zoom-btn", zoomed ? "Close full screen" : "⤢ Full screen"); zb.type = "button"; zb.id = "psy-zoom";
+  zb.addEventListener("click", () => { zoomed = !zoomed; render(); if (zoomed) document.getElementById("psy-chart-wrap").scrollIntoView(); });
+  bar.append(lt, zb);
+  const box = el("div", "psy-chart-box"); box.innerHTML = buildChart(ev.a.psia, { ret: ev.a.ret, sup: ev.a.sup }, { lowTemp }).svg;
+  box.addEventListener("click", () => { if (!zoomed) { zoomed = true; render(); } });
+  wrap.append(bar, box);
+  if (zoomed) wrap.append(el("p", "footer-note", "Scroll or pinch to look around. Tap Close full screen when done."));
+  return wrap;
+}
+
 function render() {
   const out = $("psy-results"); out.textContent = "";
   const ev = evaluate(form());
@@ -34,6 +52,7 @@ function render() {
   }
   const a = ev.a;
   if (ev.warnings.length) { const box = el("div", "psy-warn"); box.id = "psy-warnings"; box.append(el("strong", "", "Check probes:")); const ul = el("ul"); for (const w of ev.warnings) ul.append(el("li", "", w)); box.append(ul); out.append(box); }
+  out.append(chartBlock(ev));
   out.append(el("h2", "psy-h", "Capacity"));
   if (ev.capacity) {
     const rows = [];
@@ -72,7 +91,7 @@ function go(i) {
 
 load(); labels();
 for (const k of FIELDS) $(k).addEventListener("input", () => { labels(); save(); });
-for (const k of FIELDS) $(k).addEventListener("change", () => { labels(); save(); });
+for (const k of FIELDS) $(k).addEventListener("change", () => { labels(); save(); if (STEPS[step] === "results") render(); });
 document.querySelectorAll(".step-pill").forEach((p) => p.addEventListener("click", () => go(STEPS.indexOf(p.dataset.step))));
 $("psy-back").addEventListener("click", () => go(step - 1));
 $("psy-next").addEventListener("click", () => {

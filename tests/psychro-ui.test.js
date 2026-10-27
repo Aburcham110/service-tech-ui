@@ -61,7 +61,7 @@ test("copy text has labels and the worked numbers", () => {
 
 test("screen is precached, linked from home and help", () => {
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  for (const f of ["./psychro.html", "./tools/psychro-ui.js?v=31", "./tools/psychro-app.js?v=31", "./tools/psychro.js?v=31"]) assert.ok(sw.includes(`"${f}"`), f);
+  for (const f of ["./psychro.html", "./tools/psychro-ui.js?v=32", "./tools/psychro-app.js?v=32", "./tools/psychro.js?v=32"]) assert.ok(sw.includes(`"${f}"`), f);
   assert.match(readFileSync(new URL("../index.html", import.meta.url), "utf8"), /href="psychro.html"/);
   assert.match(readFileSync(new URL("../help.html", import.meta.url), "utf8"), /id="psychro"/);
 });
