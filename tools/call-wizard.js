@@ -1,8 +1,8 @@
 /** Call card (call.html) extras: inline SH/SC on Readings, amps % of plate RLA/FLA, total time on Close,
  *  quick-phrase chips on Mid/Close, and the extra Copy lines (app.js calls self.stCallCopyExtras). Offline only. */
-import { inlineShSc, shScLines, ampsReference, ampsPercent, ampsLine, totalTime, PHRASES, CLOSE_PHRASES, appendPhrase, parseParts, partsLines, headerLines, readingsExtraLines } from "./call-extras.js?v=35";
-import { psychroHref, carried } from "./psychro-link.js?v=35";
-import { DRAFT_KEY, CARD_SCAN_KEY } from "./card-plate.js?v=35";
+import { inlineShSc, shScLines, ampsReference, ampsPercent, ampsLine, totalTime, PHRASES, CLOSE_PHRASES, appendPhrase, parseParts, partsLines, headerLines, readingsExtraLines } from "./call-extras.js?v=36";
+import { psychroHref, carried } from "./psychro-link.js?v=36";
+import { DRAFT_KEY, CARD_SCAN_KEY } from "./card-plate.js?v=36";
 
 const read = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null") || null; } catch (e) { return null; } };
 const $ = (id) => document.getElementById(id);
@@ -65,6 +65,7 @@ function chips() {
         ta.focus();
         ta.setSelectionRange(r.selStart, r.selEnd);
         ta.dispatchEvent(new Event("input", { bubbles: true })); // app.js saves the draft
+        if (typeof self.stToast === "function") self.stToast("Added: " + (ph.length > 32 ? ph.slice(0, 32) + "…" : ph));
       });
       box.appendChild(b);
     }
