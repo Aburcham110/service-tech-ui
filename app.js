@@ -390,8 +390,8 @@
     window.addEventListener("offline", updateIndicator);
     updateIndicator();
     // Retry queued "Send missing model" posts at app start and whenever the phone comes back online.
-    import("./tools/missing-model.js?v=34").then((m) => m.startMissingSender()).catch(() => {});
-    import("./tools/feedback.js?v=34").then((m) => m.startFeedbackSender()).catch(() => {});
+    import("./tools/missing-model.js?v=35").then((m) => m.startMissingSender()).catch(() => {});
+    import("./tools/feedback.js?v=35").then((m) => m.startFeedbackSender()).catch(() => {});
     if (!("serviceWorker" in navigator) || window.__stSwRegistered) return;
     window.__stSwRegistered = true;
     const hadController = !!navigator.serviceWorker.controller;
@@ -423,7 +423,11 @@
     showVersion();
     initPwa();
     const p = page();
-    if (p.includes("call")) initCall();
+    if (p.includes("call")) {
+      initCall();
+      // Back from a tree/tool that added notes: the bfcache copy holds an old draft, so re-read it.
+      window.addEventListener("pageshow", (e) => { if (e.persisted) location.reload(); });
+    }
     else if (p.includes("toolkit")) initToolkit();
     else if (p.includes("docs")) initDocs();
     else initHome();
