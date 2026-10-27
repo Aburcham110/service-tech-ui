@@ -27,5 +27,5 @@ test("every URL in data/*.json, tools/ and the html pages is on the official dom
   assert.deepEqual(badUrls('x "https://www.shareddocs.com/hvac/docs/1009/Public/0D/25HBC-HCE-03SI.pdf" y'), ["https://www.shareddocs.com/hvac/docs/1009/Public/0D/25HBC-HCE-03SI.pdf"]);
   assert.equal(badUrls("https://s3.amazonaws.com/other-bucket/a.pdf").length, 1);
   assert.equal(badUrls("https://carrier.com.evil.example/a.pdf").length, 1);
-  assert.equal(EXCLUDED.length, 5); // exclusions are an explicit, short list
+  assert.equal(EXCLUDED.length, 6); // exclusions are an explicit, short list
 });

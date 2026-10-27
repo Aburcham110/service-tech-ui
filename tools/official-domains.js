@@ -25,6 +25,7 @@ export const EXCLUDED = [
   ["https://script.google.com/macros/s/", "Apps Script endpoint for missing-model reports (tools/missing-model.js)"],
   ["https://app.notion.com/p/", "Notion research pages recorded as each row's provenance"],
   ["https://github.com/Aburcham110/", "this app's own repositories (tool CLI links)"],
+  ["https://www.bpa.gov/-/media/Aep/energy-efficiency/residential/residential-ptcs-essentials/ptcs-esp-cfm-lookup-tables-final.pdf", "BPA PTCS ESP–CFM lookup tables: the cited source for the psychrometrics cfm/ton and TESP notes (tools/psychro-ui.js)"],
   ["http://www.w3.org/2000/svg", "SVG XML namespace string, not a link"],
   ["https://apps.apple.com/us/app/carrier-service-technician/", "App Store listing of Carrier's official technician app"],
 ];

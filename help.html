@@ -8,7 +8,7 @@
   <link rel="icon" href="icon-192.png" type="image/png" />
   <meta http-equiv="Cache-Control" content="no-cache" />
   <title>Help — Service Tech</title>
-  <link rel="stylesheet" href="styles.css?v=30" />
+  <link rel="stylesheet" href="styles.css?v=31" />
 </head>
 <body>
   <div class="app help">
@@ -75,19 +75,32 @@
     <p>Only numbers you saw on Check are filled; blanks stay blank. Discharge pressure goes into liquid pressure for subcooling (line loss isn't counted). The file never leaves the phone and it works offline. You can always type the readings instead.</p>
   </details>
 
+  <details class="help-sec" id="psychro">
+    <summary>7. Psychrometrics (air-side capacity)</summary>
+    <p>Home → <a href="psychro.html">Psychrometrics</a>. Four steps, one per screen:</p>
+    <ol>
+      <li><strong>Return</strong>: dry bulb (°F) plus RH (%) or wet bulb (°F).</li>
+      <li><strong>Supply</strong>: the same for the air leaving the coil.</li>
+      <li><strong>Air</strong>: altitude (ft) or barometer (inHg or psia; blank = sea level), airflow (cfm), and where the cfm was measured (supply by default). TESP (inH₂O) and rated tons are optional.</li>
+      <li><strong>Results</strong>: total, sensible and latent Btu/h, tons, SHR, cfm/ton, coil leaving dew point and every point property. <strong>Copy results</strong> puts the text on the clipboard.</li>
+    </ol>
+    <p>When you enter altitude or a barometer reading, the density-corrected total is shown first. The 4.5 / 1.08 / 0.68 numbers are labeled <em>standard air</em>. The default SHR is sensible ÷ standard-air total; the alternative (sensible ÷ (sensible + latent)) is shown and labeled.</p>
+    <p>Orange <strong>Check probes</strong> notes mean a reading looks physically off (supply not colder than return, RH at or near 100%, wet bulb above dry bulb). They are not standards. The only range notes are cited from the BPA PTCS document (325–500 cfm/ton; most manufacturers suggest 0.5 inH₂O TESP or less). Numbers only. Compare with OEM data.</p>
+  </details>
+
   <details class="help-sec" id="tools">
-    <summary>7. Tools</summary>
+    <summary>8. Tools</summary>
     <ul id="help-tools" class="help-tools"></ul>
   </details>
 
   <details class="help-sec" id="updates">
-    <summary>8. Updates</summary>
+    <summary>9. Updates</summary>
     <p>The version is at the bottom of every page (for example “Version v29”).</p>
     <p>To update: <strong>fully close the app</strong> (swipe it away from recent apps), then open it again while online. If the version still looks old, close and reopen once more.</p>
   </details>
 
   <details class="help-sec" id="feedback">
-    <summary>9. Send feedback</summary>
+    <summary>10. Send feedback</summary>
     <form id="feedback-form" class="feedback-form">
       <label for="feedback-msg">What worked, what didn't, what you'd like:</label>
       <textarea id="feedback-msg" name="message" rows="5" maxlength="1000" required></textarea>
@@ -98,8 +111,8 @@
     </form>
   </details>
   </div>
-  <script src="version.js?v=30"></script>
-  <script src="app.js?v=30"></script>
-  <script type="module" src="tools/help-app.js?v=30"></script>
+  <script src="version.js?v=31"></script>
+  <script src="app.js?v=31"></script>
+  <script type="module" src="tools/help-app.js?v=31"></script>
 </body>
 </html>

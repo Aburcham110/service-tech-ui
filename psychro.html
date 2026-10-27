@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1419" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" type="image/png" />
+  <meta http-equiv="Cache-Control" content="no-cache" />
+  <title>Psychrometrics — Service Tech</title>
+  <link rel="stylesheet" href="styles.css?v=31" />
+</head>
+<body>
+  <div class="app help">
+<body>
+  <div class="app psychro">
+  <header class="app-header">
+    <a class="back" href="index.html" aria-label="Back">←</a>
+    <h1>Psychrometrics</h1>
+  </header>
+    <div class="stepper" role="tablist">
+      <button type="button" class="step-pill active" data-step="return">Return</button>
+      <button type="button" class="step-pill" data-step="supply">Supply</button>
+      <button type="button" class="step-pill" data-step="air">Air</button>
+      <button type="button" class="step-pill" data-step="results">Results</button>
+    </div>
+
+    <section class="psy-panel" id="panel-return">
+      <p class="tool-meta">Return air (entering the coil).</p>
+      <label class="field"><span>Return dry bulb (°F)</span><input id="retDb" type="number" inputmode="decimal" step="any" /></label>
+      <div class="row">
+        <label class="field"><span>Humidity input</span><select id="retHumMode"><option value="rh">RH (%)</option><option value="wb">Wet bulb (°F)</option></select></label>
+        <label class="field"><span id="retHumLabel">Return RH (%)</span><input id="retHum" type="number" inputmode="decimal" step="any" /></label>
+      </div>
+    </section>
+
+    <section class="psy-panel hidden" id="panel-supply">
+      <p class="tool-meta">Supply air (leaving the coil).</p>
+      <label class="field"><span>Supply dry bulb (°F)</span><input id="supDb" type="number" inputmode="decimal" step="any" /></label>
+      <div class="row">
+        <label class="field"><span>Humidity input</span><select id="supHumMode"><option value="rh">RH (%)</option><option value="wb">Wet bulb (°F)</option></select></label>
+        <label class="field"><span id="supHumLabel">Supply RH (%)</span><input id="supHum" type="number" inputmode="decimal" step="any" /></label>
+      </div>
+    </section>
+
+    <section class="psy-panel hidden" id="panel-air">
+      <div class="row">
+        <label class="field"><span>Pressure from</span><select id="pressureMode"><option value="altitudeFt">Altitude (ft)</option><option value="inHg">Barometer (inHg)</option><option value="psia">Barometer (psia)</option></select></label>
+        <label class="field"><span id="pressureLabel">Altitude (ft)</span><input id="pressureValue" type="number" inputmode="decimal" step="any" placeholder="Blank = sea level" /></label>
+      </div>
+      <label class="field"><span>Airflow (cfm)</span><input id="cfm" type="number" inputmode="decimal" step="any" /></label>
+      <label class="field"><span>Airflow measured in</span><select id="airflowAt"><option value="supply">Supply air (default)</option><option value="return">Return air</option></select></label>
+      <div class="row">
+        <label class="field"><span>TESP (inH₂O, optional)</span><input id="tesp" type="number" inputmode="decimal" step="any" /></label>
+        <label class="field"><span>Rated tons (optional)</span><input id="ratedTons" type="number" inputmode="decimal" step="any" /></label>
+      </div>
+    </section>
+
+    <section class="psy-panel hidden" id="panel-results">
+      <div id="psy-results" aria-live="polite"></div>
+      <button type="button" class="btn btn-copy" id="psy-copy">Copy results</button>
+    </section>
+
+    <div class="nav-row">
+      <button type="button" class="btn btn-secondary" id="psy-back">Back</button>
+      <button type="button" class="btn btn-primary" id="psy-next">Next</button>
+    </div>
+    <p class="footer-note">Numbers only, from PsychroLib (ASHRAE Fundamentals Ch. 1 equations). Compare with OEM data. Works offline.</p>
+  </div>
+  <script src="version.js?v=31"></script>
+  <script src="app.js?v=31"></script>
+  <script type="module" src="tools/psychro-app.js?v=31"></script>
+</body>
+</html>
