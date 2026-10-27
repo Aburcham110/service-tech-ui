@@ -1,6 +1,6 @@
 /** Compute / diagnostic logic (part 1) — educational approximations */
 
-import { PT } from "./pt-tables.js?v=24";
+import { PT } from "./pt-tables.js?v=25";
 
 function satTemp(ref, psig, side = "dew") {
   const t = PT[ref];
