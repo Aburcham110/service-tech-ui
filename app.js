@@ -353,15 +353,36 @@
     window.addEventListener("offline", updateIndicator);
     updateIndicator();
     // Retry queued "Send missing model" posts at app start and whenever the phone comes back online.
-    import("./tools/missing-model.js?v=25").then((m) => m.startMissingSender()).catch(() => {});
+    import("./tools/missing-model.js?v=26").then((m) => m.startMissingSender()).catch(() => {});
     if (!("serviceWorker" in navigator) || window.__stSwRegistered) return;
     window.__stSwRegistered = true;
-    navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(console.error);
-    navigator.serviceWorker.addEventListener("controllerchange", askCacheStatus);
+    const hadController = !!navigator.serviceWorker.controller;
+    // updateViaCache "none": check sw.js and version.js past the HTTP cache (Pages sends max-age=600).
+    navigator.serviceWorker.register("./sw.js", { scope: "./", updateViaCache: "none" })
+      .then((reg) => reg && reg.update && reg.update().catch(() => {})).catch(console.error);
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      askCacheStatus();
+      // The new version applies right away: reload once (guarded against loops in version.js).
+      if (self.stOnControllerChange) {
+        try { self.stOnControllerChange({ hadController, storage: sessionStorage, reload: () => location.reload(), now: Date.now() }); } catch (e) { /* storage blocked: skip */ }
+      }
+    });
     navigator.serviceWorker.ready.then(askCacheStatus);
   }
 
+  // Visible version label in the footer, from the same constant as the service-worker cache name.
+  function showVersion() {
+    const v = self.APP_VERSION;
+    if (!v || document.querySelector(".app-version")) return;
+    const p = document.createElement("p");
+    p.className = "footer-note app-version";
+    p.textContent = "Version " + v;
+    const host = document.querySelector("main") || document.body;
+    host.appendChild(p);
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
+    showVersion();
     initPwa();
     const p = page();
     if (p.includes("call")) initCall();

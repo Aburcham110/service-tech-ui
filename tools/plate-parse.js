@@ -11,7 +11,7 @@
  * or defaulted: a field that isn't on the plate stays absent (blank).
  */
 
-import { parseHeaderRow, partNumbers, fixHeatcraftModel, HEATCRAFT_MODEL, HEATCRAFT_SERIAL, parseRefrigerantTable, gridFields } from "./plate-heatcraft.js?v=25";
+import { assignIdsByPattern, parseHeaderRow, partNumbers, fixHeatcraftModel, HEATCRAFT_MODEL, HEATCRAFT_SERIAL, parseRefrigerantTable, gridFields } from "./plate-heatcraft.js?v=26";
 
 export const LOW_CONFIDENCE = 0.6;
 /** Stricter bar for identifiers: a wrong model/serial costs a wrong part or warranty lookup. */
@@ -246,6 +246,8 @@ function sparseIdent(rawLines, i, restBefore) {
     if (!value && /^[A-Z]{5,}$/.test(chunk)) continue; // junk word before the value
     if (toks.length > 4 || !/^[A-Z0-9-]{1,14}$/.test(chunk) || value.length + chunk.length > 14) break;
     if (value && /\d/.test(value) && /^[A-Z]{4,}$/.test(chunk)) break;
+    // Stray OCR bits ("fe", "lc"): lowercase or 1-3 letters never extend an identifier.
+    if (/^[a-z]+$/.test(toks.join("")) || (value && /^[A-Z]{1,3}$/.test(chunk))) break;
     value += chunk; raw += " / " + l; used++;
   }
   if (!used || value.length < 6 || (value.match(/\d/g) || []).length < 2) return null;
@@ -695,14 +697,28 @@ export function parsePlate(input) {
   put("brand", parseBrand(rawLines));
   const ut = parseUnitType(rawLines.join("\n"));
   if (ut) fields.unitType = { value: ut.value, confidence: ut.quality, quality: ut.quality, ocr: null, raw: ut.raw };
-  const header = parseHeaderRow(rawLines);
+  const brand0 = fields.brand && fields.brand.value;
+  // Heatcraft: assign by value shape (P/N, model, serial), never by header order or line joining.
+  const byShape = brand0 === "Heatcraft" ? assignIdsByPattern(rawLines) : null;
+  const header = byShape ? null : parseHeaderRow(rawLines);
   const partNos = partNumbers(rawLines, header);
-  const identRaw = header ? {} : { model: parseIdent(rawLines, MODEL_LABEL, SERIAL_LABEL, "first", sparse, partNos), serial: parseIdent(rawLines, SERIAL_LABEL, MODEL_LABEL, "second", sparse, partNos) };
+  if (byShape && byShape.part) partNos.add(byShape.part);
+  // A Heatcraft model off the LCH/BCH pattern (e.g. PTN030H2B) still comes from its label, never sparse-joined.
+  if (byShape && !byShape.model) { const m = parseIdent(rawLines, MODEL_LABEL, SERIAL_LABEL, "first", false, partNos); if (m && !/^\d{8}$/.test(String(m.value).replace(/[^0-9A-Za-z]/g, ""))) byShape.model = m.value, byShape.modelRaw = m.raw || m.value, byShape.modelOk = false, byShape.modelFromLabel = m; }
+  const identRaw = header || byShape ? {} : { model: parseIdent(rawLines, MODEL_LABEL, SERIAL_LABEL, "first", sparse, partNos), serial: parseIdent(rawLines, SERIAL_LABEL, MODEL_LABEL, "second", sparse, partNos) };
   if (header) {
     // PART NO | MODEL NO | SERIAL NO header row: values by column, in the order printed.
     put("partNo", { value: header.part, raw: header.part, quality: 0.9, note: "PART NO column" });
     put("model", { value: header.model, raw: header.model, quality: 0.95, note: "MODEL NO column" });
     put("serial", { value: header.serial, raw: header.serial, quality: 0.95, note: "SERIAL NO column" });
+  } else if (byShape) {
+    if (byShape.part) put("partNo", { value: byShape.part, raw: byShape.part, quality: 0.9, note: "8-digit part number" });
+    if (byShape.modelFromLabel) put("model", byShape.modelFromLabel);
+    else if (byShape.model) {
+      put("model", { value: byShape.model, raw: byShape.modelRaw, quality: byShape.modelOk ? 0.95 : 0.45, note: byShape.modelOk ? "Heatcraft model pattern" : undefined });
+      if (byShape.modelChanged) { fields.model.value = byShape.modelRaw; } // fixed (and flagged) below
+    }
+    if (byShape.serial) put("serial", { value: byShape.serial, raw: byShape.serial, quality: 0.95, note: "Heatcraft serial pattern" });
   } else {
     put("model", identRaw.model);
     put("serial", identRaw.serial);
@@ -720,8 +736,9 @@ export function parsePlate(input) {
   // A part number is never the model or serial, and one value never fills both.
   const idn = (v) => String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   for (const k of ID_FIELDS) if (fields[k] && [...partNos].some((p) => idn(p) === idn(fields[k].value))) { delete fields[k]; delete identRaw[k]; }
+  for (const k of ID_FIELDS) if (fields[k] && [...partNos].some((p) => p.length >= 6 && idn(fields[k].value).startsWith(idn(p)))) { delete fields[k]; delete identRaw[k]; }
   if (fields.model && fields.serial && idn(fields.model.value) === idn(fields.serial.value)) for (const k of ID_FIELDS) { delete fields[k]; delete identRaw[k]; }
-  if (fields.model && !header) checkModel(fields.model, brandName, rawLines);
+  if (fields.model && !header && !byShape) checkModel(fields.model, brandName, rawLines);
   else if (fields.model && MODEL_PATTERNS[brandName] && !MODEL_PATTERNS[brandName].test(String(fields.model.value))) { fields.model.confidence = round(Math.min(fields.model.confidence, 0.45), 2); fields.model.note += "; doesn't fit the usual " + brandName + " model format"; }
   if (fields.serial) checkSerial(fields.serial, brandName);
   for (const [k, r] of [["model", identRaw.model], ["serial", identRaw.serial]]) {
@@ -757,11 +774,14 @@ export function parsePlate(input) {
       if (app || outdoor) fields.application = { value: [app ? "walk-in " + app.toLowerCase() : null, outdoor ? "outdoor" : null].filter(Boolean).join(", "), confidence: 0.85, quality: 0.85, ocr: null, raw: app || "FOR OUTDOOR USE" };
     }
   }
-  const rt = parseRefrigerantTable(rawLines);
+  const rt = parseRefrigerantTable(rawLines, { anywhere: isHC });
   if (rt && (isHC || rt.rows.length >= 2)) {
     // Approved-refrigerant table: list them all, or leave it blank when any row can't be read.
     delete fields.refrigerant;
-    if (!rt.unread.length && rt.rows.length) { put("refrigerant", { value: rt.value, raw: rt.rows.map((r) => r.raw).join(" "), quality: 0.9, note: "approved refrigerants (" + rt.rows.length + " rows)" }); fields.refrigerant.list = rt.list; }
+    // Garbled tokens are snapped only on a unique match; snapped or partial lists are always flagged.
+    put("refrigerant", { value: rt.value, raw: rt.rows.map((r) => r.raw).join(" "), quality: 0.9, note: "approved refrigerants (" + rt.rows.length + " rows)" + (rt.corrected ? "; snapped from OCR " + rt.rows.map((r) => r.raw).join(", ") : "") + (rt.unread.length ? "; unreadable row(s): " + rt.unread.join(", ") : "") });
+    fields.refrigerant.list = rt.list;
+    if (rt.corrected || rt.unread.length) fields.refrigerant.confidence = round(Math.min(fields.refrigerant.confidence, 0.55), 2);
   }
   if (/THERMALLY\s+PROTECTED/i.test(text)) fields.protection = { value: "thermally protected", confidence: 1, quality: 1, ocr: null, raw: "THERMALLY PROTECTED" };
 
@@ -798,6 +818,13 @@ export function parsePlate(input) {
     }
   }
   put("fanFla", numField(fan));
+  if (isHC) {
+    // Cond-fan row "1/3 3.5" or "1/3..3.5": FLA is the amps token right after the HP fraction.
+    for (const l of lines) {
+      const m = l.match(/\b1\/\d{1,2}\s*[.,:;\-_ ]*\s*(\d{1,2}[.,]\d{1,2})(?![\d\/])/);
+      if (m) { const v = Number(m[1].replace(",", ".")); if (v > 0 && v < 15) { fields.fanFla = { value: v, raw: m[0], confidence: 0.85, note: "after the fan HP in the cond-fan row" }; break; } }
+    }
+  }
   put("mca", numField(labelledAll(lines, /\b(?:MCA|M\.\s?C\.\s?A\.?|MIN(?:IMUM)?\.?\s*(?:SUPPLY\s*)?(?:CIRCUIT|CIR\.?|CKT\.?)\s*(?:AMP(?:ACITY|S)?|AMPS?)\.?)/, { prevLine: true })[0]));
   const STD_OCP = [3, 6, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 110, 125, 150, 175, 200, 225, 250, 300, 350, 400];
   put("mop", numField(labelledAll(lines, /\b(?:MOCP|MOP|M\.\s?O\.\s?C\.?\s?P\.?|M\.\s?O\.\s?P\.?|MAX(?:IMUM)?\.?\s*(?:OVER\s*CURRENT\s*(?:PROT(?:ECTION|\.)?(?:\s*DEVICE)?)?|O\.?C\.?P\.?|FUSE(?:\s*(?:\/|OR)\s*(?:MAX\.?\s*)?(?:HACR\s*)?(?:TYPE\s*)?(?:CKT[.,]?\s*|CIRCUIT\s*)?(?:BKR[.,]?|BREAKER))?(?:\s*SIZE)?|(?:CKT[.,]?\s*|CIRCUIT\s*)?(?:BKR|BREAKER)))/, { skipParen: true, prevLine: true, marks: true }).filter((r) => STD_OCP.includes(r.num))[0]));
@@ -808,6 +835,16 @@ export function parsePlate(input) {
     names.forEach((n) => { const f = fields[n]; if (!f) return; f.confidence = round(f.confidence * 0.5, 2); f.note = f.note ? f.note + "; " + note : note; });
   };
   const g = (n) => fields[n] && fields[n].value;
+  if (isHC && !fields.defrostA) {
+    // Text fallback (no word boxes): "DEFROST HEATER MAX AMPS 30", or the number on the next line.
+    for (let i = 0; i < lines.length; i++) {
+      if (!/\bDEFROST\b.*\bAMPS?\b/i.test(lines[i])) continue;
+      const m = lines[i].match(/\bAMPS?\b\s*[:.]?\s*(\d{1,2})\s*$/i) || (lines[i + 1] || "").match(/^\s*(\d{1,2})\s*$/);
+      if (m) fields.defrostA = { value: Number(m[1]), raw: m[1], confidence: 0.85 };
+      break;
+    }
+  }
+  saneFanFla(fields, isHC);
   chk(g("rla") != null && g("lra") != null && g("lra") <= g("rla"), ["rla", "lra"], "LRA should exceed RLA");
   chk(g("mca") != null && g("mop") != null && g("mop") < g("mca"), ["mca", "mop"], "MOP below MCA");
   chk(g("mca") != null && g("rla") != null && g("mca") < g("rla"), ["mca", "rla"], "MCA below RLA");
@@ -833,6 +870,16 @@ export function parsePlate(input) {
  * @param {Array<{name:string, parsed:ReturnType<typeof parsePlate>}>} list
  */
 const passWeight = (p) => { const c = p.confidence != null ? p.confidence : p.parsed && p.parsed.passConfidence; return c != null ? Math.pow(Math.max(1, c) / 100, 3) : 1; };
+/** Fan FLA can't reuse another field's value (the LRA bleeding over), must be under RLA, and under 15 A on Heatcraft. Else blank. */
+export function saneFanFla(fields, isHC) {
+  const f = fields.fanFla;
+  if (!f) return;
+  const v = Number(f.value);
+  const reused = ["lra", "rla", "mca", "mop", "voltage", "hz", "compA", "totalA", "defrostA", "evapFanA", "crankcaseW"].some((k) => fields[k] && Number(fields[k].value) === v);
+  const rla = fields.rla && Number(fields.rla.value);
+  if (reused || (isHC && v >= 15) || (rla && isHC && v >= rla)) delete fields.fanFla;
+}
+
 const AMP_FIELDS = ["rla", "lra", "fanFla", "mca", "mop", "compA", "totalA"];
 const INFERRED = /decimal point inferred/;
 export function mergeParses(list) {
@@ -876,7 +923,13 @@ export function mergeParses(list) {
       const votesFor = (k) => got.filter((f) => key(f, n) === k).length;
       const maxVotes = Math.max(...distinct.map(votesFor));
       // Flag when no weighted majority, or when the weight picked a value fewer passes read.
-      if (top * 2 <= total || votesFor(key(best, n)) < maxVotes) {
+      const second = [...tally.values()].sort((a, b) => b - a)[1] || 0;
+      // Also flag a near tie: a runner-up within 25% of the winner's weight.
+      const nearTie = second >= top * 0.75;
+      // Amps near tie: the most confident pass's read wins (got[0]); any near tie is flagged.
+      if (nearTie && AMP_FIELDS.includes(n)) Object.assign(best, got[0]);
+      // A majority of weaker passes outvoting the most confident pass is flagged too.
+      if (top * 2 <= total || votesFor(key(best, n)) < maxVotes || nearTie || key(best, n) !== key(got[0], n)) {
         best.confidence = round(best.confidence * 0.55, 2);
         best.note = (best.note ? best.note + "; " : "") + "passes disagree: " + distinct.map((d) => JSON.parse(d)).join(" vs ");
       }
@@ -905,5 +958,6 @@ export function mergeParses(list) {
   // Keep only the hint that matches the merged unit type.
   const ut = fields.unitType && fields.unitType.value;
   const lowConfidence = Object.keys(fields).filter((k) => fields[k].confidence < lowBar(k));
+  saneFanFla(fields, !!(fields.brand && fields.brand.value === "Heatcraft"));
   return { fields, lowConfidence, hints: ut === "indoor" ? hints.slice(0, 1) : [], bestPass, text: list.length ? list.find((p) => p.name === bestPass).parsed.text : "" };
 }

@@ -101,20 +101,23 @@ const ROW_TOK = /^[R1A][A-Z0-9\/|€]{3,12}$/;
  * Refrigerant table rows below the TYPE header. Returns {value, list, rows, unread} or null.
  * value lists every approved refrigerant ("R-404A/R-507A, R-407C, ...").
  */
-export function parseRefrigerantTable(rawLines) {
-  const h = rawLines.findIndex((l) => /^\W*TYPE\b/i.test(l) || /\bTYPE\b.*\bMIN\b/i.test(l));
-  if (h < 0) return null;
+export function parseRefrigerantTable(rawLines, { anywhere = false } = {}) {
+  let h = rawLines.findIndex((l) => /^\W*TYPE\b/i.test(l) || /\bTYPE\b.*\bMIN\b/i.test(l));
+  if (h < 0 && !anywhere) return null;
+  const end = h < 0 ? rawLines.length : Math.min(rawLines.length, h + 30);
   const rows = [], unread = [];
-  for (let k = h + 1; k < Math.min(rawLines.length, h + 30); k++) {
-    if (/applications|WARNING|ADVERTENC/i.test(rawLines[k])) break;
+  for (let k = h + 1; k < end; k++) {
+    if (h >= 0 && /applications|WARNING|ADVERTENC/i.test(rawLines[k])) break;
     const tok = rawLines[k].split(/\s+/)[0].replace(/[^A-Za-z0-9\/|€]/g, "").toUpperCase();
     if (!ROW_TOK.test(tok)) continue;
     const r = snapRow(tok);
-    if (r) rows.push({ raw: tok, refs: r }); else if (/\d/.test(tok)) unread.push(tok);
+    if (r) { if (h >= 0 || r.length > 1 || /^R4\d\d[A-Z]$/.test(tok)) rows.push({ raw: tok, refs: r }); }
+    else if (/\d/.test(tok) && (h >= 0 || /^R/.test(tok) && (tok.includes("/") || tok.length >= 9))) unread.push(tok);
   }
-  if (rows.length + unread.length < 2) return null;
+  if (rows.length + unread.length < 2 || !rows.length) return null;
   const list = [...new Set(rows.flatMap((r) => r.refs))];
-  return { value: rows.map((r) => r.refs.map(fmtR).join("/")).join(", "), list, rows, unread };
+  const corrected = rows.some((r) => r.raw.replace(/\//g, "") !== r.refs.join(""));
+  return { value: rows.map((r) => r.refs.map(fmtR).join("/")).join(", "), list, rows, unread, corrected };
 }
 
 // ---------- grid cells via word boxes ----------
@@ -201,4 +204,31 @@ export function gridFields(words) {
     if (one(mins) && one(maxs)) out.tempRange = { value: one(mins) + " to " + one(maxs) + " °F", raw: one(mins) + " " + one(maxs), quality: 0.85 };
   }
   return out;
+}
+
+/**
+ * Model / serial / P/N by value shape, not by header order (PSM 11 scrambles the header labels):
+ *   8 digits -> P/N; letter+2 digits+letter+digits -> serial; LCH/BCH-style -> model.
+ * Looks only near the PART/MODEL/SERIAL labels. Tokens are never joined across lines.
+ * Returns {part, model, serial, modelChanged, modelRaw, modelOk} (any may be missing) or null.
+ */
+export function assignIdsByPattern(rawLines) {
+  const LBL = /\b(?:PART|MODEL|SER[I1l]AL)\s*N[O0]\b/i;
+  const idx = rawLines.map((l, i) => (LBL.test(l) ? i : -1)).filter((i) => i >= 0);
+  if (!idx.length) return null;
+  const out = {};
+  for (let k = idx[0]; k < Math.min(rawLines.length, idx[0] + 12); k++) {
+    if (k > idx[0] && /\bV[O0]LTS?\b|\bPHASE\b|\bHERTZ\b/i.test(rawLines[k])) break;
+    for (const t0 of rawLines[k].replace(/\b(?:PART|MODEL|SER[I1l]AL)\s*N[O0]\.?/gi, " ").split(/\s+/)) {
+      const t = cleanTok(t0);
+      if (!t) continue;
+      if (/^\d{8}$/.test(t)) { if (!out.part) out.part = t; continue; }
+      if (HEATCRAFT_SERIAL.test(t)) { if (!out.serial) out.serial = t; continue; }
+      if (/^[LBP]C[A-Z0-9]{10,16}$/.test(t) && !out.model) {
+        const fx = fixHeatcraftModel(t);
+        out.model = fx.ok ? fx.value : t; out.modelRaw = t; out.modelChanged = fx.ok && fx.changed; out.modelOk = fx.ok;
+      }
+    }
+  }
+  return out.part || out.model || out.serial ? out : null;
 }

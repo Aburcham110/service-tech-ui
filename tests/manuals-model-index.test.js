@@ -115,7 +115,7 @@ test("generator: Model Manual Index rows -> models/prefixes/templates; non-offic
 
 test("offline: the index is precached at the current version, PDFs never are, cross-origin is network-only", () => {
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  const v = sw.match(/const VERSION = "v(\d+)"/)[1];
+  const v = readFileSync(new URL("../version.js", import.meta.url), "utf8").match(/APP_VERSION = "v(\d+)"/)[1];
   assert.ok(sw.includes('"./data/manuals-index.json?v=' + v + '"'));
   assert.ok(!/\.pdf/i.test(sw));
   assert.match(sw, /url\.origin !== self\.location\.origin\) return;/);

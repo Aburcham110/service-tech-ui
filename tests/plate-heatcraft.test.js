@@ -52,7 +52,7 @@ test("heatcraft: serial format letter+2 digits+letter+digits; voting prefers the
   assert.ok(HEATCRAFT_SERIAL.test("T21C05997")); assert.ok(!HEATCRAFT_SERIAL.test("121C059917"));
   const good = { name: "a psm11", confidence: 60, parsed: parsePlate({ text: PSM6 }) };
   const off = { name: "b psm11", confidence: 72, parsed: parsePlate({ text: PSM6.replace("T21C05997", "121C059917") }) };
-  assert.ok(off.parsed.fields.serial.confidence <= 0.5);
+  assert.equal(off.parsed.fields.serial, undefined, "an off-format serial is left blank, never guessed");
   assert.equal(mergeParses([off, good]).fields.serial.value, "T21C05997");
 });
 
@@ -69,7 +69,10 @@ test("refrigerant snapping: unique matches only, every approved refrigerant list
   assert.equal(snapRow("RADAAIRG07A"), null, "G07A is not unambiguous");
   const plate = "HEATCRAFT\nTYPE MIN MAX/COOLER FREEZER\nRADAAIRSO7A —40 0 3.15\nRAOTAIRAOTF —40 0 3.15\nRAOTC —40 0 3.15\nRA4BAIRA49A —40 0 3.15\n";
   assert.equal(parsePlate(plate).fields.refrigerant.value, "R-404A/R-507A, R-407A/R-407F, R-407C, R-448A/R-449A");
-  assert.equal(parsePlate(plate.replace("RAOTC", "RA9QC")).fields.refrigerant, undefined, "an unreadable row leaves it blank");
+  const part = parsePlate(plate.replace("RAOTC", "RA9QC")).fields.refrigerant;
+  assert.equal(part.value, "R-404A/R-507A, R-407A/R-407F, R-448A/R-449A", "readable rows are still listed");
+  assert.match(part.note, /unreadable row\(s\): RA9QC/);
+  assert.ok(part.confidence <= 0.55, "a partial or snapped list is flagged");
 });
 
 test("amps: decimal restored when another pass agrees; a lone no-decimal value is flagged", () => {
