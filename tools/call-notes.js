@@ -128,9 +128,10 @@ const NOISE = /^(note|verify|tip|educational)\b|^\[approx\]|^---|^need |^(mode|t
 /** Key result lines: "Label: value" lines (units kept), minus notes/caveats; checklists add their first 3 steps. */
 export function toolKeyLines(lines) {
   const ls = (Array.isArray(lines) ? lines : String(lines || "").split("\n")).map((s) => String(s).trim()).filter(Boolean);
-  const kv = ls.filter((l) => /^[^:]{1,40}:\s*\S/.test(l) && !NOISE.test(l));
-  const steps = ls.filter((l) => /^\d+\.\s/.test(l)).slice(0, 3);
-  return kv.concat(steps);
+  const isStep = (l) => /^\d+\.\s/.test(l);
+  const kv = ls.filter((l) => !isStep(l) && /^[^:]{1,40}:\s*\S/.test(l) && !NOISE.test(l));
+  const steps = ls.filter(isStep).slice(0, 3);
+  return [...new Set(kv.concat(steps))];
 }
 /** Tool result as a call entry; SH/SC also carries its inputs for the Readings step. */
 export function toolEntry(tool, fields, lines) {
