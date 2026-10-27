@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="Service Tech" />
   <meta http-equiv="Cache-Control" content="no-cache" />
   <title>New call — Service Tech</title>
-  <link rel="stylesheet" href="styles.css?v=32" />
+  <link rel="stylesheet" href="styles.css?v=33" />
 </head>
 <body>
   <div class="app">
@@ -92,8 +92,14 @@
 
     <section id="panel-close" class="hidden">
       <label class="field"><span>Fixed</span><textarea id="fixed" placeholder="Resolution"></textarea></label>
-      <div class="phrase-chips" data-for="fixed" aria-label="Quick phrases for Fixed"></div>
-      <label class="field"><span>Parts used</span><textarea id="partsUsed" placeholder="Parts / materials"></textarea></label>
+      <div class="phrase-chips" data-for="fixed" data-set="close" aria-label="Resolution phrases for Fixed"></div>
+      <div class="parts-list" id="parts-list">
+        <h2 class="psy-h">Parts used</h2>
+        <div id="parts-rows"></div>
+        <button type="button" class="btn btn-secondary" id="parts-add">+ Add part</button>
+      </div>
+      <input type="hidden" id="partsList" />
+      <input type="hidden" id="partsUsed" />
       <div class="row">
         <label class="field"><span>End date</span><input id="endDate" type="date" /></label>
         <label class="field"><span>End time</span><input id="endTime" type="time" /></label>
@@ -108,10 +114,10 @@
     </div>
     <p class="footer-note"><button type="button" class="btn btn-secondary" id="btn-reset" style="margin-top:12px">Clear draft</button></p>
   </div>
-  <script src="version.js?v=32"></script>
-  <script src="app.js?v=32"></script>
-  <script type="module" src="tools/call-scan.js?v=32"></script>
-  <script type="module" src="tools/call-gauge.js?v=32"></script>
-  <script type="module" src="tools/call-wizard.js?v=32"></script>
+  <script src="version.js?v=33"></script>
+  <script src="app.js?v=33"></script>
+  <script type="module" src="tools/call-scan.js?v=33"></script>
+  <script type="module" src="tools/call-gauge.js?v=33"></script>
+  <script type="module" src="tools/call-wizard.js?v=33"></script>
 </body>
 </html>

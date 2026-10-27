@@ -358,3 +358,7 @@ input.imported, select.imported { outline: 2px solid var(--warn, #e0a030); }
 .psy-chart circle { stroke: #0b1016; stroke-width: 1; }
 .psy-chart .psy-pt-ret circle { fill: #f87171; } .psy-chart .psy-pt-sup circle { fill: #38bdf8; }
 .psy-chart .psy-pt-label { fill: #e6edf3; font-size: 8px; font-weight: 700; }
+.parts-list { margin: 4px 0 14px; }
+.part-row { border: 1px solid var(--border); border-radius: 12px; padding: 10px 10px 4px; margin-bottom: 10px; }
+.part-row .pf-qty { max-width: 34%; }
+.part-remove { margin-bottom: 6px; }

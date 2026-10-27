@@ -1,6 +1,6 @@
 /** help.html: opens the section named in the URL hash, lists the real tools, wires Send feedback. */
 import { TOOLS } from "./registry.js";
-import { sendFeedback, MAX_FEEDBACK } from "./feedback.js?v=32";
+import { sendFeedback, MAX_FEEDBACK } from "./feedback.js?v=33";
 
 function openHash() {
   const id = decodeURIComponent(location.hash.slice(1));

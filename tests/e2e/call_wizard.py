@@ -71,22 +71,34 @@ async def main():
         await pg.click("[data-step=close]"); await pg.wait_for_timeout(200)
         et = await pg.eval_on_selector("#endTime", "e => e.value")
         chk("end stamped on Close", re.fullmatch(r"\d\d:\d\d", et))
-        await pg.click(".phrase-chips[data-for=fixed] .phrase-chip:has-text('Recharged by weight')")
+        chk("close chips are resolution phrases", await pg.locator(".phrase-chips[data-for=fixed] .phrase-chip:has-text('Verified operation after repair')").count() == 1 and await pg.locator(".phrase-chips[data-for=fixed] .phrase-chip:has-text('Adjusted TXV')").count() == 0)
+        await pg.click(".phrase-chips[data-for=fixed] .phrase-chip:has-text('Verified operation after repair')")
+        chk("total time shown", (await pg.inner_text("#total-time")).startswith("Total time: "))
+        for i, (pt, q, n) in enumerate([("Contactor 40A", "1", "OEM equiv"), ("Junk row", "3", ""), ("Filter-drier", "2", "")]):
+            await pg.click("#parts-add"); r = pg.locator("#parts-rows .part-row").nth(i)
+            await r.locator(".part-part").fill(pt); await r.locator(".part-qty").fill(q)
+            if n: await r.locator(".part-note").fill(n)
+        q_label = await pg.inner_text("#parts-rows .part-row >> nth=0 >> .part-qty-label") if False else await pg.locator("#parts-rows .part-row").nth(0).inner_text()
+        chk("qty has units", "Qty (ea)" in q_label)
+        await pg.click("#parts-rows .part-row >> nth=1 >> .part-remove")
+        chk("remove row", await pg.locator("#parts-rows .part-row").count() == 2)
         await pg.fill("#endDate", sd); await pg.fill("#endTime", "00:25"); await pg.wait_for_timeout(100)
         tt = await pg.inner_text("#total-time"); out["total"] = tt
         chk("total time crosses midnight", "45 min" in tt and "midnight" in tt)
 
         await pg.reload(); await pg.wait_for_timeout(800)
         vals = await pg.evaluate("['workOrder','techName','startTime','endTime','did','fixed','fla'].map(k => document.getElementById(k).value)")
-        chk("draft persists across reload", vals == ["WO-1182", "Arthur", "23:40", "00:25", "Leak checked\nEvacuated to 450 microns", "Recharged by weight", "10"])
+        chk("draft persists across reload", vals == ["WO-1182", "Arthur", "23:40", "00:25", "Leak checked\nEvacuated to 450 microns", "Verified operation after repair", "10"])
+        chk("parts persist", await pg.locator("#parts-rows .part-row").count() == 2 and await pg.locator("#parts-rows .part-row >> nth=1 >> .part-part").input_value() == "Filter-drier")
         await pg.click("#btn-copy"); await pg.wait_for_timeout(300)
         cp = (await pg.evaluate("window.__copied"))[-1]; out["copy"] = cp
         for s in ["Work order / customer #: WO-1182", "Tech: Arthur", "Start: " + sd + " 23:40", "End: " + sd + " 00:25", "Total time: 45 min (past midnight)",
-                  f"Superheat: {tsh} °F", f"Subcool: {tsc} °F", "psig", "Amps: 8.6 A = 86% of 10 A (RLA/FLA typed on the call card)", "Recharged by weight"]:
+                  f"Superheat: {tsh} °F", f"Subcool: {tsc} °F", "psig", "Amps: 8.6 A = 86% of 10 A (RLA/FLA typed on the call card)", "Verified operation after repair", "Parts used:\n- Contactor 40A × 1 ea (OEM equiv)\n- Filter-drier × 2 ea"]:
             chk("copy has " + s, s in cp)
 
         await pg.click("#btn-reset"); await pg.wait_for_timeout(300)
         chk("tech remembered after clear", await pg.eval_on_selector("#techName", "e => e.value") == "Arthur")
+        chk("parts cleared", await pg.locator("#parts-rows .part-row").count() == 0)
         chk("WO cleared", await pg.eval_on_selector("#workOrder", "e => e.value") == "")
         chk("start re-stamped", re.fullmatch(r"\d\d:\d\d", await pg.eval_on_selector("#startTime", "e => e.value")))
         await br.close()

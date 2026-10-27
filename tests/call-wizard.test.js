@@ -106,3 +106,16 @@ test("call.html: units on every reading field, header fields, chip hosts, module
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
   for (const f of ["call-extras", "call-wizard"]) assert.match(sw, new RegExp('"./tools/' + f + '\\.js\\?v=\\d+"'));
 });
+
+test("close: resolution chips, parts list parse/migrate and copy lines", () => {
+  assert.ok(X.CLOSE_PHRASES.length >= 6 && X.CLOSE_PHRASES.includes("Verified operation after repair"));
+  for (const p of X.CLOSE_PHRASES) assert.doesNotMatch(p, /\d+\s*(°F|psig|%|microns)/, "no specs in phrases: " + p);
+  assert.deepEqual(X.parseParts({}), []);
+  assert.deepEqual(X.parseParts({ partsUsed: "old text" }), [{ part: "old text", qty: "", note: "" }]);
+  assert.deepEqual(X.parseParts({ partsList: "garbage" }), []);
+  const rows = X.parseParts({ partsList: JSON.stringify([{ part: "Contactor 40A 24V coil", qty: "1", note: "OEM equiv" }, { part: "", qty: "2" }, { part: "Filter-drier", qty: "2" }]) });
+  assert.deepEqual(X.partsLines(rows), ["- Contactor 40A 24V coil × 1 ea (OEM equiv)", "- Filter-drier × 2 ea"]);
+  const h = readFileSync(new URL("../call.html", import.meta.url), "utf8");
+  for (const id of ["parts-list", "parts-rows", "parts-add", "partsList", "endTime", "total-time"]) assert.ok(h.includes('id="' + id + '"'), id);
+  assert.ok(h.includes('data-set="close"'));
+});

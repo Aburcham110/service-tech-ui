@@ -96,7 +96,7 @@
       suctionPsig: "", suctionTemp: "", liquidPsig: "", liquidTemp: "",
       supplyTemp: "", returnTemp: "", amps: "", fla: "", voltage: "",
       did: "", found: "", stillSeeing: "",
-      fixed: "", partsUsed: "",
+      fixed: "", partsUsed: "", partsList: "[]",
     };
   }
 
@@ -114,7 +114,7 @@
       supplyTemp: "supplyTemp", returnTemp: "returnTemp",
       amps: "amps", fla: "fla", voltage: "voltage",
       did: "did", found: "found", stillSeeing: "stillSeeing",
-      fixed: "fixed", partsUsed: "partsUsed",
+      fixed: "fixed", partsUsed: "partsUsed", partsList: "partsList",
     };
     Object.keys(map).forEach((k) => {
       const el = document.getElementById(map[k]);
@@ -171,7 +171,9 @@
       parts.push("", "MID CALL", line("Did", d.did), line("Found", d.found), line("Still seeing", d.stillSeeing));
     }
     if (idx >= 3) {
-      parts.push("", "CLOSE", line("Fixed", d.fixed), line("Parts used", d.partsUsed));
+      const pl = typeof self.stCallPartsLines === "function" ? self.stCallPartsLines(d) : [];
+      parts.push("", "CLOSE", line("Fixed", d.fixed));
+      if (pl.length) parts.push("Parts used:", ...pl); else parts.push(line("Parts used", d.partsUsed));
     }
     parts.push("", "(Educational field helper — verify with OEM / AHJ)");
     return parts.join("\n");
@@ -201,7 +203,7 @@
   /** A saved call draft with anything typed in it (beyond the defaults). */
   function draftHasContent(d) {
     const def = defaultDraft();
-    const auto = ["step", "techName", "startDate", "startTime", "endDate", "endTime"]; // stamped/remembered, not typed for this call
+    const auto = ["step", "partsList", "techName", "startDate", "startTime", "endDate", "endTime"]; // stamped/remembered, not typed for this call
     return Object.keys(d || {}).some((k) => !auto.includes(k) && d[k] !== "" && d[k] != null && d[k] !== false && d[k] !== def[k]);
   }
 
@@ -388,8 +390,8 @@
     window.addEventListener("offline", updateIndicator);
     updateIndicator();
     // Retry queued "Send missing model" posts at app start and whenever the phone comes back online.
-    import("./tools/missing-model.js?v=32").then((m) => m.startMissingSender()).catch(() => {});
-    import("./tools/feedback.js?v=32").then((m) => m.startFeedbackSender()).catch(() => {});
+    import("./tools/missing-model.js?v=33").then((m) => m.startMissingSender()).catch(() => {});
+    import("./tools/feedback.js?v=33").then((m) => m.startFeedbackSender()).catch(() => {});
     if (!("serviceWorker" in navigator) || window.__stSwRegistered) return;
     window.__stSwRegistered = true;
     const hadController = !!navigator.serviceWorker.controller;
