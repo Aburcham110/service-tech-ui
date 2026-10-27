@@ -2,7 +2,7 @@
 import { getTool } from "./registry.js";
 import { runTool } from "./logic.js?v=36";
 import { applyPrefill } from "./prefill.js?v=36";
-import { mountAddToCall, toolNote } from "./call-notes.js?v=36";
+import { mountAddToCall, toolEntry, CALL_TOOLS } from "./call-notes.js?v=36";
 
 function $(sel, el) { return (el || document).querySelector(sel); }
 
@@ -128,7 +128,9 @@ function mount(tool) {
   root.appendChild(out);
   const addHost = document.createElement("div");
   root.appendChild(addHost);
-  const add = mountAddToCall(addHost, () => toolNote(tool.title, out.dataset.copy), { id: "tool-add-call" });
+  addHost.className = "tool-add-call-host";
+  // Reverse flow: key outputs (with units) -> the open call; SH/SC also fills empty Readings.
+  const add = CALL_TOOLS[tool.id] ? mountAddToCall(addHost, () => toolEntry(tool, readFields(form), out.dataset.copy), { id: "tool-add-call", label: "Add results to current call" }) : null;
   if (add) add.disabled = true;
 
   function run() {

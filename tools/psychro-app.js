@@ -2,6 +2,7 @@
 import { evaluate, pointRows, copyText } from "./psychro-ui.js?v=36";
 import { buildChart } from "./psychro-chart.js?v=36";
 import { prefillFromQuery } from "./psychro-link.js?v=36";
+import { mountAddToCall, psychroEntry } from "./call-notes.js?v=36";
 
 const STEPS = ["return", "supply", "air", "results"];
 const FIELDS = ["retDb", "retHumMode", "retHum", "supDb", "supHumMode", "supHum", "pressureMode", "pressureValue", "cfm", "airflowAt", "tesp", "ratedTons"];
@@ -46,6 +47,7 @@ function render() {
   const out = $("psy-results"); out.textContent = "";
   const ev = evaluate(form());
   $("psy-copy").hidden = !ev.ok;
+  if (addBtn) addBtn.disabled = !ev.ok;
   if (!ev.ok) {
     const box = el("div", "psy-warn"); box.id = "psy-problems";
     box.append(el("strong", "", "Fix these first:")); const ul = el("ul"); for (const p of ev.problems) ul.append(el("li", "", p)); box.append(ul);
@@ -115,4 +117,7 @@ $("psy-copy").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(t); $("psy-copy").textContent = "✓ Copied"; } catch (e) { $("psy-copy").textContent = "Copy failed"; }
   setTimeout(() => { $("psy-copy").textContent = "Copy results"; }, 1500);
 });
+// Reverse flow: results -> the open call (Found note; dry bulbs fill empty Supply/Return air).
+const addHost = el("div", "tool-add-call-host"); $("psy-copy").after(addHost);
+const addBtn = mountAddToCall(addHost, () => { const ev = evaluate(form()); return ev.ok ? psychroEntry(copyText(ev), form()) : null; }, { id: "psy-add-call", label: "Add results to current call" });
 go(0);

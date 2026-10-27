@@ -377,3 +377,9 @@ input.imported, select.imported { outline: 2px solid var(--warn, #e0a030); }
 .card-preview { margin-top: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
 .card-preview summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
 .card-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; margin: 8px 0 0; max-height: 50vh; overflow: auto; }
+/* Reverse flow: add tree steps / tool results to the open call */
+.tree-add-step { margin: 8px 0 4px; }
+.add-to-call-chip { cursor: pointer; color: inherit; font: inherit; font-size: 0.9rem; min-height: 36px; }
+.add-to-call-chip:active { background: var(--muted); }
+.add-to-call-status a.back-to-call { white-space: nowrap; font-weight: 600; }
+.add-to-call-hint a { white-space: nowrap; }
