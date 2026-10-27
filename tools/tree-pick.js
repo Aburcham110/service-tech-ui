@@ -8,16 +8,18 @@
  * Returns { tree, certain, choices, why }. When not certain, choices holds the 2–3 likely trees.
  * Generic routing only: no model-specific codes or specs live here.
  */
-import { brandKey, matchModel } from "./manuals.js?v=40";
+import { brandKey, matchModel } from "./manuals.js?v=41";
 
 export const TREE_LABELS = {
   "mini-split": "Ductless mini-split",
   "split-ac-hp": "Split AC / heat pump",
+  rtu: "RTU / packaged rooftop unit",
   compressor: "Compressor",
   "walk-in": "Walk-in / refrigeration",
 };
 
 const SPLIT = ["split-ac-hp", "mini-split"];
+// Packaged rooftop markers decide RTU; anything less keeps the split/packaged tree (conservative).
 // Model-number patterns (series prefixes printed on the plates).
 const PATTERNS = [
   // Fujitsu wall-mount/ductless indoor (AS..) and outdoor (AO..) units
@@ -27,6 +29,8 @@ const PATTERNS = [
   // Daikin ducted FIT/DX/DZ split systems vs Daikin ductless (FTX/FTK/RX/RK/CTX/FDMQ/MXS)
   { brand: "Daikin", re: /^(DX|DZ)/, tree: "split-ac-hp", why: "Daikin DX/DZ ducted split model" },
   { brand: "Daikin", re: /^(FTX|FTK|RX|RK|CTX|FDMQ|MXS|FVX|FFQ)/, tree: "mini-split", why: "Daikin ductless model" },
+  // York/UPG packaged rooftop series (ZS/ZF/ZJ Sun-Line and KE prefixes on the plate)
+  { brand: "York", re: /^(ZS|ZF|ZJ|KE)\d{2,3}/, tree: "rtu", why: "York/UPG packaged rooftop model" },
   // LG ductless indoor/outdoor and Multi F
   { brand: "LG", re: /^(LS|LA|LMU|LMN|LSU|LSN|LAU|LAN|KUSX)/, tree: "mini-split", why: "LG ductless model" },
 ];
@@ -47,7 +51,7 @@ const BRANDS = {
   Daikin: { choices: ["mini-split", "split-ac-hp"], why: "Daikin — model doesn't say ductless or ducted" },
   LG: { choices: ["mini-split", "split-ac-hp"], why: "LG — model doesn't say ductless or ducted" },
 };
-const EQUIP = { "mini-split": "mini-split", cooler: "walk-in", freezer: "walk-in", rack: "walk-in", rtu: "split-ac-hp", split: "split-ac-hp" };
+const EQUIP = { "mini-split": "mini-split", cooler: "walk-in", freezer: "walk-in", rack: "walk-in", rtu: "rtu", split: "split-ac-hp" };
 const norm = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 const sure = (tree, why) => ({ tree, certain: true, choices: [tree], why });
 const ask = (choices, why, hint) => {
@@ -69,14 +73,18 @@ export function pickTree({ brand, model, unitType, equipment } = {}, index = nul
   const eq = EQUIP[String(equipment || "").toLowerCase()] || null;
   if (ut === "compressor") return sure("compressor", "Scanner read a compressor nameplate");
   if (ut === "condensing unit") return sure("walk-in", "Scanner read a walk-in condensing unit plate");
+  if (ut === "packaged rooftop") return sure("rtu", "Plate shows packaged rooftop / gas-heat markers");
   const b = scanBrand(index, { brand, model });
   const m = norm(model);
   const p = b && m && PATTERNS.find((x) => x.brand === b && x.re.test(m));
   if (p) return sure(p.tree, p.why);
   const r = b && BRANDS[b];
+  // The tech picked RTU on the call card and the brand only says "split system": RTU wins.
+  if (r && r.certain && eq === "rtu" && r.tree === "split-ac-hp") return sure("rtu", r.why.replace(/split system$/, "unit") + "; call card says RTU");
   if (r && r.certain) return sure(r.tree, r.why);
   if (r) return ask(r.choices, r.why, eq);
   if (ut === "indoor" || ut === "outdoor" || ut === "packaged") {
+    if (eq === "rtu") return sure("rtu", "Scanned " + ut + " unit; call card says RTU");
     if (eq && SPLIT.includes(eq)) return sure(eq, "Scanned " + ut + " unit; call card says " + equipment);
     return ask(SPLIT, "Scanned " + ut + " unit of an unlisted brand");
   }

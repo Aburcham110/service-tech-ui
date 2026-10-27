@@ -21,5 +21,5 @@ test("query -> form values: RH wins, else WB, else humidity cleared; ignored unl
 test("wired: Readings button, back link, precached", () => {
   assert.ok(readFileSync(new URL("../call.html", import.meta.url), "utf8").includes('id="psy-link"'));
   assert.ok(readFileSync(new URL("../psychro.html", import.meta.url), "utf8").includes('id="psy-back-call" href="call.html"'));
-  assert.ok(readFileSync(new URL("../sw.js", import.meta.url), "utf8").includes('"./tools/psychro-link.js?v=40"'));
+  assert.ok(readFileSync(new URL("../sw.js", import.meta.url), "utf8").includes('"./tools/psychro-link.js?v=41"'));
 });

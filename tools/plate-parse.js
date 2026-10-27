@@ -11,8 +11,8 @@
  * or defaulted: a field that isn't on the plate stays absent (blank).
  */
 
-import { parseLoadTable, voltPhHz } from "./plate-loadtable.js?v=40";
-import { assignIdsByPattern, parseHeaderRow, partNumbers, fixHeatcraftModel, HEATCRAFT_MODEL, HEATCRAFT_SERIAL, parseRefrigerantTable, gridFields } from "./plate-heatcraft.js?v=40";
+import { parseLoadTable, voltPhHz } from "./plate-loadtable.js?v=41";
+import { assignIdsByPattern, parseHeaderRow, partNumbers, fixHeatcraftModel, HEATCRAFT_MODEL, HEATCRAFT_SERIAL, parseRefrigerantTable, gridFields } from "./plate-heatcraft.js?v=41";
 
 export const LOW_CONFIDENCE = 0.6;
 /** Stricter bar for identifiers: a wrong model/serial costs a wrong part or warranty lookup. */
@@ -941,6 +941,15 @@ export function parsePlate(input) {
   chk(g("mca") != null && g("mop") != null && g("mop") < g("mca"), ["mca", "mop"], "MOP below MCA");
   chk(g("mca") != null && g("rla") != null && g("mca") < g("rla"), ["mca", "rla"], "MCA below RLA");
 
+  // Packaged rooftop: gas-heat section text on a plate that also carries the cooling side, or explicit
+  // PACKAGED ROOFTOP wording. Anything weaker keeps the current type (split/packaged).
+  if (!g("unitType") || g("unitType") === "outdoor") {
+    const T = text.toUpperCase();
+    const explicit = T.match(/\b(?:PACKAGED\s+(?:ROOF\s*TOP|ROOFTOP|GAS\s*\/?\s*ELECTRIC)|ROOF\s*TOP\s+UNIT|ROOFTOP\s+UNIT)\b/);
+    const gas = T.match(/GAS[-\s]*FIRED\s+CENTRAL\s+FURNACE|FORCED\s+AIR\s+FURNACE\s+WITH\s+COO\w*|\bTYPE\s*[\/:.]?\s*(?:OF\s+)?GAS\b|\bGAS\s+SUPPLY\s+PRESS|\bMANIFOLD\s+PRESS/);
+    const cooling = fields.rla || fields.refrigerant || fields.charge || /\bCOMP\w*\b|\bR\.?L\.?A\b/.test(T);
+    if (explicit || (gas && cooling)) fields.unitType = { value: "packaged rooftop", confidence: 0.8, quality: 0.8, ocr: null, raw: (explicit || gas)[0], note: "packaged rooftop: gas-heat or rooftop markers on the plate" };
+  }
   // A bare compressor plate (thermally protected, oil, no fan/MCA/MOP) is a component, not a unit.
   if (!g("unitType") || g("unitType") === "outdoor") {
     const compPlate = (fields.protection || fields.oil || /\bCOPELAND|TECUMSEH|DANFOSS|BRISTOL\b/i.test(text)) && !fields.fanFla && !fields.mca && !fields.mop && !fields.charge;

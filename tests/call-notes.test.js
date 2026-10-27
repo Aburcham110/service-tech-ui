@@ -33,7 +33,7 @@ test("tree and tool notes", () => {
 
 test("troubleshooting button picks the tree for the equipment type", () => {
   assert.equal(treeHref(chooseTree({ equipment: "split" })), "tree.html?type=split-ac-hp");
-  assert.equal(treeHref(chooseTree({ equipment: "RTU" })), "tree.html?type=split-ac-hp");
+  assert.equal(treeHref(chooseTree({ equipment: "RTU" })), "tree.html?type=rtu");
   assert.equal(treeHref(chooseTree({ equipment: "mini-split" })), "tree.html?type=mini-split");
   assert.equal(treeHref(chooseTree({ equipment: "freezer" })), "tree.html?type=walk-in");
   assert.equal(chooseTree({ equipment: "other" }), null);
@@ -43,5 +43,5 @@ test("troubleshooting button picks the tree for the equipment type", () => {
 test("wired + precached", () => {
   assert.ok(readFileSync(new URL("../tools/tree-app.js", import.meta.url), "utf8").includes("mountAddToCall"));
   assert.ok(readFileSync(new URL("../tools/tool-app.js", import.meta.url), "utf8").includes("mountAddToCall"));
-  assert.ok(readFileSync(new URL("../sw.js", import.meta.url), "utf8").includes('"./tools/call-notes.js?v=40"'));
+  assert.ok(readFileSync(new URL("../sw.js", import.meta.url), "utf8").includes('"./tools/call-notes.js?v=41"'));
 });
