@@ -1,8 +1,8 @@
 /** Call card (call.html) extras: inline SH/SC on Readings, amps % of plate RLA/FLA, total time on Close,
  *  quick-phrase chips on Mid/Close, and the extra Copy lines (app.js calls self.stCallCopyExtras). Offline only. */
-import { inlineShSc, shScLines, ampsReference, ampsPercent, ampsLine, totalTime, PHRASES, CLOSE_PHRASES, appendPhrase, parseParts, partsLines, headerLines, readingsExtraLines } from "./call-extras.js?v=40";
-import { psychroHref, carried } from "./psychro-link.js?v=40";
-import { DRAFT_KEY, CARD_SCAN_KEY } from "./card-plate.js?v=40";
+import { inlineShSc, shScLines, ampsReference, ampsPercent, ampsLine, totalTime, PHRASES, CLOSE_PHRASES, appendPhrase, parseParts, partsLines, headerLines, readingsExtraLines } from "./call-extras.js?v=41";
+import { psychroHref, carried } from "./psychro-link.js?v=41";
+import { DRAFT_KEY, CARD_SCAN_KEY } from "./card-plate.js?v=41";
 
 const read = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null") || null; } catch (e) { return null; } };
 const $ = (id) => document.getElementById(id);

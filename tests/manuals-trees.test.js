@@ -79,8 +79,8 @@ test("generator parses the Notion markdown (sources map + manuals index)", () =>
   assert.equal(e[0].title, "Copeland Electrical Handbook 2008");
 });
 
-test("trees: the four equipment types exist and every node is well formed and reachable", () => {
-  assert.deepEqual(Object.keys(TREES).sort(), ["compressor", "mini-split", "split-ac-hp", "walk-in"]);
+test("trees: the five equipment types exist and every node is well formed and reachable", () => {
+  assert.deepEqual(Object.keys(TREES).sort(), ["compressor", "mini-split", "rtu", "split-ac-hp", "walk-in"]);
   for (const [id, t] of Object.entries(TREES)) {
     assert.ok(t.nodes[t.start], id + " start");
     const seen = new Set([t.start]), queue = [t.start];
@@ -127,7 +127,7 @@ test("chooseTree picks by equipment / scanned unit type", () => {
   assert.equal(chooseTree({ equipment: "cooler" }), "walk-in");
   assert.equal(chooseTree({ equipment: "freezer" }), "walk-in");
   assert.equal(chooseTree({ equipment: "rack" }), "walk-in");
-  assert.equal(chooseTree({ equipment: "RTU" }), "split-ac-hp");
+  assert.equal(chooseTree({ equipment: "RTU" }), "rtu");
   assert.equal(chooseTree({ equipment: "mini-split" }), "mini-split");
   assert.equal(chooseTree({ equipment: "other", unitType: "compressor" }), "compressor");
   assert.equal(chooseTree({ equipment: "split", unitType: "indoor", brand: "Fujitsu" }), "mini-split");
@@ -136,8 +136,8 @@ test("chooseTree picks by equipment / scanned unit type", () => {
 
 test("offline: new files are precached and the cache is bumped", () => {
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  for (const f of ["./tree.html", "./tools/manuals.js?v=40", "./tools/trees.js?v=40", "./tools/tree-app.js?v=40", "./data/manuals-index.json?v=40", "./manuals.html", "./tools/prefill.js?v=40", "./tools/call-card.js?v=40", "./tools/manuals-helper.js?v=40", "./tools/manuals-helper-app.js?v=40", "./tools/last-plate.js?v=40", "./tools/scan-flow.js?v=40", "./tools/missing-model.js?v=40", "./tools/tree-pick.js?v=40", "./tools/card-plate.js?v=40", "./tools/error-codes.js?v=40", "./data/error-codes.json?v=40", "./tools/heic.js?v=40", "./tools/plate-heatcraft.js?v=40", "./vendor/libheif/libheif-bundle.mjs", "./help.html", "./tools/help-app.js?v=40", "./tools/feedback.js?v=40", "./share.html", "./tools/gauge-parse.js?v=40", "./tools/gauge-import.js?v=40", "./tools/call-gauge.js?v=40", "./tools/call-extras.js?v=40", "./tools/call-wizard.js?v=40", "./vendor/pdfjs/pdf.min.mjs", "./vendor/pdfjs/pdf.worker.min.mjs", "./vendor/fflate/fflate.mjs"]) assert.ok(sw.includes('"' + f + '"'), f);
-  assert.match(readFileSync(new URL("../version.js", import.meta.url), "utf8"), /self.APP_VERSION = "v40"/);
+  for (const f of ["./tree.html", "./tools/manuals.js?v=41", "./tools/trees.js?v=41", "./tools/tree-app.js?v=41", "./data/manuals-index.json?v=41", "./manuals.html", "./tools/prefill.js?v=41", "./tools/call-card.js?v=41", "./tools/manuals-helper.js?v=41", "./tools/manuals-helper-app.js?v=41", "./tools/last-plate.js?v=41", "./tools/scan-flow.js?v=41", "./tools/missing-model.js?v=41", "./tools/tree-pick.js?v=41", "./tools/card-plate.js?v=41", "./tools/error-codes.js?v=41", "./data/error-codes.json?v=41", "./tools/heic.js?v=41", "./tools/plate-heatcraft.js?v=41", "./vendor/libheif/libheif-bundle.mjs", "./help.html", "./tools/help-app.js?v=41", "./tools/feedback.js?v=41", "./share.html", "./tools/gauge-parse.js?v=41", "./tools/gauge-import.js?v=41", "./tools/call-gauge.js?v=41", "./tools/call-extras.js?v=41", "./tools/call-wizard.js?v=41", "./vendor/pdfjs/pdf.min.mjs", "./vendor/pdfjs/pdf.worker.min.mjs", "./vendor/fflate/fflate.mjs"]) assert.ok(sw.includes('"' + f + '"'), f);
+  assert.match(readFileSync(new URL("../version.js", import.meta.url), "utf8"), /self.APP_VERSION = "v41"/);
 });
 
 const count = (b) => INDEX.brands[b].oem.length;

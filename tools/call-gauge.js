@@ -1,7 +1,7 @@
 /** Call card Readings: "Import gauge report" -> fills suction/liquid psig and line temps (+ refrigerant on Open),
  *  then shows superheat/subcooling from the SH/Subcool tool's math. Manual entry stays as is. */
-import { mountGaugeImport, SHARE_CACHE, SHARE_KEY } from "./gauge-import.js?v=40";
-import { runTool } from "./logic.js?v=40";
+import { mountGaugeImport, SHARE_CACHE, SHARE_KEY } from "./gauge-import.js?v=41";
+import { runTool } from "./logic.js?v=41";
 import { getTool } from "./registry.js";
 
 const REFS = getTool("superheat-subcool").fields.find((f) => f.name === "refrigerant").options.map((o) => o[0]);

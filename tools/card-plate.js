@@ -1,8 +1,8 @@
 /** The open call card's plate, for Troubleshooting (tree.html). The scan that was sent to the card is
  *  stored with the card (CARD_SCAN_KEY, next to the call draft); the card's own fields win, so hand-edits
  *  to the Data plate, Refrigerant or Equipment carry over. Nothing leaves the device. */
-import { plateRecord } from "./last-plate.js?v=40";
-import { parsePlate } from "./plate-parse.js?v=40";
+import { plateRecord } from "./last-plate.js?v=41";
+import { parsePlate } from "./plate-parse.js?v=41";
 
 export const DRAFT_KEY = "serviceTechCallDraft_v1"; // app.js STORAGE_KEY
 export const CARD_SCAN_KEY = "serviceTechCardScan_v1";

@@ -116,6 +116,113 @@ export const TREES = {
     },
   },
 
+  rtu: {
+    title: "RTU / packaged rooftop unit",
+    start: "start",
+    nodes: {
+      start: { text: "Packaged rooftop unit. Lock out and use the unit's wiring diagram and the plate for every value. What is the complaint?", options: [
+        { label: "No cooling / compressor not running", next: "cool-call" },
+        { label: "Poor cooling", next: "poor-airflow" },
+        { label: "No heat — gas heat", next: "gas-call" },
+        { label: "No heat — electric heat", next: "elec-call" },
+        { label: "Indoor blower not running", next: "blower" },
+        { label: "Economizer / outdoor air problem", next: "econ" },
+        { label: "Short cycling", next: "short" },
+        { label: "Frozen evaporator", next: "frozen" },
+        { label: "Condensate / float switch trips", next: "condensate" },
+        { label: "Safety lockout / flash code", next: "lockout" },
+      ] },
+
+      "cool-call": { text: "Is there a cooling call (Y, plus second-stage Y on two-stage units) at the unit's low-voltage terminal board or controller?", tools: ["electrical"], options: [
+        { label: "Yes", next: "cool-safeties" }, { label: "No", next: "cool-nocall" },
+      ] },
+      "cool-nocall": { end: true, text: "No call reaching the unit: check the thermostat or BAS/controller output and schedule, the low-voltage wiring, transformer and fuse. If a unit controller or DDC board is fitted, read its status per the OEM manual.", tools: ["electrical"] },
+      "cool-safeties": { text: "Call present. Are the safeties in the compressor circuit closed (high- and low-pressure switches, freeze stat, condensate float, any lockout on the unit control board)?", tools: ["electrical"], options: [
+        { label: "Yes, all closed", next: "cool-contactor" }, { label: "One is open / locked out", next: "cool-safety-open" },
+      ] },
+      "cool-safety-open": { end: true, text: "Find why it opened before resetting: high pressure → condenser coil, condenser fans, overcharge; low pressure → low charge, low indoor airflow, frozen coil; float → condensate (see that branch). Record any flash code and look it up in the OEM manual.", tools: ["superheat-subcool", "airflow-delta-t", "nameplate-faults"] },
+      "cool-contactor": { text: "Compressor contactor pulled in, with line voltage on the load side on all legs (check phase balance on 3-phase units)?", tools: ["electrical"], options: [
+        { label: "Yes", next: "cool-comp" }, { label: "No", next: "cool-fix-contactor" },
+      ] },
+      "cool-fix-contactor": { end: true, text: "Check supply at the disconnect and line side, fuses/breaker against the plate MOP, the contactor coil voltage and contacts, and any compressor time-delay or lockout on the control board.", tools: ["electrical", "nameplate-faults"] },
+      "cool-comp": { text: "Voltage reaches the compressor but it, or the condenser fans, won't run.", tools: ["electrical"], options: [
+        { label: "Compressor: go to the compressor tree", tree: "compressor" },
+        { label: "Condenser fan(s) not running", next: "cool-fan" },
+      ] },
+      "cool-fan": { end: true, text: "Check each condenser fan motor: supply, capacitor (if fitted) against its printed rating, windings, amps against the OD FAN FLA on the plate, and any fan-cycling or head-pressure control.", tools: ["electrical"] },
+
+      "poor-airflow": { text: "Indoor airflow first: filters, belt and sheave, blower wheel, evaporator coil, return/outside air dampers. Measure ΔT and external static. Airflow OK?", tools: ["airflow-delta-t", "duct-static", "psychrometrics"], options: [
+        { label: "Airflow problem found", next: "poor-fix-airflow" }, { label: "Airflow OK", next: "poor-charge" },
+      ] },
+      "poor-fix-airflow": { end: true, text: "Correct the airflow problem (filters, belt tension/alignment, blower speed setting, dirty coil, stuck damper), then re-measure after it stabilizes.", tools: ["airflow-delta-t", "duct-static"] },
+      "poor-charge": { text: "Read each refrigerant circuit separately (multi-circuit units have one per compressor). Superheat and subcooling after 15+ minutes running?", tools: ["superheat-subcool", "txv-eev"], options: [
+        { label: "High superheat, low subcool", next: "poor-leak" },
+        { label: "High superheat, high subcool", next: "poor-restriction" },
+        { label: "Low superheat, high subcool / high head", next: "poor-high" },
+        { label: "Both normal", next: "poor-other" },
+      ] },
+      "poor-leak": { end: true, text: "Undercharge on that circuit: leak search and repair, evacuate, then weigh in the charge printed on the plate for that system.", tools: ["leak-rate", "vacuum-coach", "charge-recovery", "a2l-checklist"] },
+      "poor-restriction": { end: true, text: "Restriction or metering fault: TXV bulb and equalizer, liquid-line drier pressure drop, kinked or crushed tubing.", tools: ["txv-eev"] },
+      "poor-high": { end: true, text: "Check the condenser coil (clean it through), condenser fans, and hot-air recirculation on the roof; if still high, recover and weigh in the plate charge.", tools: ["superheat-subcool", "charge-recovery", "electrical"] },
+      "poor-other": { end: true, text: "Charge and airflow OK: check that every compressor stage runs (second-stage Y call, second contactor), economizer not bringing in hot outside air while cooling, compressor efficiency, and the building load.", tools: ["compressor-diag", "electrical", "psychrometrics"] },
+
+      "gas-call": { text: "Gas heat. Is there a heat call (W, plus second-stage W on two-stage units) at the unit, and does the inducer motor start?", tools: ["electrical"], options: [
+        { label: "No heat call", next: "gas-nocall" },
+        { label: "Call present, inducer doesn't start", next: "gas-inducer" },
+        { label: "Inducer runs", next: "gas-ps" },
+      ] },
+      "gas-nocall": { end: true, text: "No heat call: thermostat/controller, low-voltage wiring, transformer and fuse. Check that a limit or rollout switch is not holding the control board out (see that step).", tools: ["electrical"] },
+      "gas-inducer": { end: true, text: "Check the control board's inducer output and the inducer motor: supply, capacitor if fitted, windings, wheel free and not blocked. Follow the OEM ignition-control sequence of operation.", tools: ["electrical"] },
+      "gas-ps": { text: "Inducer running: does the pressure switch close (check across it with the inducer running)?", tools: ["electrical"], options: [
+        { label: "Yes, it closes", next: "gas-ign" }, { label: "No, stays open", next: "gas-ps-open" },
+      ] },
+      "gas-ps-open": { end: true, text: "Pressure switch not proving: check the tubing and port for water, cracks or blockage, flue/vent and combustion-air openings (birds, debris, ice), the inducer wheel and speed, and a blocked heat exchanger or condensate. Test the switch against the setpoint printed on it; never jumper it.", tools: ["electrical"] },
+      "gas-ign": { text: "Pressure switch proved. Does the igniter glow / spark and the gas valve open (burners light)?", tools: ["electrical"], options: [
+        { label: "No ignition", next: "gas-no-ign" },
+        { label: "Lights, then drops out after a few seconds", next: "gas-flame" },
+        { label: "Lights and stays lit, but trips off later", next: "gas-limit" },
+        { label: "Lights and runs but heat is weak", next: "gas-pressure" },
+      ] },
+      "gas-no-ign": { end: true, text: "Check the igniter (resistance or spark gap per OEM), the board's igniter output, 24 V to the gas valve during the trial, gas supply on and the manual valve open. Record any flash code and use the OEM manual.", tools: ["electrical", "nameplate-faults"] },
+      "gas-flame": { end: true, text: "Flame not proving: clean the flame sensor, check its lead and the burner ground, measure flame current against the OEM ignition-control spec, and confirm polarity and a solid ground on the unit supply.", tools: ["electrical"] },
+      "gas-limit": { text: "Is the high limit or the rollout switch opening?", tools: ["electrical"], options: [
+        { label: "High limit", next: "gas-highlimit" }, { label: "Rollout switch", next: "gas-rollout" },
+      ] },
+      "gas-highlimit": { end: true, text: "High limit trips are usually airflow: blower running at the heat speed, belt, filters, closed dampers or supply registers. Measure the temperature rise and compare to the rise range printed on the plate. Check gas input too (next step).", tools: ["airflow-delta-t", "duct-static", "electrical"] },
+      "gas-rollout": { end: true, text: "Flame rollout is a safety event: inspect for a blocked flue/heat exchanger, cracked heat exchanger, wrong orifices or over-firing before any reset. Follow the OEM manual; do not bypass the switch.", tools: ["electrical"] },
+      "gas-pressure": { end: true, text: "Measure inlet and manifold gas pressure with a manometer, on low and high fire, and compare to the gas type and the manifold/supply pressures printed on the plate (and the OEM manual). Then check the temperature rise against the plate's rise range.", tools: ["airflow-delta-t"] },
+
+      "elec-call": { text: "Electric heat. Heat call present (W, and second-stage W if used) and the heater contactor(s) or sequencers pulled in?", tools: ["electrical"], options: [
+        { label: "Yes", next: "elec-elements" }, { label: "No", next: "elec-nocall" },
+      ] },
+      "elec-nocall": { end: true, text: "Check the heat call from the thermostat/controller, heater contactor coil voltage and the heat kit's low-voltage wiring and any outdoor-air lockout setting.", tools: ["electrical"] },
+      "elec-elements": { end: true, text: "With power locked out, check each element and its limits/fusible links for continuity; with power on, measure amps per element against the heater data on the plate or heater label. Confirm the blower runs during heat.", tools: ["electrical"] },
+
+      blower: { text: "Is the indoor blower belt drive or direct drive (ECM / VFD)?", options: [
+        { label: "Belt drive", next: "blower-belt" }, { label: "Direct drive ECM / VFD", next: "blower-ecm" },
+      ] },
+      "blower-belt": { end: true, text: "Check for a fan call (G) and the blower contactor, then the belt (broken, loose, glazed), sheave alignment and set screws, bearings, and motor amps against the plate indoor blower FLA. Overload tripped? Find the cause before resetting.", tools: ["electrical"] },
+      "blower-ecm": { end: true, text: "ECM: check line voltage to the motor and the control signal from the board/thermostat. VFD: read the drive's display/fault history and look it up in the drive or OEM manual; check the drive's enable/run input and the motor. Compare amps to the plate indoor blower FLA.", tools: ["electrical", "nameplate-faults"] },
+
+      econ: { text: "Economizer: what are you seeing?", options: [
+        { label: "Damper stuck / not moving", next: "econ-actuator" },
+        { label: "Bringing in outside air when it shouldn't (hot/humid air in cooling)", next: "econ-control" },
+        { label: "Controller alarm / fault", next: "econ-alarm" },
+      ] },
+      "econ-actuator": { end: true, text: "Check the actuator supply and control signal, the linkage and blades for binding, and that minimum position is set as designed. Stroke it with the controller's test mode if the OEM manual has one.", tools: ["electrical"] },
+      "econ-control": { end: true, text: "Check the outside-air/return-air sensors (location, wiring, reading against a reference thermometer), the changeover setpoint, and that free cooling is disabled when outdoor conditions are unsuitable. Settings come from the OEM economizer manual.", tools: ["psychrometrics", "electrical"] },
+      "econ-alarm": { end: true, text: "Record the alarm exactly from the economizer controller display and look it up in that controller's manual (Manuals on the call card). This app doesn't carry codes.", tools: ["nameplate-faults", "job-log"] },
+
+      short: { end: true, text: "Check thermostat/sensor location and the control's anti-short-cycle delay, pressure switches tripping (high: condenser/fan/overcharge; low: charge, airflow, frozen coil), the compressor overload, and an oversized unit or stage cycling on a light load.", tools: ["electrical", "superheat-subcool", "compressor-diag"] },
+
+      frozen: { end: true, text: "Shut cooling off and thaw the coil (blower only). Then check airflow (filters, belt, blower, dampers), low charge on that circuit, a restriction, and running in cooling at low outdoor temperatures without low-ambient control. Re-check superheat after it runs.", tools: ["airflow-delta-t", "superheat-subcool", "txv-eev"] },
+
+      condensate: { end: true, text: "Clear the drain pan, trap and drain line (RTU traps must be sized and primed for the negative pressure in the cabinet; check the OEM installation manual), check pan slope and the float switch wiring. A frozen or overflowing coil points back to airflow or charge.", tools: ["airflow-delta-t"] },
+
+      lockout: { end: true, text: "Record the flash code or controller display exactly (count and colour of LED flashes), the unit model and serial. Look the code up only in the OEM manual or the code label inside the unit's control panel door; this app doesn't carry brand codes. Fix the cause before resetting the lockout.", tools: ["nameplate-faults", "job-log", "electrical"] },
+    },
+  },
+
   compressor: {
     title: "Compressor",
     start: "start",
@@ -192,7 +299,8 @@ export function chooseTree({ equipment, unitType, brand, model } = {}) {
   if (["cooler", "freezer", "rack"].includes(eq)) return "walk-in";
   // A Fujitsu/Mitsubishi/Daikin indoor-or-outdoor pair from a plate with a matched unit is ductless.
   if ((ut === "indoor" || ut === "outdoor") && /fujitsu|mitsubishi|daikin|lg|samsung|gree|midea|mrcool|toshiba|panasonic/i.test(brand || "")) return "mini-split";
-  if (eq === "rtu" || eq === "split" || ut === "indoor" || ut === "outdoor" || ut === "packaged") return "split-ac-hp";
+  if (eq === "rtu" || ut === "packaged rooftop") return "rtu";
+  if (eq === "split" || ut === "indoor" || ut === "outdoor" || ut === "packaged") return "split-ac-hp";
   return null;
 }
 
