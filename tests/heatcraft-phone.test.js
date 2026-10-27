@@ -39,3 +39,28 @@ test("assignIdsByPattern: scrambled labels, same-line model+serial, no joining",
   assert.equal(b.part, "89074001"); assert.equal(b.model, undefined); assert.equal(b.serial, undefined);
   assert.equal(assignIdsByPattern(["nothing here"]), null);
 });
+
+test("phone replay: electrical — LRA 169, fan FLA 3.5 (not the LRA bleeding over), defrost 30", () => {
+  const m = merge(HEATCRAFT_PHONE_PASSES).fields;
+  assert.equal(m.lra.value, 169);
+  assert.ok(m.lra.confidence < 0.6, "the 169/189 near tie is flagged");
+  assert.equal(m.fanFla.value, 3.5);
+  assert.equal(m.defrostA.value, 30);
+  assert.equal(m.rla.value, 24.7);
+});
+
+test("LRA: a majority of low-confidence passes can win but is flagged", () => {
+  const mk = (name, confidence, lra) => ({ name, confidence, psm: 11, text: "HEATCRAFT\nRLA 24.7\nLRA " + lra });
+  const m = merge([mk("a", 80, 169), mk("b", 74, 189), mk("c", 70, 189)]).fields.lra;
+  assert.equal(m.value, 189);
+  assert.ok(m.confidence < 0.6, "outvoting the most confident pass is flagged");
+  assert.ok(m.candidates.some((c) => c.value === 169));
+});
+
+test("fan FLA: never reuses another field's value; under 15 A and below RLA, else blank", () => {
+  const f = (t) => parsePlate({ text: "HEATCRAFT\nRLA 24.7\nLRA 169\n" + t, psm: 6 }).fields.fanFla;
+  assert.equal(f("FAN FLA 169"), undefined);
+  assert.equal(f("FAN FLA 30.5"), undefined);
+  assert.equal(f("COND FAN 1 1/3..3.5").value, 3.5);
+  assert.equal(f("VR 85"), undefined);
+});

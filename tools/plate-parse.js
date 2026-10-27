@@ -818,6 +818,13 @@ export function parsePlate(input) {
     }
   }
   put("fanFla", numField(fan));
+  if (isHC) {
+    // Cond-fan row "1/3 3.5" or "1/3..3.5": FLA is the amps token right after the HP fraction.
+    for (const l of lines) {
+      const m = l.match(/\b1\/\d{1,2}\s*[.,:;\-_ ]*\s*(\d{1,2}[.,]\d{1,2})(?![\d\/])/);
+      if (m) { const v = Number(m[1].replace(",", ".")); if (v > 0 && v < 15) { fields.fanFla = { value: v, raw: m[0], confidence: 0.85, note: "after the fan HP in the cond-fan row" }; break; } }
+    }
+  }
   put("mca", numField(labelledAll(lines, /\b(?:MCA|M\.\s?C\.\s?A\.?|MIN(?:IMUM)?\.?\s*(?:SUPPLY\s*)?(?:CIRCUIT|CIR\.?|CKT\.?)\s*(?:AMP(?:ACITY|S)?|AMPS?)\.?)/, { prevLine: true })[0]));
   const STD_OCP = [3, 6, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 110, 125, 150, 175, 200, 225, 250, 300, 350, 400];
   put("mop", numField(labelledAll(lines, /\b(?:MOCP|MOP|M\.\s?O\.\s?C\.?\s?P\.?|M\.\s?O\.\s?P\.?|MAX(?:IMUM)?\.?\s*(?:OVER\s*CURRENT\s*(?:PROT(?:ECTION|\.)?(?:\s*DEVICE)?)?|O\.?C\.?P\.?|FUSE(?:\s*(?:\/|OR)\s*(?:MAX\.?\s*)?(?:HACR\s*)?(?:TYPE\s*)?(?:CKT[.,]?\s*|CIRCUIT\s*)?(?:BKR[.,]?|BREAKER))?(?:\s*SIZE)?|(?:CKT[.,]?\s*|CIRCUIT\s*)?(?:BKR|BREAKER)))/, { skipParen: true, prevLine: true, marks: true }).filter((r) => STD_OCP.includes(r.num))[0]));
@@ -828,6 +835,16 @@ export function parsePlate(input) {
     names.forEach((n) => { const f = fields[n]; if (!f) return; f.confidence = round(f.confidence * 0.5, 2); f.note = f.note ? f.note + "; " + note : note; });
   };
   const g = (n) => fields[n] && fields[n].value;
+  if (isHC && !fields.defrostA) {
+    // Text fallback (no word boxes): "DEFROST HEATER MAX AMPS 30", or the number on the next line.
+    for (let i = 0; i < lines.length; i++) {
+      if (!/\bDEFROST\b.*\bAMPS?\b/i.test(lines[i])) continue;
+      const m = lines[i].match(/\bAMPS?\b\s*[:.]?\s*(\d{1,2})\s*$/i) || (lines[i + 1] || "").match(/^\s*(\d{1,2})\s*$/);
+      if (m) fields.defrostA = { value: Number(m[1]), raw: m[1], confidence: 0.85 };
+      break;
+    }
+  }
+  saneFanFla(fields, isHC);
   chk(g("rla") != null && g("lra") != null && g("lra") <= g("rla"), ["rla", "lra"], "LRA should exceed RLA");
   chk(g("mca") != null && g("mop") != null && g("mop") < g("mca"), ["mca", "mop"], "MOP below MCA");
   chk(g("mca") != null && g("rla") != null && g("mca") < g("rla"), ["mca", "rla"], "MCA below RLA");
@@ -853,6 +870,16 @@ export function parsePlate(input) {
  * @param {Array<{name:string, parsed:ReturnType<typeof parsePlate>}>} list
  */
 const passWeight = (p) => { const c = p.confidence != null ? p.confidence : p.parsed && p.parsed.passConfidence; return c != null ? Math.pow(Math.max(1, c) / 100, 3) : 1; };
+/** Fan FLA can't reuse another field's value (the LRA bleeding over), must be under RLA, and under 15 A on Heatcraft. Else blank. */
+export function saneFanFla(fields, isHC) {
+  const f = fields.fanFla;
+  if (!f) return;
+  const v = Number(f.value);
+  const reused = ["lra", "rla", "mca", "mop", "voltage", "hz", "compA", "totalA", "defrostA", "evapFanA", "crankcaseW"].some((k) => fields[k] && Number(fields[k].value) === v);
+  const rla = fields.rla && Number(fields.rla.value);
+  if (reused || (isHC && v >= 15) || (rla && isHC && v >= rla)) delete fields.fanFla;
+}
+
 const AMP_FIELDS = ["rla", "lra", "fanFla", "mca", "mop", "compA", "totalA"];
 const INFERRED = /decimal point inferred/;
 export function mergeParses(list) {
@@ -896,7 +923,13 @@ export function mergeParses(list) {
       const votesFor = (k) => got.filter((f) => key(f, n) === k).length;
       const maxVotes = Math.max(...distinct.map(votesFor));
       // Flag when no weighted majority, or when the weight picked a value fewer passes read.
-      if (top * 2 <= total || votesFor(key(best, n)) < maxVotes) {
+      const second = [...tally.values()].sort((a, b) => b - a)[1] || 0;
+      // Also flag a near tie: a runner-up within 25% of the winner's weight.
+      const nearTie = second >= top * 0.75;
+      // Near tie: the most confident pass's read wins (got[0]), flagged.
+      if (nearTie) Object.assign(best, got[0]);
+      // A majority of weaker passes outvoting the most confident pass is flagged too.
+      if (top * 2 <= total || votesFor(key(best, n)) < maxVotes || nearTie || key(best, n) !== key(got[0], n)) {
         best.confidence = round(best.confidence * 0.55, 2);
         best.note = (best.note ? best.note + "; " : "") + "passes disagree: " + distinct.map((d) => JSON.parse(d)).join(" vs ");
       }
@@ -925,5 +958,6 @@ export function mergeParses(list) {
   // Keep only the hint that matches the merged unit type.
   const ut = fields.unitType && fields.unitType.value;
   const lowConfidence = Object.keys(fields).filter((k) => fields[k].confidence < lowBar(k));
+  saneFanFla(fields, !!(fields.brand && fields.brand.value === "Heatcraft"));
   return { fields, lowConfidence, hints: ut === "indoor" ? hints.slice(0, 1) : [], bestPass, text: list.length ? list.find((p) => p.name === bestPass).parsed.text : "" };
 }
