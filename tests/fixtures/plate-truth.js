@@ -11,4 +11,7 @@ export const TRUTH = {
   // Heatcraft walk-in condensing unit, gallery screenshot (app UI around the plate), read by eye.
   // The defrost heater cell IS printed: "DEFROST HTR. MAX AMPS 30".
   "heatcraft-lch0055-upload": { brand: "Heatcraft", unitType: "condensing unit", partNo: "89074001", model: "LCH0055LBACZA0300", serial: "T21C05997", voltage: "208/230", phase: 1, hz: 60, mca: 44.3, mop: 60, rla: 24.7, lra: 169, fanQty: 1, fanHp: "1/3", fanFla: 3.5, crankcaseW: 80, designHigh: "450 psig", designLow: "178 psig", evapFanA: 10, defrostA: 30, refrigerant: "R-404A/R-507A, R-407A/R-407F, R-407C, R-448A/R-449A", tempRange: "-40 to 0 °F", awef: 3.15, application: "walk-in freezer, outdoor", charge: null },
+  // York (Unitary Products Group) ZS gas/electric RTU, phone photo, read by eye. Charge "SYS #1 R-410A 4 LBS. 4 OZ.";
+  // MCA printed "29.9/29.9", fuse and breaker "40/40"; test pressures 445 / 236 PSIG.
+  "york-zs04-rtu": { brand: "Unitary Products Group (York/Coleman)", model: "ZS-04N13BTAZZ10001A", serial: "N1D1914801", voltage: "208/230", phase: 3, hz: 60, rla: 16, lra: 120, fanFla: 2.3, mca: 29.9, mop: 40, refrigerant: "R-410A", charge: 4.25, designHigh: "445 psig", designLow: "236 psig" },
 };

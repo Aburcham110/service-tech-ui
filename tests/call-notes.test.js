@@ -43,5 +43,5 @@ test("troubleshooting button picks the tree for the equipment type", () => {
 test("wired + precached", () => {
   assert.ok(readFileSync(new URL("../tools/tree-app.js", import.meta.url), "utf8").includes("mountAddToCall"));
   assert.ok(readFileSync(new URL("../tools/tool-app.js", import.meta.url), "utf8").includes("mountAddToCall"));
-  assert.ok(readFileSync(new URL("../sw.js", import.meta.url), "utf8").includes('"./tools/call-notes.js?v=36"'));
+  assert.ok(readFileSync(new URL("../sw.js", import.meta.url), "utf8").includes('"./tools/call-notes.js?v=37"'));
 });

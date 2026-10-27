@@ -1,8 +1,8 @@
 /** Call wizard extras (pure, node-testable): inline SH/SC from the SH/SC tool's code, amps as % of plate
  *  RLA/FLA, job times, quick phrases, and the extra lines for "Copy for Service Tech". No DOM, no network. */
-import { shScValues } from "./logic-1.js?v=36";
-import { PT } from "./pt-tables.js?v=36";
-import { cardPlate } from "./card-plate.js?v=36";
+import { shScValues } from "./logic-1.js?v=37";
+import { PT } from "./pt-tables.js?v=37";
+import { cardPlate } from "./card-plate.js?v=37";
 
 export const TECH_KEY = "serviceTechTechName_v1";
 
