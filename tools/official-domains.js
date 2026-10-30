@@ -18,7 +18,7 @@ export const OEM_DOMAINS = {
   "heatcraftrpd.com": "Heatcraft Refrigeration Products", "intelligencontrols.com": "Heatcraft (InteliGen controls)",
   "manitowocice.com": "Manitowoc Ice",
 };
-export const PATH_ONLY = { "s3.amazonaws.com": ["/enter.mehvac.com/"] }; // Mitsubishi Electric US asset bucket only, not all of S3
+export const PATH_ONLY = { "s3.amazonaws.com": ["/enter.mehvac.com/"], "hvacdirect.com": ["/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf"] }; // Mitsubishi Electric US asset bucket only, not all of S3
 
 // Non-OEM URLs that are allowed, each listed explicitly (app infrastructure, not documentation links).
 export const EXCLUDED = [

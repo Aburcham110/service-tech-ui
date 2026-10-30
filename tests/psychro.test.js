@@ -67,5 +67,5 @@ test("no uncited range hints; vendored PsychroLib is MIT and precached", () => {
   for (const s of ["16", "0.70", "350", "450"]) assert.ok(!new RegExp(`\\b${s.replace(".", "\\.")}\\b`).test(src), s);
   assert.match(readFileSync(new URL("../vendor/psychrolib/LICENSE", import.meta.url), "utf8"), /MIT License/);
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(sw, /vendor\/psychrolib\/psychrolib\.mjs/); assert.match(sw, /tools\/psychro\.js\?v=41/);
+  assert.match(sw, /vendor\/psychrolib\/psychrolib\.mjs/); assert.match(sw, /tools\/psychro\.js\?v=42/);
 });

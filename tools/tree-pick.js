@@ -8,7 +8,7 @@
  * Returns { tree, certain, choices, why }. When not certain, choices holds the 2–3 likely trees.
  * Generic routing only: no model-specific codes or specs live here.
  */
-import { brandKey, matchModel } from "./manuals.js?v=41";
+import { brandKey, matchModel } from "./manuals.js?v=42";
 
 export const TREE_LABELS = {
   "mini-split": "Ductless mini-split",

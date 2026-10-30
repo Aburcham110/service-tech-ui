@@ -34,6 +34,7 @@ export const OFFICIAL_HOSTS = {
   "carrier.com.pr/": "Carrier Puerto Rico (already accepted for the manuals index)",
   "www.lennox.com/": "Lennox",
   "mobile.goodmanmfg.com/": "Goodman Manufacturing",
+  "hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf": "HVACDirect dealer copy of Fujitsu General service manual SR_AS025EF_04 — this one file only, approved by Arthur 2026-10-30",
 };
 export const officialHost = (url) => {
   const hp = url.replace(/^https?:\/\//, "");
@@ -41,9 +42,9 @@ export const officialHost = (url) => {
 };
 
 // Which scanned models each section covers: model prefixes, compared after removing spaces and dashes.
-const SECTIONS = [
+export const SECTIONS = [
   [/^Fujitsu ASUG15LZAS/, "Fujitsu", ["ASUG09LZAS", "ASUG12LZAS", "ASUG15LZAS", "AOUG09LZAS", "AOUG12LZAS", "AOUG15LZAS"]],
-  [/^Fujitsu AOUG15LZAH1/, "Fujitsu", ["AOUG15LZAH", "ASUG15LZAH"]],
+  [/^Fujitsu AOUG15LZAH1/, "Fujitsu", ["AOUG09LZAH", "AOUG12LZAH", "AOUG15LZAH"]],
   [/^Fujitsu ASU9RLS3Y/, "Fujitsu", ["ASU9RLS3", "AOU9RLS3"]],
   [/^Mitsubishi MUZ-FS/, "Mitsubishi Electric", ["MUZFS", "MSZFS"]],
   [/^Daikin FIT/, "Daikin", ["DX6VS", "DZ6VS"]],
