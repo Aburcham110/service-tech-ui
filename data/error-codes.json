@@ -362,14 +362,316 @@
   },
   {
    "brand": "Fujitsu",
-   "title": "Fujitsu AOUG15LZAH1 outdoor",
+   "title": "Fujitsu AOUG15LZAH1 outdoor (ASUG09/12/15LZAS indoor + AOUG09/12/15LZAH1 outdoor)",
    "models": [
-    "AOUG15LZAH",
-    "ASUG15LZAH"
+    "AOUG09LZAH",
+    "AOUG12LZAH",
+    "AOUG15LZAH"
    ],
-   "note": "Verified 2026-10-26. Unfetchable: no official, fetchable OEM manual found (service manual SR_AS025EF is only on [portal.fujitsugeneral.com](http://portal.fujitsugeneral.com), which fails the TLS handshake for automated fetch, and on third-party sites, which are excluded). No codes transcribed.",
-   "rows": [],
-   "unavailable": true
+   "note": "Verified 2026-10-30 against PDF. Source: Fujitsu General service manual SR_AS025EF_04 (2020.02.26, Copyright © 2020 Fujitsu General Limited), dealer-hosted copy approved by Arthur 2026-10-30. Pages are PDF pages (table 1-1 = manual p.03-1, PDF p.35; table 1-2 = manual p.03-2, PDF p.36). Remedy = the manual's check-point headings for each code (full flowcharts are on the troubleshooting pages).",
+   "rows": [
+    {
+     "keys": [
+      "11"
+     ],
+     "pattern": "E: 11 — Operation (green) 1 times / Timer (orange) 1 times / Economy (green) continuous; wired remote: 11",
+     "meaning": "Serial communication error (Serial reverse transfer error) (Outdoor unit)",
+     "remedy": "Troubleshooting 2-1: Check point 1. Reset the power and operate; Check point 2. Check connection; Check point 3. Check the voltage of power supply; Check point 4. Check serial signal (Reverse transfer signal); Check point 1-2. Check external cause such as noise",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "11"
+     ],
+     "pattern": "E: 11 — Operation (green) 1 times / Timer (orange) 1 times / Economy (green) continuous; wired remote: 11",
+     "meaning": "Serial communication error (Serial forward transfer error) (Indoor unit)",
+     "remedy": "Troubleshooting 2-2: Check point 1. Reset the power and operate; Check point 2. Check connection; Check point 3. Check the voltage of power supply; Check point 4. Check serial signal (reverse transfer signal); Check point 1-2. Check external cause such as noise",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "12"
+     ],
+     "pattern": "E: 12 — Operation (green) 1 times / Timer (orange) 2 times / Economy (green) continuous; wired remote: 12",
+     "meaning": "Wired remote controller communication error (Indoor unit)",
+     "remedy": "Troubleshooting 2-3: Check point 1. Check the connection of terminal; Check point 2. Check connection",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "18"
+     ],
+     "pattern": "E: 18 — Operation (green) 1 times / Timer (orange) 8 times / Economy (green) continuous; wired remote: 18",
+     "meaning": "External communication error (Indoor unit)",
+     "remedy": "Troubleshooting 2-4: Check point 1. Check the connection; Check point 2. Replace the external input and output PCB; Check point 3. Replace main PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "18"
+     ],
+     "pattern": "E: 18 — Operation (green) 1 times / Timer (orange) 8 times / Economy (green) continuous; wired remote: 18",
+     "meaning": "External communication error between indoor unit and WLAN adapter",
+     "remedy": "Troubleshooting 4-1: Check point 1. Check the connection; Check point 2. Replace wireless LAN adapter.; Check point 3. Replace controller PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "18"
+     ],
+     "pattern": "E: 18 — Operation (green) 1 times / Timer (orange) 8 times / Economy (green) continuous; wired remote: 18",
+     "meaning": "Communication error",
+     "remedy": "Troubleshooting 4-4: Check point 1. Check the connection cable; Check point 2. Check the connection status.and transmission state; Check point 3-1. Turn on the power again of air conditioner.; Check point 3-2. Check the connection.; Check point 4. Replace wireless LAN adapter.; Check point 5. Replace controller PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "18"
+     ],
+     "pattern": "E: 18 — Operation (green) 1 times / Timer (orange) 8 times / Economy (green) continuous; wired remote: 18",
+     "meaning": "Wireless LAN adapter non-energized",
+     "remedy": "Troubleshooting 4-5: Check point 1. Check the connection.; Check point 2. Check the wireless LAN adapter PCB and the controller PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "32"
+     ],
+     "pattern": "E: 32 — Operation (green) 3 times / Timer (orange) 2 times / Economy (green) continuous; wired remote: 32",
+     "meaning": "Indoor unit main PCB error (Indoor unit)",
+     "remedy": "Troubleshooting 2-5: Check point 1. Reset power supply and operate; Check point 2. Check Indoor unit electric components; Check point 3. Replace main PCB; Check point 1-2. Check external cause such as noise",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "35"
+     ],
+     "pattern": "E: 35 — Operation (green) 3 times / Timer (orange) 5 times / Economy (green) continuous; wired remote: 35",
+     "meaning": "MANUAL AUTO button error (Indoor unit)",
+     "remedy": "Troubleshooting 2-6: Check point 1. Check the MANUAL AUTO button; Check point 2. Replace main PCB and indicator PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "41"
+     ],
+     "pattern": "E: 41 — Operation (green) 4 times / Timer (orange) 1 times / Economy (green) continuous; wired remote: 41",
+     "meaning": "Room temperature sensor error (Indoor unit)",
+     "remedy": "Troubleshooting 2-7: Check point 1. Check connection of connector; Check point 2. Remove connector and check thermistor resistance value; Check point 3. Check voltage of main PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "42"
+     ],
+     "pattern": "E: 42 — Operation (green) 4 times / Timer (orange) 2 times / Economy (green) continuous; wired remote: 42",
+     "meaning": "Indoor unit heat exchanger sensor error (Indoor unit)",
+     "remedy": "Troubleshooting 2-8: Check point 1. Check connection of connector; Check point 2. Remove connector and check thermistor resistance value; Check point 3. Check voltage of main PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "51"
+     ],
+     "pattern": "E: 51 — Operation (green) 5 times / Timer (orange) 1 times / Economy (green) continuous; wired remote: 51",
+     "meaning": "Indoor unit fan motor error (Indoor unit)",
+     "remedy": "Troubleshooting 2-9: Check point 1. Check rotation of fan; Check point 2. Check ambient temp. around motor; Check point 3. Check indoor unit fan motor; Check point 4. Replace main PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "58"
+     ],
+     "pattern": "E: 58 — Operation (green) 5 times / Timer (orange) 8 times / Economy (green) continuous; wired remote: 58",
+     "meaning": "Intake grille error (Indoor unit)",
+     "remedy": "Troubleshooting 2-10: Check point 1. Check limit switch; Check point 2. Check Connector (CN11)/wire; Check point 3. Replace main PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "62"
+     ],
+     "pattern": "E: 62 — Operation (green) 6 times / Timer (orange) 2 times / Economy (green) continuous; wired remote: 62",
+     "meaning": "Outdoor unit main PCB error (Outdoor unit)",
+     "remedy": "Troubleshooting 2-11: Check point 1. Reset power supply and operate; Check point 2. Replace main PCB; Check point 1-2. Check external cause",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "63"
+     ],
+     "pattern": "E: 63 — Operation (green) 6 times / Timer (orange) 3 times / Economy (green) continuous; wired remote: 63",
+     "meaning": "Inverter error (Outdoor unit)",
+     "remedy": "Troubleshooting 2-12: Check point 1. Turn the power on again?; Check point 2. Check the wiring (power supply to inverter PCB); Check point 3. Replace inverter PCB; Check point 1-2. Check external cause",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "64"
+     ],
+     "pattern": "E: 64 — Operation (green) 6 times / Timer (orange) 4 times / Economy (green) continuous; wired remote: 64",
+     "meaning": "PFC circuit error (Outdoor unit)",
+     "remedy": "Troubleshooting 2-13: Check point 1. Check external cause at indoor and outdoor (Voltage drop or Noise); Check point 2. Check connection of Connector; Check point 3. Replace main PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "71"
+     ],
+     "pattern": "E: 71 — Operation (green) 7 times / Timer (orange) 1 times / Economy (green) continuous; wired remote: 71",
+     "meaning": "Discharge thermistor error (Outdoor unit)",
+     "remedy": "Troubleshooting 2-14: Check point 1. Check connection of connector; Check point 2. Remove connector and check thermistor resistance value; Check point 3. Check voltage of main PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "73"
+     ],
+     "pattern": "E: 73 — Operation (green) 7 times / Timer (orange) 3 times / Economy (green) continuous; wired remote: 73",
+     "meaning": "Outdoor unit heat exchanger thermistor error (Outdoor unit)",
+     "remedy": "Troubleshooting 2-15: Check point 1. Check connection of connector; Check point 2. Remove connector and check thermistor resistance value; Check point 3. Check voltage of main PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "74"
+     ],
+     "pattern": "E: 74 — Operation (green) 7 times / Timer (orange) 4 times / Economy (green) continuous; wired remote: 74",
+     "meaning": "Outdoor temperature thermistor error (Outdoor unit)",
+     "remedy": "Troubleshooting 2-16: Check point 1. Check connection of connector; Check point 2. Remove connector and check thermistor resistance value; Check point 3. Check voltage of main PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "84"
+     ],
+     "pattern": "E: 84 — Operation (green) 8 times / Timer (orange) 4 times / Economy (green) continuous; wired remote: 84",
+     "meaning": "Current sensor error (Outdoor unit)",
+     "remedy": "Troubleshooting 2-17: Check point 1. Reset power supply and operate; Check point 2. Check connections of outdoor unit electrical components; Check point 3. Replace main PCB; Check point 1-2. Check external cause at Indoor and Outdoor (Voltage drop or Noise)",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "94"
+     ],
+     "pattern": "E: 94 — Operation (green) 9 times / Timer (orange) 4 times / Economy (green) continuous; wired remote: 94",
+     "meaning": "Trip detection (Outdoor unit)",
+     "remedy": "Troubleshooting 2-18: Check point 1. Check the outdoor unit fan operation, heat-exchanger, ambient temperature; Check point 2. Replace main PCB; Check point 3. Replace compressor",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "95"
+     ],
+     "pattern": "E: 95 — Operation (green) 9 times / Timer (orange) 5 times / Economy (green) continuous; wired remote: 95",
+     "meaning": "Compressor motor control error (Outdoor unit)",
+     "remedy": "Troubleshooting 2-19: Check point 1. Check Noise from Compressor; Check point 2. Check connection of around the compressor components; Check point 3. Replace main PCB; Check point 4. Replace compressor",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "97"
+     ],
+     "pattern": "E: 97 — Operation (green) 9 times / Timer (orange) 7 times / Economy (green) continuous; wired remote: 97",
+     "meaning": "Outdoor unit fan motor error (Outdoor unit)",
+     "remedy": "Troubleshooting 2-20: Check point 1. Check rotation of fan; Check point 2. Check ambient temp. around motor; Check point 3. Check outdoor unit fan motor; Check point 4. Check output voltage of main PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "99"
+     ],
+     "pattern": "E: 99 — Operation (green) 9 times / Timer (orange) 9 times / Economy (green) continuous; wired remote: 99",
+     "meaning": "4-way valve error (Outdoor unit)",
+     "remedy": "Troubleshooting 2-21: Check point 1. Check connection of connector; Check point 2. Check each thermistor; Check point 3. Check the solenoid coil and 4-way valve; Check point 4. Check the voltage of 4-way valve; Check point 5. Replace main PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [
+      "A1"
+     ],
+     "pattern": "E: A1 — Operation (green) 10 times / Timer (orange) 1 times / Economy (green) continuous; wired remote: A1",
+     "meaning": "Discharge temperature error (Outdoor unit)",
+     "remedy": "Troubleshooting 2-22: Check point 1. Check if 3-way valve is open; Check point 2. Check the electronic expansion valve (EEV) and strainer; Check point 3. Check the outdoor unit fan and heat exchanger; Check point 4. Check the discharge thermistor; Check point 5. Check the refrigerant amount; Check point 6. Replace main PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 35
+    },
+    {
+     "keys": [],
+     "pattern": "Wireless LAN LED (orange): On: Connection information with router is available / Off: Connection information with router is unavailable; Error code 18",
+     "meaning": "E: 18. External communication error between indoor unit and WLAN adapter",
+     "remedy": "Troubleshooting 4-1: Check point 1. Check the connection; Check point 2. Replace wireless LAN adapter.; Check point 3. Replace controller PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 36
+    },
+    {
+     "keys": [],
+     "pattern": "Wireless LAN LED (orange): Flashing slow; Error code: No error (Flashing slow: Repeating 7 seconds on/2 seconds off)",
+     "meaning": "Wireless LAN adapter error",
+     "remedy": "Troubleshooting 4-2: Check point 1. Check the setting button; Check point 2. Replace wireless LAN adapter.; Check point 3. Replace controller PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 36
+    },
+    {
+     "keys": [],
+     "pattern": "Wireless LAN LED (orange): On; Error code: No error",
+     "meaning": "Network communication error between wireless LAN router and WLAN adapter",
+     "remedy": "Troubleshooting 4-3: Check point 1. Check the connection cable; Check point 2. Check the connection status.; Check point 3. Turn on the power again of air conditioner.; Check point 4. Replace wireless LAN adapter.; Check point 2-2. Check the transmission state",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 36
+    },
+    {
+     "keys": [],
+     "pattern": "Wireless LAN LED (orange): Flashing slow; Error code 18 (Flashing slow: Repeating 7 seconds on/2 seconds off)",
+     "meaning": "E: 18. Communication error",
+     "remedy": "Troubleshooting 4-4: Check point 1. Check the connection cable; Check point 2. Check the connection status.and transmission state; Check point 3-1. Turn on the power again of air conditioner.; Check point 3-2. Check the connection.; Check point 4. Replace wireless LAN adapter.; Check point 5. Replace controller PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 36
+    },
+    {
+     "keys": [],
+     "pattern": "Wireless LAN LED (orange): Off; Error code 18",
+     "meaning": "E: 18. Wireless LAN adapter non-energized",
+     "remedy": "Troubleshooting 4-5: Check point 1. Check the connection.; Check point 2. Check the wireless LAN adapter PCB and the controller PCB",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 36
+    },
+    {
+     "keys": [],
+     "pattern": "Wireless LAN LED (orange): Off; Error code: No error",
+     "meaning": "Wireless LAN adapter Sleep mode (Indoor unit)",
+     "remedy": "Troubleshooting 4-6: Check point 1. Cheak the sleep mode",
+     "url": "https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf",
+     "page": 36,
+     "flags": [
+      "as-printed"
+     ]
+    }
+   ]
   },
   {
    "brand": "Fujitsu",

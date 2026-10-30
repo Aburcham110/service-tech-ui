@@ -8,10 +8,10 @@ const DATA = JSON.parse(readFileSync(new URL("../data/error-codes.json", import.
 const set = (re) => DATA.sets.find((s) => re.test(s.title));
 const allRows = DATA.sets.flatMap((s) => s.rows);
 
-test("all 433 Notion rows kept; per-section counts", () => {
-  assert.equal(allRows.length, 433);
+test("all 464 rows kept (433 Notion + 31 Fujitsu LZAH1); per-section counts", () => {
+  assert.equal(allRows.length, 464);
   assert.deepEqual(DATA.dropped, []);
-  assert.deepEqual(DATA.sets.map((s) => s.rows.length), [34, 0, 42, 22, 58, 60, 44, 79, 72, 22, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual(DATA.sets.map((s) => s.rows.length), [34, 31, 42, 22, 58, 60, 44, 79, 72, 22, 0, 0, 0, 0, 0, 0]);
 });
 
 test("exact transcription samples", () => {
