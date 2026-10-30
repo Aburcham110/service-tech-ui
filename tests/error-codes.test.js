@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { findCodeSet, lookupCode, sourceLink, rowLabel } from "../tools/error-codes.js";
-import { officialHost, OFFICIAL_HOSTS, codeKeys, NO_TABLE_TEXT } from "../tools/gen-error-codes.mjs";
+import { officialHost, OFFICIAL_HOSTS, codeKeys, NO_TABLE_TEXT, SECTIONS } from "../tools/gen-error-codes.mjs";
 
 const DATA = JSON.parse(readFileSync(new URL("../data/error-codes.json", import.meta.url), "utf8"));
 const set = (re) => DATA.sets.find((s) => re.test(s.title));
@@ -100,4 +100,13 @@ test("tree page wires the Error codes step from the scan header", () => {
   assert.match(app, /tree-codes-step/);
   assert.match(app, /error-codes\.js\?v=42/);
   assert.match(readFileSync(new URL("../tools/error-codes.js", import.meta.url), "utf8"), /data\/error-codes\.json\?v=42/);
+});
+
+test("generator section models match the shipped data (a Notion rebuild keeps the same models)", () => {
+  const lzah = SECTIONS.find(([re]) => re.test("Fujitsu AOUG15LZAH1 outdoor"));
+  assert.deepEqual(lzah[2], ["AOUG09LZAH", "AOUG12LZAH", "AOUG15LZAH"]);
+  for (const s of DATA.sets) {
+    const sec = SECTIONS.find(([re]) => re.test(s.title));
+    if (sec) assert.deepEqual(sec[2], s.models, s.title);
+  }
 });
