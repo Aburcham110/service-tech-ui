@@ -34,6 +34,7 @@ export const OFFICIAL_HOSTS = {
   "carrier.com.pr/": "Carrier Puerto Rico (already accepted for the manuals index)",
   "www.lennox.com/": "Lennox",
   "mobile.goodmanmfg.com/": "Goodman Manufacturing",
+  "hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf": "HVACDirect dealer copy of Fujitsu General service manual SR_AS025EF_04 — this one file only, approved by Arthur 2026-10-30",
 };
 export const officialHost = (url) => {
   const hp = url.replace(/^https?:\/\//, "");

@@ -76,6 +76,9 @@ test("no non-OEM domains", () => {
   assert.deepEqual(Object.keys(DATA.hosts).sort(), Object.keys(OFFICIAL_HOSTS).sort());
   assert.equal(officialHost("https://s3.amazonaws.com/someone-else/x.pdf"), null); // only Mitsubishi's bucket
   assert.equal(officialHost("https://www.manualslib.com/x.pdf"), null);
+  assert.equal(officialHost("https://hvacdirect.com/media/pdf/other.pdf"), null); // only the one approved Fujitsu file
+  assert.equal(officialHost("https://hvacdirect.com/"), null);
+  assert.equal(officialHost("https://hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf"), "hvacdirect.com/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf");
   assert.equal(officialHost("https://daikincity.com.evil.example/x.pdf"), null);
 });
 
