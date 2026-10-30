@@ -1,8 +1,8 @@
 /** Mount interactive tool UI from ?id= */
 import { getTool } from "./registry.js";
-import { runTool } from "./logic.js?v=41";
-import { applyPrefill } from "./prefill.js?v=41";
-import { mountAddToCall, toolEntry, CALL_TOOLS } from "./call-notes.js?v=41";
+import { runTool } from "./logic.js?v=42";
+import { applyPrefill } from "./prefill.js?v=42";
+import { mountAddToCall, toolEntry, CALL_TOOLS } from "./call-notes.js?v=42";
 
 function $(sel, el) { return (el || document).querySelector(sel); }
 
@@ -147,7 +147,7 @@ function mount(tool) {
   });
 
   if (tool.id === "superheat-subcool") {
-    import("./gauge-import.js?v=41").then(({ mountGaugeImport }) => {
+    import("./gauge-import.js?v=42").then(({ mountGaugeImport }) => {
       const refs = (tool.fields.find((f) => f.name === "refrigerant").options || []).map((o) => o[0]);
       mountGaugeImport(scanHost, {
         refrigerants: refs,
@@ -165,7 +165,7 @@ function mount(tool) {
   }
 
   if (tool.id === "nameplate-faults") {
-    import("./plate-scan.js?v=41").then(({ mountPlateScan, plateSummary }) => {
+    import("./plate-scan.js?v=42").then(({ mountPlateScan, plateSummary }) => {
       mountPlateScan(scanHost, (v) => {
         const set = (k, val) => {
           const el = form.querySelector('[data-field="' + k + '"]');
@@ -183,7 +183,7 @@ function mount(tool) {
         run();
         // "Add to call card" (writes the call draft; then "Added — open call card" / "Go to Readings") + "Start troubleshooting".
         // "Fill call card" already happened (forced model/serial check): write the call draft, then Done.
-        import("./call-card.js?v=41").then(({ renderDone, mergeIntoDraft, saveScan, DRAFT_KEY }) => {
+        import("./call-card.js?v=42").then(({ renderDone, mergeIntoDraft, saveScan, DRAFT_KEY }) => {
           let d = {};
           try { d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}"); } catch (e) { /* ignore */ }
           try { localStorage.setItem(DRAFT_KEY, JSON.stringify(mergeIntoDraft(d, v))); } catch (e) { /* ignore */ }
@@ -195,7 +195,7 @@ function mount(tool) {
           });
         }).catch(console.error);
         // Manual links for the scanned brand/model.
-        import("./manuals.js?v=41").then(async ({ loadManualsIndex, findManuals, renderManuals }) => {
+        import("./manuals.js?v=42").then(async ({ loadManualsIndex, findManuals, renderManuals }) => {
           let host = document.getElementById("manuals-host");
           if (!host) { host = document.createElement("div"); host.id = "manuals-host"; scanHost.after(host); }
           const id = { brand: v.brand, model: v.model };
