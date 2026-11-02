@@ -3,7 +3,7 @@
  *  Nothing is written to the form until the tech taps "Looks right — fill". */
 import { BRANDS, FIELDS, PRESSURE_UNITS, TEMP_UNITS, fileKind, parseCSV, toTable, parseXLSX, parseXML,
   pdfLinesToTable, itemsToLines, unitFor, mappingFits, loadMapping, saveMapping, buildPreview, fillValues,
-  isTestoCSV, parseTestoCSV, testoUsable, testoProbeLabel, TESTO_SLOTS, loadTestoProbes, saveTestoProbes, testoProbesKnown, buildTestoPreview } from "./gauge-parse.js?v=42";
+  isTestoCSV, parseTestoCSV, testoUsable, testoProbeLabel, TESTO_SLOTS, loadTestoProbes, saveTestoProbes, testoProbesKnown, buildTestoPreview } from "./gauge-parse.js?v=44";
 
 export const SHARE_CACHE = "st-share";
 export const SHARE_KEY = "./__shared-gauge-report";
