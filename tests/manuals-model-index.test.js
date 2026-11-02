@@ -71,13 +71,16 @@ test("fixture entries use the schema's docTypes", () => {
 
 test("shipped index: Researcher's Model Manual Index loaded — official hosts, cited, matching works", () => {
   const MI = "https://app.notion.com/p/405402f833af81e5ad02d05a324316a0";
-  assert.equal(REAL.models.length, 12); assert.equal(REAL.prefixes.length, 21);
+  assert.equal(REAL.models.length, 13); assert.equal(REAL.prefixes.length, 20); // 2026-11-02: +Heatcraft LCH0055 (model + prefix); Trane XR16 ODR-SVN002E PDF now HTTP 404, dropped by --verify
   assert.deepEqual(Object.keys(REAL.brands).filter((b) => REAL.brands[b].searchTemplate).sort(), ["Copeland", "Trane"]);
-  const OK = /^https:\/\/(?:[a-z0-9-]+\.)*(fujitsugeneral\.com|upgnet\.com|copeland\.com|tecumseh\.com|daikincomfort\.com|goodmanmfg\.com|lennox\.com|tranetechnologies\.com|carrier\.com\.pr|rheem\.com|yorknow\.com)\//;
+  const OK = /^https:\/\/(?:[a-z0-9-]+\.)*(fujitsugeneral\.com|upgnet\.com|copeland\.com|tecumseh\.com|daikincomfort\.com|goodmanmfg\.com|lennox\.com|tranetechnologies\.com|carrier\.com\.pr|rheem\.com|yorknow\.com|heatcraftrpd\.com)\//;
   for (const e of [...REAL.models, ...REAL.prefixes]) { assert.match(e.url, OK, e.url); assert.ok(e.source.startsWith(MI)); assert.ok(["install", "service", "owner", "wiring"].includes(e.docType)); }
   assert.ok(![...REAL.models, ...REAL.prefixes].some((e) => /mylinkdrive|amazonaws|daikincity|shareddocs/.test(e.url)));
   assert.equal(matchModel(REAL, { model: "ASUG15LZAS" }).kind, "exact");
-  assert.equal(matchModel(REAL, { brand: "Trane", model: "5TTR7024A1000A" }).kind, "prefix");
+  assert.equal(matchModel(REAL, { brand: "Trane", model: "5TTR7024A1000A" }).kind, "search"); // dead ODR-SVN002E link dropped; Trane eLibrary search instead
+  assert.equal(matchModel(REAL, { brand: "Heatcraft", model: "LCH0055LBACZA0300" }).kind, "exact");
+  assert.equal(matchModel(REAL, { brand: "Heatcraft", model: "LCH0055LCBCZA0000" }).kind, "prefix");
+  assert.equal(matchModel(REAL, { brand: "York", model: "KE060H12A1AAAAA1A1" }).kind === "exact", false); // KE060: no official manual found
   assert.equal(matchModel(REAL, { brand: "Coleman", model: "BRCS0301BDG" }).kind, "exact"); // UPG/Coleman = York
   assert.equal(matchModel(REAL, { brand: "Carrier", model: "24ACC636A003" }).docs[0].url, "https://carrier.com.pr/pdf/products_pdf/24ACC6_INSTALLATION.pdf");
   assert.equal(matchModel(REAL, { brand: "Copeland", model: "ZR34K5E" }).kind, "search");
