@@ -8,7 +8,7 @@
   <link rel="icon" href="icon-192.png" type="image/png" />
   <meta http-equiv="Cache-Control" content="no-cache" />
   <title>Help — Service Tech</title>
-  <link rel="stylesheet" href="styles.css?v=43" />
+  <link rel="stylesheet" href="styles.css?v=44" />
 </head>
 <body>
   <div class="app help">
@@ -75,7 +75,8 @@
       <li><strong>Match columns</strong> (first time per gauge app): pick which column is suction pressure, discharge pressure, suction line temp, liquid line temp, refrigerant and time, and each unit. It's remembered on this phone.</li>
       <li><strong>Check</strong>: values shown in psig and °F, converted from kPa/bar/°C if needed. Orange rows need a look. For a data log, ◀ ▶ picks the reading (last one by default). Tap <strong>Looks right — fill</strong>.</li>
     </ol>
-    <p>Only numbers you saw on Check are filled; blanks stay blank. Discharge pressure goes into liquid pressure for subcooling (line loss isn't counted). The file never leaves the phone and it works offline. You can always type the readings instead.</p>
+    <p><strong>testo Smart CSV</strong> is recognized by itself (it has an <em>Instruments</em> list with probe serial numbers). Steps: <strong>File</strong> → <strong>Match probes</strong> (once per probe: each column's serial ending is matched to a testo 549i pressure or 115i temperature probe; pick suction, discharge, suction line or liquid line, or Not used; remembered on this phone by serial) → <strong>Refrigerant</strong> (you pick it; the file doesn't say) → <strong>Check</strong>. The last reading is used by default; tap <em>Overall average</em> to use the file's average instead. Summary rows (average, minimum, maximum) are never counted as readings. <strong>0.0 psi</strong> means the probe gave no reading: it's left blank, flagged orange and not used in any calculation. A column whose serial doesn't match exactly one probe is flagged and not used.</p>
+    <p>Only numbers you saw on Check are filled; blanks stay blank. Discharge pressure goes into liquid pressure for subcooling (line loss isn't counted). The file never leaves the phone and it works offline. You can always type the readings instead. Educational only — verify with OEM data.</p>
   </details>
 
   <details class="help-sec" id="psychro">
@@ -115,8 +116,8 @@
     </form>
   </details>
   </div>
-  <script src="version.js?v=43"></script>
-  <script src="app.js?v=43"></script>
-  <script type="module" src="tools/help-app.js?v=43"></script>
+  <script src="version.js?v=44"></script>
+  <script src="app.js?v=44"></script>
+  <script type="module" src="tools/help-app.js?v=44"></script>
 </body>
 </html>

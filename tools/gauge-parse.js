@@ -294,3 +294,127 @@ export function fillValues(preview) {
   for (const k of Object.keys(out)) if (out[k] == null) delete out[k];
   return out;
 }
+
+/* ---------- testo Smart CSV (verified from a real export: app 32.1.8, 549i + 115i, 2026-11-02) ----------
+ * Layout: "Date/Time,<last3 of serial> [unit],...," (trailing comma), 1 row per second,
+ * footer rows Overall Average / Minimum Total / Maximum Total, then "< Section >" blocks
+ * (General Information, Instruments, Measurement Parameters). Probe roles are never guessed. */
+const TESTO_FOOTER = { "overall average": "average", "minimum total": "min", "maximum total": "max" };
+const TESTO_COL_RE = /^(\d{3})\s*\[([^\]]+)\]$/;
+
+/** testo = an "< Instruments >" block AND at least one "<3 digits> [unit]" header column. */
+export function isTestoCSV(text) {
+  const rows = parseCSV(text).rows;
+  const hasInst = rows.some((r) => /^<\s*instruments\s*>$/i.test(r[0] || ""));
+  const hdr = rows[0] || [];
+  return hasInst && /^date\/time$/i.test(hdr[0] || "") && hdr.slice(1).some((h) => TESTO_COL_RE.test(h));
+}
+
+export const testoUnit = (u) => {
+  const s = String(u).replace(/º/g, "°").trim().toLowerCase();
+  if (s === "°f") return { kind: "temp", unit: "°F" };
+  if (s === "°c") return { kind: "temp", unit: "°C" };
+  if (s === "psi") return { kind: "pressure", unit: "psi" };
+  if (s === "psig") return { kind: "pressure", unit: "psig" };
+  if (s === "bar") return { kind: "pressure", unit: "bar" };
+  if (s === "kpa") return { kind: "pressure", unit: "kPa" };
+  if (s === "mpa") return { kind: "pressure", unit: "MPa" };
+  return { kind: null, unit: null };
+};
+
+/** Returns { kind:"testo", headers, rows (readings only), footer:{average,min,max}, columns[], instruments[], sections{}, meta[] } */
+export function parseTestoCSV(text) {
+  const all = parseCSV(text).rows.map((r) => (r.length && r[r.length - 1] === "" ? r.slice(0, -1) : r));
+  const hdr = all[0] || [];
+  const sections = {};
+  let cur = null;
+  const rows = [], footer = {};
+  for (const r of all.slice(1)) {
+    const sm = (r[0] || "").match(/^<\s*(.+?)\s*>$/);
+    if (sm) { cur = sm[1]; sections[cur] = []; continue; }
+    if (cur) { sections[cur].push(r); continue; }
+    const f = TESTO_FOOTER[(r[0] || "").toLowerCase()];
+    if (f) footer[f] = r; else rows.push(r);
+  }
+  const toObjs = (blk) => { if (!blk || !blk.length) return []; const [h, ...d] = blk; return d.map((r) => Object.fromEntries(h.map((k, i) => [k, r[i] ?? ""]))); };
+  const instruments = toObjs(sections["Instruments"]).map((o) => ({ name: o["Name"] || "", serial: o["Serial Number"] || "", firmware: o["Firmware Version"] || "", param: o["Measurement Parameters"] || "" }));
+  const columns = hdr.slice(1).map((h, j) => {
+    const m = h.match(TESTO_COL_RE);
+    const col = { index: j + 1, header: h, suffix: m ? m[1] : null, unit: null, kind: null, instrument: null, flags: [] };
+    if (!m) { col.flags.push("column header not in testo form — not used"); return col; }
+    Object.assign(col, testoUnit(m[2]));
+    if (!col.unit) col.flags.push("unit “" + m[2] + "” not supported — not used");
+    const hits = instruments.filter((i) => i.serial.endsWith(m[1]));
+    if (hits.length === 1) col.instrument = hits[0];
+    else col.flags.push(hits.length ? "serial ending " + m[1] + " matches " + hits.length + " instruments — not used" : "no instrument serial ends in " + m[1] + " — not used");
+    if (col.instrument && col.kind) {
+      const p = col.instrument.param.toLowerCase();
+      if ((col.kind === "pressure" && !/pressure/.test(p)) || (col.kind === "temp" && !/temp/.test(p))) col.flags.push("unit doesn't match the instrument's " + col.instrument.param + " — not used");
+    }
+    return col;
+  });
+  const gen = toObjs(sections["General Information"])[0] || {};
+  const mp = toObjs(sections["Measurement Parameters"])[0] || {};
+  const meta = [gen["App Version"] && "testo Smart app " + gen["App Version"], mp["Measuring Cycle"] && "Cycle " + mp["Measuring Cycle"], mp["Start Time"] && "Start " + mp["Start Time"], mp["End"] && "End " + mp["End"]].filter(Boolean);
+  return { kind: "testo", headers: hdr, rows, footer, columns, instruments, sections, general: gen, params: mp, meta };
+}
+
+/** Usable columns (unique serial match, known unit, unit matches instrument). */
+export const testoUsable = (t) => t.columns.filter((c) => !c.flags.length);
+export const testoProbeLabel = (c) => c.instrument ? c.instrument.name + " " + (c.kind === "pressure" ? "pressure" : "temperature") + " · serial " + c.instrument.serial + " (" + c.unit + ")" : c.header;
+
+/** Slots a probe can be mapped to (refrigerant and time are not probes). */
+export const TESTO_SLOTS = FIELDS.filter((f) => f.kind === "pressure" || f.kind === "temp");
+export const TESTO_MAP_KEY = "serviceTechTestoProbes_v1";
+/** { [fullSerial]: fieldId | "" (= not used) }, kept on this phone only. */
+export function loadTestoProbes(storage) { try { return JSON.parse(storage.getItem(TESTO_MAP_KEY) || "{}") || {}; } catch (e) { return {}; } }
+export function saveTestoProbes(storage, map) {
+  const all = loadTestoProbes(storage);
+  Object.assign(all, map);
+  storage.setItem(TESTO_MAP_KEY, JSON.stringify(all));
+  return all;
+}
+/** Every usable probe in this file already has a saved slot (or saved "not used"). */
+export const testoProbesKnown = (t, saved) => testoUsable(t).every((c) => Object.prototype.hasOwnProperty.call(saved, c.instrument.serial));
+
+/** Preview. opts: { probes: {serial: fieldId}, refrigerant (user-picked, never from the file), source: "last"|"average", row }. */
+export function buildTestoPreview(t, opts) {
+  const src = opts.source === "average" ? "average" : "last";
+  const r = opts.row ?? t.rows.length - 1;
+  const row = src === "average" ? t.footer.average || [] : t.rows[r] || [];
+  const bySlot = {};
+  for (const c of testoUsable(t)) { const s = (opts.probes || {})[c.instrument.serial]; if (s) (bySlot[s] = bySlot[s] || []).push(c); }
+  const items = FIELDS.map((f) => {
+    const it = { id: f.id, label: f.label, raw: "", unit: null, value: null, display: "—", flags: [], probe: null };
+    if (f.id === "refrigerant") {
+      const rf = normRefrigerant(opts.refrigerant);
+      it.value = rf; it.display = rf || "—";
+      if (!rf) it.flags.push("pick the refrigerant — not filled");
+      return it;
+    }
+    if (f.id === "timestamp") {
+      it.value = src === "average" ? null : row[0] || null;
+      it.display = src === "average" ? "Overall average" : row[0] || "—";
+      return it;
+    }
+    const cs = bySlot[f.id] || [];
+    if (!cs.length) { it.flags.push("no probe mapped — not filled"); return it; }
+    if (cs.length > 1) { it.flags.push("two probes mapped here — not filled"); return it; }
+    const c = cs[0];
+    it.probe = testoProbeLabel(c); it.unit = c.unit; it.raw = row[c.index] ?? "";
+    const n = num(it.raw);
+    if (f.kind === "pressure" && n === 0) { it.display = "—"; it.flags.push("0.0 psi = no reading (probe off or not connected) — left blank"); return it; }
+    const conv = f.kind === "pressure" ? toPsig(it.raw, c.unit) : toF(it.raw, c.unit);
+    if (conv.value == null) { it.flags.push(it.raw ? "not a number — not filled" : "empty — not filled"); return it; }
+    it.value = round1(conv.value);
+    const tgt = f.kind === "pressure" ? "psig" : "°F";
+    it.display = it.value + " " + tgt + (c.unit !== tgt ? "  (from " + it.raw + " " + c.unit + ")" : "");
+    if (conv.note) it.flags.push(conv.note);
+    if (f.kind === "pressure" && (it.value < -15 || it.value > 700)) it.flags.push("outside gauge range — check");
+    if (f.kind === "temp" && (it.value < -60 || it.value > 250)) it.flags.push("outside line-temp range — check");
+    return it;
+  });
+  const dis = items.find((x) => x.id === "dischargePsig");
+  if (dis && dis.value != null) dis.flags.push("used as liquid pressure for subcooling (line loss not counted)");
+  return { row: r, rows: t.rows.length, source: src, items };
+}

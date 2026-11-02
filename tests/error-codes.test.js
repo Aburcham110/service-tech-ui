@@ -101,8 +101,8 @@ test("matching a scanned unit and typed codes", () => {
 test("tree page wires the Error codes step from the scan header", () => {
   const app = readFileSync(new URL("../tools/tree-app.js", import.meta.url), "utf8");
   assert.match(app, /tree-codes-step/);
-  assert.match(app, /error-codes\.js\?v=43/);
-  assert.match(readFileSync(new URL("../tools/error-codes.js", import.meta.url), "utf8"), /data\/error-codes\.json\?v=43/);
+  assert.match(app, /error-codes\.js\?v=44/);
+  assert.match(readFileSync(new URL("../tools/error-codes.js", import.meta.url), "utf8"), /data\/error-codes\.json\?v=44/);
 });
 
 test("generator section models match the shipped data (a Notion rebuild keeps the same models)", () => {

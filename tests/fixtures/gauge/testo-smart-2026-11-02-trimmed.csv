@@ -1,0 +1,25 @@
+Date/Time,377 [°F],523 [psi],934 [°F],974 [psi],
+11/2/26 4:28:09 PM,70.4,0.0,72.5,0.0,
+11/2/26 4:28:10 PM,70.5,0.0,72.5,0.0,
+11/2/26 4:28:11 PM,70.5,0.0,72.5,0.0,
+11/2/26 4:29:11 PM,71.4,0.0,73.0,0.0,
+11/2/26 4:29:12 PM,71.4,0.0,73.0,0.0,
+11/2/26 4:29:13 PM,71.4,0.0,73.0,0.0,
+Overall Average,71.0,0.0,72.8,0.0,
+Minimum Total,70.4,0.0,72.5,0.0,
+Maximum Total,71.4,0.0,73.0,0.0,
+
+< General Information >
+App Version,Name of Measurement Program,Date of Measurement,Comments,
+32.1.8.108231,Basic View,11/2/26 4:29:15 PM,,
+
+< Instruments >
+Name,Serial Number,Firmware Version,Measurement Parameters,Set Surface Increment,
+testo 549i,48719974,2.4.17,Pressure,,
+testo 549i,48729523,2.4.17,Pressure,,
+testo 115i,48733377,2.204.1,Temperature,On,
+testo 115i,48733934,2.204.1,Temperature,On,
+
+< Measurement Parameters >
+Measuring mode,Measuring Cycle,Start Time,End,Duration,
+Continuous,1 Sec,11/2/26 4:28:09 PM,11/2/26 4:29:13 PM,1 Min. 4 Sec,
