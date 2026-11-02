@@ -2,7 +2,8 @@
  *  Everything is parsed on this phone. pdf.js / fflate are import()ed only for PDF / XLSX files.
  *  Nothing is written to the form until the tech taps "Looks right — fill". */
 import { BRANDS, FIELDS, PRESSURE_UNITS, TEMP_UNITS, fileKind, parseCSV, toTable, parseXLSX, parseXML,
-  pdfLinesToTable, itemsToLines, unitFor, mappingFits, loadMapping, saveMapping, buildPreview, fillValues } from "./gauge-parse.js?v=42";
+  pdfLinesToTable, itemsToLines, unitFor, mappingFits, loadMapping, saveMapping, buildPreview, fillValues,
+  isTestoCSV, parseTestoCSV, testoUsable, testoProbeLabel, TESTO_SLOTS, loadTestoProbes, saveTestoProbes, testoProbesKnown, buildTestoPreview } from "./gauge-parse.js?v=42";
 
 export const SHARE_CACHE = "st-share";
 export const SHARE_KEY = "./__shared-gauge-report";
@@ -15,7 +16,12 @@ function btn(text, cls, on) { const b = mk("button", "btn " + (cls || "btn-secon
 /** File -> table. Throws a plain-language Error for unsupported files. */
 export async function readReport(file) {
   const kind = fileKind(file.name, file.type);
-  if (kind === "csv") return toTable(parseCSV(await file.text()).rows, "csv");
+  if (kind === "csv") {
+    const text = await file.text();
+    // testo Smart: "< Instruments >" block + "<serial> [unit]" headers. Checked first; other CSVs unchanged.
+    if (isTestoCSV(text)) return parseTestoCSV(text);
+    return toTable(parseCSV(text).rows, "csv");
+  }
   if (kind === "xml") return parseXML(await file.text());
   if (kind === "xlsx") {
     const { unzipSync } = await import("../vendor/fflate/fflate.mjs");
@@ -60,10 +66,10 @@ export function mountGaugeImport(host, opts) {
   host.appendChild(box);
   const st = { brand: localStorage.getItem(BRAND_KEY) || "", file: null, table: null, mapping: null, row: null, err: "" };
 
-  function screen(title, n) {
+  function screen(title, n, of) {
     box.innerHTML = "";
     const h = mk("h2", "gi-title", title);
-    if (n) h.prepend(mk("span", "gi-step", "Step " + n + " of 3 · "));
+    if (n) h.prepend(mk("span", "gi-step", "Step " + n + " of " + (of || 3) + " · "));
     const help = mk("a", "gi-help", "?"); help.href = "help.html#import"; help.setAttribute("aria-label", "Help: import gauge report");
     box.append(h, help);
     return box;
@@ -95,6 +101,13 @@ export function mountGaugeImport(host, opts) {
         st.table = await readReport(file); st.file = file; st.err = "";
         if (!st.table.rows.length) throw new Error("No readings found in this file. Enter the values by hand.");
         st.row = st.table.rows.length - 1;
+        if (st.table.kind === "testo") {
+          st.brand = "testo"; localStorage.setItem(BRAND_KEY, st.brand);
+          st.probes = loadTestoProbes(localStorage); st.source = "last"; st.refrigerant = "";
+          if (!testoUsable(st.table).length) throw new Error("testo file found, but no column matched an instrument serial. Enter the values by hand.");
+          if (testoProbesKnown(st.table, st.probes)) testoRef(); else testoMap();
+          return;
+        }
         const saved = loadMapping(localStorage, st.brand);
         if (mappingFits(saved, st.table.headers)) { st.mapping = saved; check(); } else { st.mapping = saved || {}; mapCols(); }
       } catch (e) { msg.textContent = e.message || String(e); }
@@ -179,6 +192,90 @@ export function mountGaugeImport(host, opts) {
         done(vals, where);
       }),
       btn("Change columns", "btn-secondary gi-remap", mapCols),
+      btn("Cancel", "btn-secondary", start));
+  }
+
+  /* ---------- testo Smart: 2 Probes (once per serial) · 3 Refrigerant · 4 Check ---------- */
+  const DEFAULT_REFS = ["R-410A", "R-22", "R-454B", "R-32", "R-134a", "R-404A", "R-407C"];
+  function testoMap() {
+    screen("Match probes", 2, 4);
+    const t = st.table;
+    box.appendChild(mk("p", "gi-hint", "testo Smart file. For each probe, pick what it was measuring. This is remembered on this phone by the probe's serial number, so you only do it once per probe."));
+    const sels = [];
+    for (const c of t.columns) {
+      const wrap = mk("div", "gi-map gi-probe"); wrap.dataset.col = c.header;
+      if (c.flags.length) { wrap.classList.add("gi-flag"); wrap.append(mk("p", null, c.header), mk("p", "gi-why", c.flags.join("; "))); box.appendChild(wrap); continue; }
+      const lab = mk("label", "field"); lab.appendChild(mk("span", null, testoProbeLabel(c)));
+      const sel = mk("select"); sel.className = "gi-slot"; sel.dataset.serial = c.instrument.serial;
+      sel.appendChild(new Option("Choose…", ""));
+      TESTO_SLOTS.filter((f) => f.kind === c.kind).forEach((f) => sel.appendChild(new Option(f.label, f.id)));
+      sel.appendChild(new Option("Not used", "-"));
+      const prev = st.probes[c.instrument.serial];
+      sel.value = prev === "" ? "-" : (prev || "");
+      lab.appendChild(sel); wrap.appendChild(lab); box.appendChild(wrap); sels.push(sel);
+    }
+    const msg = mk("p", "gi-error"); msg.setAttribute("aria-live", "polite");
+    box.append(msg, btn("Save and continue", "btn-primary gi-save", () => {
+      if (sels.some((s) => !s.value)) { msg.textContent = "Pick what each probe measured (or Not used)."; return; }
+      const m = {}; for (const s of sels) m[s.dataset.serial] = s.value === "-" ? "" : s.value;
+      const used = Object.values(m).filter(Boolean);
+      if (new Set(used).size !== used.length) { msg.textContent = "Two probes are on the same reading. Each reading needs its own probe."; return; }
+      st.probes = saveTestoProbes(localStorage, m); testoRef();
+    }), btn("Cancel", "btn-secondary", start));
+  }
+
+  function testoRef() {
+    screen("Refrigerant", 3, 4);
+    box.appendChild(mk("p", "gi-hint", "The testo file doesn't say which refrigerant is in the system. Pick it from the unit's data plate."));
+    const lab = mk("label", "field"); lab.appendChild(mk("span", null, "Refrigerant"));
+    const sel = mk("select"); sel.id = "gi-testo-ref";
+    sel.appendChild(new Option("Choose…", ""));
+    (opts.refrigerants || DEFAULT_REFS).forEach((r) => sel.appendChild(new Option(r, r)));
+    sel.appendChild(new Option("Leave blank", "-"));
+    sel.value = st.refrigerant || "";
+    lab.appendChild(sel); box.appendChild(lab);
+    const msg = mk("p", "gi-error"); msg.setAttribute("aria-live", "polite");
+    box.append(msg, btn("Continue", "btn-primary gi-save", () => {
+      if (!sel.value) { msg.textContent = "Pick the refrigerant, or Leave blank."; return; }
+      st.refrigerant = sel.value; testoCheck();
+    }), btn("Change probes", "btn-secondary", testoMap), btn("Cancel", "btn-secondary", start));
+  }
+
+  function testoCheck() {
+    screen("Check the readings", 4, 4);
+    const t = st.table;
+    const pv = buildTestoPreview(t, { probes: st.probes, refrigerant: st.refrigerant === "-" ? "" : st.refrigerant, source: st.source, row: st.row });
+    const srcNav = mk("div", "gi-rownav");
+    srcNav.append(btn("Last reading", "btn-" + (st.source === "last" ? "primary" : "secondary") + " gi-src-last", () => { st.source = "last"; st.row = t.rows.length - 1; testoCheck(); }),
+      btn("Overall average", "btn-" + (st.source === "average" ? "primary" : "secondary") + " gi-src-avg", () => { st.source = "average"; testoCheck(); }));
+    if (!t.footer.average) srcNav.lastChild.disabled = true;
+    box.appendChild(srcNav);
+    if (st.source === "last" && pv.rows > 1) {
+      const nav = mk("div", "gi-rownav");
+      nav.append(btn("◀", "btn-secondary gi-prev", () => { st.row = Math.max(0, st.row - 1); testoCheck(); }),
+        mk("span", "gi-rowtext", "Reading " + (pv.row + 1) + " of " + pv.rows + (pv.row === pv.rows - 1 ? " (last)" : "")),
+        btn("▶", "btn-secondary gi-next", () => { st.row = Math.min(pv.rows - 1, st.row + 1); testoCheck(); }));
+      box.appendChild(nav);
+    }
+    box.appendChild(mk("p", "gi-hint", "Compare with the testo Smart app. Orange = check it. 0.0 psi means no reading and is left blank. Only values shown with a number are filled. Educational only — verify with OEM data."));
+    const tbl = mk("table", "gi-preview");
+    for (const it of pv.items) {
+      const tr = mk("tr", it.flags.length ? "gi-flag" : ""); tr.dataset.field = it.id;
+      tr.append(mk("th", null, it.label), mk("td", "gi-val", it.display), mk("td", "gi-why", [it.probe, ...it.flags].filter(Boolean).join("; ")));
+      tbl.appendChild(tr);
+    }
+    box.appendChild(tbl);
+    const refItem = pv.items.find((x) => x.id === "refrigerant");
+    if (refItem.value && opts.refrigerants && !opts.refrigerants.includes(refItem.value)) refItem.value = null;
+    const vals = fillValues(pv);
+    if (refItem.value == null) delete vals.refrigerant;
+    const msg = mk("p", "gi-error");
+    box.append(msg,
+      btn("Looks right — fill", "btn-primary gi-ok", () => {
+        if (!Object.keys(vals).length) { msg.textContent = "Nothing to fill. Change probes or enter by hand."; return; }
+        done(vals, opts.onFill(vals, pv));
+      }),
+      btn("Change probes", "btn-secondary gi-remap", testoMap),
       btn("Cancel", "btn-secondary", start));
   }
 
