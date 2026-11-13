@@ -383,3 +383,11 @@ input.imported, select.imported { outline: 2px solid var(--warn, #e0a030); }
 .add-to-call-chip:active { background: var(--muted); }
 .add-to-call-status a.back-to-call { white-space: nowrap; font-weight: 600; }
 .add-to-call-hint a { white-space: nowrap; }
+
+/* OEM manuals card (manuals.html) */
+.oem-manuals { border: 1px solid var(--accent, #3b82f6); border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+.oem-manuals h2 { margin: 0 0 6px; font-size: 1rem; }
+.oem-list { list-style: none; padding: 0; margin: 0; }
+.oem-list li { margin: 6px 0; }
+.oem-link { display: block; }
+.oem-meta { display: block; opacity: 0.8; }

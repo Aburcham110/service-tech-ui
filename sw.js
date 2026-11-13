@@ -89,6 +89,10 @@ const ASSETS = [
   "./tools/scan-flow.js?v=44",
   "./tools/missing-model.js?v=44",
   "./tools/heic.js?v=44",
+  // OEM manuals card: matcher, card and the generated manual index (links only; the PDFs are never fetched or cached).
+  "./tools/manual-match.js?v=44",
+  "./tools/manual-links-ui.js?v=44",
+  "./data/manual-index.json?v=44",
   // Manual links index (generated from the Notion Manuals page + OEM sources map).
   "./data/manuals-index.json?v=44",
   // On-device OCR (vendored Tesseract.js 7.0.0, ~15 MB; see vendor/tesseract/README.md).
