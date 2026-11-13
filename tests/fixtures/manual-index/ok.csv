@@ -1,0 +1,12 @@
+Filename,Brand,Model/series,Match key,Doc title/number,Status,Official URL,Notes,Library folder,Verified date
+fx-a.pdf,Fixtureco,FX-A series,FXA*TEST; FXB*TEST,TEST FIXTURE doc A,MATCHED,https://daikincomfort.com/fixture/a.pdf,SECRET-NOTE-A,SECRET-FOLDER-A,2026-11-13
+fx-b.pdf,Fixtureco,FX-B,,TEST FIXTURE doc B (blank key),RELATED,https://daikincomfort.com/fixture/b.pdf,note,folder,2026-11-13
+fx-c.pdf,Fixtureco,FX-C,FXC*,TEST FIXTURE doc C,NOT FOUND,https://daikincomfort.com/fixture/c.pdf,note,folder,2026-11-13
+fx-d.pdf,Fixtureco,FX-D,FXD*,TEST FIXTURE doc D,MATCHED,,note,folder,2026-11-13
+fx-e.pdf,Fixtureco,FX-E,FXE*,TEST FIXTURE doc E,LOGIN-ONLY,https://daikincomfort.com/fixture/e.pdf,note,folder,2026-11-13
+fx-f.pdf,Fixtureco,FX-F,FXF*,TEST FIXTURE doc F,DUPLICATE,https://daikincomfort.com/fixture/f.pdf,note,folder,2026-11-13
+fx-g.pdf,Fixtureco,FX-G,FXG*,TEST FIXTURE doc G,NOT OEM,https://daikincomfort.com/fixture/g.pdf,note,folder,2026-11-13
+fx-h.pdf,Otherco,OT-H,OTH*,TEST FIXTURE doc H (host not on allowlist),MATCHED (newer rev),https://www.not-on-allowlist.invalid/h.pdf,note,folder,2026-11-13
+fx-i.pdf,Fixtureco,"FX-I, ""quoted""",FXI*,"TEST FIXTURE doc I, with comma",REFERENCE,https://daikincomfort.com/fixture/i.pdf,"multi
+line note",folder,2026-11-13
+fx-j.pdf,Fixtureco,FX-J,FXJ*,TEST FIXTURE doc J,MATCHED (newer edition),https://daikincomfort.com/fixture/j.pdf,note,folder,2026-11-13
