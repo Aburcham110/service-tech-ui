@@ -65,3 +65,10 @@ test("picking Neptronic with model EDH-120 returns the Neptronic manual", () => 
   assert.ok(r.length >= 1);
   assert.ok(r.every((x) => new URL(x.url).hostname === "www.neptronic.com"));
 });
+
+test("manuals page: the 14 render first, extras are added when manual-index.json loads (same-origin only)", () => {
+  const src = readFileSync(new URL("../tools/manuals-helper-app.js", import.meta.url), "utf8");
+  assert.match(src, /brandOptions\(base, manualIndex \? manualIndex\.entries : \[\]\)/);
+  assert.match(src, /oemIndex\.then\(\(mi\) => \{\s*manualIndex = mi;\s*fillPicker\(\);/);
+  assert.ok(!/https?:\/\//.test(src.replace(/\/\*[\s\S]*?\*\//g, "")));
+});
