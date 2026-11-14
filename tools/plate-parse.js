@@ -11,8 +11,8 @@
  * or defaulted: a field that isn't on the plate stays absent (blank).
  */
 
-import { parseLoadTable, voltPhHz } from "./plate-loadtable.js?v=48";
-import { assignIdsByPattern, parseHeaderRow, partNumbers, fixHeatcraftModel, HEATCRAFT_MODEL, HEATCRAFT_SERIAL, parseRefrigerantTable, gridFields } from "./plate-heatcraft.js?v=48";
+import { parseLoadTable, voltPhHz } from "./plate-loadtable.js?v=49";
+import { assignIdsByPattern, parseHeaderRow, partNumbers, fixHeatcraftModel, HEATCRAFT_MODEL, HEATCRAFT_SERIAL, parseRefrigerantTable, gridFields } from "./plate-heatcraft.js?v=49";
 
 export const LOW_CONFIDENCE = 0.6;
 /** Stricter bar for identifiers: a wrong model/serial costs a wrong part or warranty lookup. */
