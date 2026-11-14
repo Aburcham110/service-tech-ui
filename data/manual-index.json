@@ -44,6 +44,17 @@
    "verifiedDate": "2026-11-13"
   },
   {
+   "brand": "Viessmann (not Daikin)",
+   "model": "EM-M1 mixing valve extension kit (ADIO module)",
+   "matchKeys": [
+    "EM-M1"
+   ],
+   "docTitle": "Installation & Service Instructions 5472 517-06 (04/2022)",
+   "status": "RELATED",
+   "url": "https://www.viessmann.ca/content/dam/public-brands/ca/pdfs/doc/mix/mixing_valve_ext_module.pdf/_jcr_content/renditions/original.media_file.inline.file/mixing_valve_ext_module.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
    "brand": "Daikin",
    "model": "VRV Aurora heat recovery RELQ-TATJA/TAYDA/TAYCA",
    "matchKeys": [
@@ -74,6 +85,29 @@
    "docTitle": "Engineering Data EDUS341819A-D (2020-01)",
    "status": "RELATED",
    "url": "https://daikincomfort.com/docs/default-source/vrv-aurora-heat-pump/em-presales-rxlq_tb.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Daikin",
+   "model": "VRV X cooling-only RXQ6-48A(N)R (RXQ-ARYFK)",
+   "matchKeys": [
+    "RXQ*AR*"
+   ],
+   "docTitle": "Service Manual SiME341909EA",
+   "status": "MATCHED",
+   "url": "https://www.daikin.eu/content/dam/global-assets/DameaWebsite/ProductGroups/VRV/VRV-X/RXQ-ARYFK%20Service%20Manual.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Daikin",
+   "model": "Multi-split outdoor 2/3/4/5MXS-W, 2/3/4MXL-W, 2/3/4MXLH-W",
+   "matchKeys": [
+    "*MXS*W*",
+    "*MXL*W*"
+   ],
+   "docTitle": "Service Manual SiUS122226EA",
+   "status": "MATCHED",
+   "url": "https://cdn.daikincloud.io/PIM/Assets/Documents/SM-SiUS122226EA2.pdf",
    "verifiedDate": "2026-11-13"
   },
   {
@@ -184,6 +218,35 @@
    "verifiedDate": "2026-11-13"
   },
   {
+   "brand": "Friedrich (not Daikin)",
+   "model": "VPAK accessory VPAL2",
+   "matchKeys": [
+    "VPAL2"
+   ],
+   "docTitle": "VPAL2 IOM 920-077-01",
+   "status": "MATCHED",
+   "url": "https://www.friedrich.com/hubfs/2019%20Literature%20PDFs/Installation%20and%20Operation%20Manuals/Vertical%20Package%20Terminal%20Air%20Conditioners/VPAK%20Accessories/Current%20VPAK%20Accessory%20VPAL2%20IOM.pdf?hsLang=en",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "CaptiveAire (likely; not Daikin)",
+   "model": "DOAS rooftop units",
+   "matchKeys": [],
+   "docTitle": "DOAS RTU series manual, Oct 2020 Rev 00 (136 pages)",
+   "status": "RELATED",
+   "url": "https://www.captiveaire.com/manuals/makeupair/doas-oim.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "CaptiveAire (not Daikin)",
+   "model": "DOAS rooftop units",
+   "matchKeys": [],
+   "docTitle": "DOAS RTU Installation & Operation Manual A0026936 Rev 18",
+   "status": "MATCHED",
+   "url": "https://www.captiveaire.com/manuals/makeupair/doas-oim.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
    "brand": "Daikin",
    "model": "Wall-mounted VRV indoor FXAQ-PVJU",
    "matchKeys": [
@@ -216,6 +279,17 @@
   },
   {
    "brand": "Daikin",
+   "model": "KRP928 BACnet/Modbus interface adaptor",
+   "matchKeys": [
+    "KRP928*"
+   ],
+   "docTitle": "Application Guide AN-KRP-11-2023",
+   "status": "MATCHED",
+   "url": "https://cdn.daikincloud.io/PIM/Assets/Documents/AG-KRP928%20Application%20Guide_20.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Daikin",
    "model": "intelligent Touch Manager DCM601A71",
    "matchKeys": [
     "DCM601A71"
@@ -234,6 +308,17 @@
    "docTitle": "DCS302C71 Installation Manual (OH14-01)",
    "status": "RELATED",
    "url": "https://daikincomfort.com/docs/default-source/dcs302c71/dcs302c71-operation-manual.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Daikin",
+   "model": "Gateway DGE601A53",
+   "matchKeys": [
+    "DGE601A53"
+   ],
+   "docTitle": "Installation Manual 3PEN583694-2E",
+   "status": "MATCHED",
+   "url": "https://www.daikin.eu/content/dam/document-library/installation-manuals/opt-and-acc/dge601a53/DGE601A53_Installation%20manual_3PEN583694-2E_English.pdf",
    "verifiedDate": "2026-11-13"
   },
   {
@@ -259,12 +344,263 @@
    "verifiedDate": "2026-11-13"
   },
   {
+   "brand": "Neptronic",
+   "model": "EDH electric zone heater",
+   "matchKeys": [
+    "EDH*"
+   ],
+   "docTitle": "EDH Zone Heater Installation Instructions",
+   "status": "MATCHED",
+   "url": "https://www.neptronic.com/pdf/EDH%20Zone%20Heater%20Installation%20Instructions.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Ice-O-Matic",
+   "model": "ICE series cubers ICE0250-ICE2100",
+   "matchKeys": [
+    "ICE0*",
+    "ICE1*",
+    "ICE2*"
+   ],
+   "docTitle": "ICE Series Service Manual 11-1000 (8/2015)",
+   "status": "MATCHED",
+   "url": "https://iceomatic.com/content/store-documents/ICE_Service%20Manual.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
    "brand": "Copeland (Emerson)",
    "model": "Refrigeration Manual Part 5 (general)",
    "matchKeys": [],
    "docTitle": "Refrigeration Manual Part 5, Installation & Service (AE-105 / 5400004)",
    "status": "MATCHED",
    "url": "https://www.copeland.com/documents/installation-service-en-us-5400004.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "S&P (Soler & Palau)",
+   "model": "TRCeN energy recovery ventilators",
+   "matchKeys": [
+    "TRCeN*"
+   ],
+   "docTitle": "TRCeN IOM",
+   "status": "MATCHED",
+   "url": "https://solerpalaucanada.com/documents/IOM/iom-trcen.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "S&P (Soler & Palau)",
+   "model": "TRCeN energy recovery ventilators",
+   "matchKeys": [
+    "TRCeN*"
+   ],
+   "docTitle": "TRCeN IOM",
+   "status": "MATCHED",
+   "url": "https://www.solerpalau-usa.com/documents/IOM/iom-trcen.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "RegO",
+   "model": "LP-gas regulators and valves (general)",
+   "matchKeys": [],
+   "docTitle": "L-545 Serviceman's Manual",
+   "status": "MATCHED (newer rev)",
+   "url": "https://www.regoproducts.com/content/dam/pes/pdfs/L-545_Servicemans_Manual.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Mate Precision Technologies",
+   "model": "Punch press tooling (not HVAC)",
+   "matchKeys": [],
+   "docTitle": "Technical Solutions Guide LIT00682 Rev E",
+   "status": "MATCHED",
+   "url": "https://www.mate.com/wp-content/uploads/2021/03/LIT00682_TechSolutionsGuide_RevE_LR.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Turbo Air",
+   "model": "M3 reach-in refrigerators/freezers M3R/M3F",
+   "matchKeys": [
+    "M3R*",
+    "M3F*"
+   ],
+   "docTitle": "M3R/M3F Series Installation & Operation Manual (older, 18 pages)",
+   "status": "RELATED",
+   "url": "https://www.turboairinc.com/wp-content/uploads/2020/01/M3-Reach-Ins-HC.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Turbo Air",
+   "model": "M3 reach-in refrigerators/freezers (HC)",
+   "matchKeys": [
+    "M3R*",
+    "M3F*"
+   ],
+   "docTitle": "M3 Reach-Ins HC Installation & Operation Manual",
+   "status": "MATCHED",
+   "url": "https://www.turboairinc.com/wp-content/uploads/2020/01/M3-Reach-Ins-HC.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Sporlan (Parker)",
+   "model": "Head pressure control valves LAC-4 / LAC-4-DS",
+   "matchKeys": [
+    "LAC-4*"
+   ],
+   "docTitle": "Installation & Servicing Instructions SD-134 (82021)",
+   "status": "MATCHED",
+   "url": "https://www.parker.com/content/dam/Parker-com/Literature/Sporlan/Sporlan-pdf-files/Sporlan-pdf-090/SD-134-Head-Pressure-Control-Valves--LAC-4.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "ECR / Utica",
+   "model": "Starfire SFH gas boiler",
+   "matchKeys": [
+    "SFH*"
+   ],
+   "docTitle": "SFH Installation & Operation Manual P/N 240009735 Rev F (12/2014)",
+   "status": "MATCHED",
+   "url": "https://uticaboilers.com/wp-content/uploads/2022/02/SFH-Installation-and-Operation-Manual.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Hoshizaki",
+   "model": "Steelheart undercounter/worktop refrigeration",
+   "matchKeys": [
+    "UR*A",
+    "UF*A",
+    "WR*A"
+   ],
+   "docTitle": "Steelheart Series Service Manual 73217",
+   "status": "MATCHED",
+   "url": "https://secure.hoshizakiamerica.com/docs/manuals/SteelHeart_UC_WT_PT_serv.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "S&P (Soler & Palau)",
+   "model": "TRC1600 ERV (obsolete)",
+   "matchKeys": [
+    "TRC1600*"
+   ],
+   "docTitle": "TRC1600 Submittal",
+   "status": "MATCHED",
+   "url": "https://www.solerpalau-usa.com/documents/Submittal/sub-trc1600updated.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "S&P (Soler & Palau)",
+   "model": "TRCe800 ERV",
+   "matchKeys": [
+    "TRCe800*"
+   ],
+   "docTitle": "TRCe800 Submittal",
+   "status": "MATCHED",
+   "url": "https://www.solerpalaucanada.com/resources/archdocs/sub-trce800.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "S&P (Soler & Palau)",
+   "model": "TRCeN500 ERV",
+   "matchKeys": [
+    "TRCeN500*"
+   ],
+   "docTitle": "TRCeN500 Submittal",
+   "status": "MATCHED",
+   "url": "https://www.solerpalau-usa.com/documents/Submittal/sub-trcen500.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "S&P (Soler & Palau)",
+   "model": "TRCeN800V ERV",
+   "matchKeys": [
+    "TRCeN800*"
+   ],
+   "docTitle": "TRCeN800V Submittal",
+   "status": "MATCHED (newer rev)",
+   "url": "https://www.solerpalau-usa.com/documents/Submittal/sub-trcen800v.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Turbo Air",
+   "model": "M3 reach-ins (TRBA-M3 service)",
+   "matchKeys": [
+    "M3R*",
+    "M3F*"
+   ],
+   "docTitle": "M3 HC Service Manual (TRBA-M3)",
+   "status": "MATCHED",
+   "url": "https://www.turboairinc.com/wp-content/uploads/2020/01/M3_HC_Service-Manual.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "York (JCI)",
+   "model": "Smart Equipment unit control board SE-SPU1001/1011/1002/1012",
+   "matchKeys": [
+    "SE-SPU10*"
+   ],
+   "docTitle": "Smart Equipment Controls Quick Start Guide 1136326-USG-H-0120",
+   "status": "MATCHED",
+   "url": "https://docs.johnsoncontrols.com/ductedsystems/api/khub/documents/sX7mjPqCLCxTTXYla1IEcw/content",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Rinnai",
+   "model": "Tankless gas piping (general)",
+   "matchKeys": [],
+   "docTitle": "Technical Bulletin TB-111 1/2\" Gas Line Piping",
+   "status": "MATCHED",
+   "url": "https://media.rinnai.us/salsify_asset/s-f905168b-b0a9-4b7c-a205-bbb8071597bb/TB-111%20Half%20Inch%20Gas%20line.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Marley Engineered Products",
+   "model": "Electric duct heaters (sizing)",
+   "matchKeys": [],
+   "docTitle": "Duct Heater How To Size",
+   "status": "MATCHED",
+   "url": "https://www.marleymep.com/wp-content/uploads/zbr-mdhht_how-to-size_0.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Master-Bilt / Norlake (RSG)",
+   "model": "One-piece Capsule Pak refrigeration systems",
+   "matchKeys": [],
+   "docTitle": "Capsule Pak Installation Manual 171375 Rev G",
+   "status": "MATCHED",
+   "url": "https://norlake.com/wp-content/uploads/2020/10/171375-Capsule-Pak-Systems-Installation-Manual-Self-Contained.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Turbo Air",
+   "model": "SMART-7 refrigeration system (Carel controller)",
+   "matchKeys": [],
+   "docTitle": "Refrigeration System Installation & Operation Manual KUCST210419",
+   "status": "RELATED",
+   "url": "https://www.turboairinc.com/refrigerationsystem/wp-content/uploads/sites/8/2021/07/Previous-Model_-Refrigeration-System-Intallation-Operation-Manual-SMART-7-For-Danfoss-Controller_EachPorductPag.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Norlake / Master-Bilt (RSG)",
+   "model": "LogiTemp Full Gauge VX-1025E Plus controller",
+   "matchKeys": [
+    "VX-1025E*"
+   ],
+   "docTitle": "LogiTemp VX-1025E Plus Manual 219828",
+   "status": "MATCHED",
+   "url": "https://norlake.com/wp-content/uploads/2024/03/219828-LogiTemp-Full-Gauge-VX-1025E-Plus-Manual.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Sporlan (Parker)",
+   "model": "Head pressure control ORI/ORD/OROA/LAC",
+   "matchKeys": [
+    "ORI*",
+    "ORD*",
+    "OROA*",
+    "LAC*"
+   ],
+   "docTitle": "Bulletin 90-30-1 Head Pressure Control Charging (June 2022)",
+   "status": "MATCHED (newer rev)",
+   "url": "https://www.parker.com/content/dam/Parker-com/Literature/Sporlan/Sporlan-pdf-files/Sporlan-pdf-090/90-30-1-Head-Pressure-Control-Charging_ORI_ORD_OROA_LAC.pdf",
    "verifiedDate": "2026-11-13"
   },
   {
@@ -289,6 +625,69 @@
    "docTitle": "RST64C1E-IAV-959 submittal sheet",
    "status": "MATCHED",
    "url": "https://www.copeland.com/en-us/shop/rst64c1e-iav-959",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Scotsman",
+   "model": "Ice machines (general)",
+   "matchKeys": [],
+   "docTitle": "Ice Machine Service Handbook 17-1991-01",
+   "status": "MATCHED",
+   "url": "https://www.scotsman-ice.com/service/Miscellaneous/HANDBOOK.PDF",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "KeepRite",
+   "model": "KEZ-Line air-cooled scroll condensing units",
+   "matchKeys": [
+    "KEZ*"
+   ],
+   "docTitle": "KEZ-Line Product Data Bulletin K40-KEZ-PDS-10",
+   "status": "MATCHED",
+   "url": "https://docs.k-rp.com/1087393.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "KeepRite",
+   "model": "Head pressure control (general)",
+   "matchKeys": [],
+   "docTitle": "Head Pressure Control Application Guide K40-HPC-AG-2",
+   "status": "MATCHED",
+   "url": "https://docs.k-rp.com/product-data-installation/HEAD-PRESSURE-GUIDE_1101110.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Hoshizaki",
+   "model": "KM-1600SAH/SWH/SRH(3) stackable crescent cuber",
+   "matchKeys": [
+    "KM-1600S*"
+   ],
+   "docTitle": "Service Manual 73120 (Sep 2004)",
+   "status": "MATCHED",
+   "url": "https://secure.hoshizakiamerica.com/docs/manuals/KM-1600S_H_serv.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Howe",
+   "model": "Rapid Freeze 2000-RL/3000-RL/4000-RL/6000-RL",
+   "matchKeys": [
+    "2000-RL",
+    "3000-RL",
+    "4000-RL",
+    "6000-RL"
+   ],
+   "docTitle": "Rapid Freeze Ice Flaker Installation & Service Manual",
+   "status": "MATCHED",
+   "url": "https://www.howecorp.com/asset/5de693745c9ba",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "G&D Chillers",
+   "model": "Single & dual stage glycol chillers",
+   "matchKeys": [],
+   "docTitle": "Chiller Installation Guide & User Manual (2021a)",
+   "status": "MATCHED",
+   "url": "https://gdchillers.com/wp-content/uploads/1970/01/Single-Dual-Stage-Chiller-Manual-2021a.pdf",
    "verifiedDate": "2026-11-13"
   },
   {
