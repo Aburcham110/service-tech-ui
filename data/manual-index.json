@@ -355,6 +355,15 @@
    "verifiedDate": "2026-11-13"
   },
   {
+   "brand": "HTPG",
+   "model": "Unit coolers (HTPG board)",
+   "matchKeys": [],
+   "docTitle": "Unit Coolers IOM HT-EN-IOM-0322A",
+   "status": "MATCHED",
+   "url": "https://qr-code-documents.s3.amazonaws.com/HTPG/HT-EN-IOM.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
    "brand": "Ice-O-Matic",
    "model": "ICE series cubers ICE0250-ICE2100",
    "matchKeys": [
@@ -438,6 +447,15 @@
    "docTitle": "M3 Reach-Ins HC Installation & Operation Manual",
    "status": "MATCHED",
    "url": "https://www.turboairinc.com/wp-content/uploads/2020/01/M3-Reach-Ins-HC.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "Radiant Floor Company",
+   "model": "DIY radiant floor heating (general)",
+   "matchKeys": [],
+   "docTitle": "Design & Installation Manual (11th ed.)",
+   "status": "MATCHED",
+   "url": "https://www.radiantcompany.com/wp-content/uploads/radiantcompanymanual.pdf",
    "verifiedDate": "2026-11-13"
   },
   {
@@ -529,6 +547,18 @@
    "docTitle": "M3 HC Service Manual (TRBA-M3)",
    "status": "MATCHED",
    "url": "https://www.turboairinc.com/wp-content/uploads/2020/01/M3_HC_Service-Manual.pdf",
+   "verifiedDate": "2026-11-13"
+  },
+  {
+   "brand": "True",
+   "model": "Deep-well bar coolers TDBD / TSID",
+   "matchKeys": [
+    "TDBD*",
+    "TSID*"
+   ],
+   "docTitle": "TDBD/TSID Installation & Operation Manual",
+   "status": "MATCHED",
+   "url": "https://dc2kentprodcontent.blob.core.windows.net/installationmanuals/TDBD_TSID/TDBD_English.pdf",
    "verifiedDate": "2026-11-13"
   },
   {

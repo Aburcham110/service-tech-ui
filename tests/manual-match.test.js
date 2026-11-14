@@ -108,12 +108,14 @@ test("real index: RXYQ72TATJU (Daikin) finds the EDUS341703A-R2 engineering data
   assert.match(r[0].docTitle, /EDUS341703A-R2/);
 });
 
-test("real index: newly allowlisted brand hosts match by brand; held-out hosts are absent", () => {
+test("real index: allowlisted brand hosts match by brand; storage hosts only with their exact files", () => {
   const REAL = JSON.parse(readFileSync(new URL("../data/manual-index.json", import.meta.url), "utf8"));
   const edh = matchManuals(REAL, { model: "EDH-120", brand: "Neptronic" });
   assert.ok(edh.length >= 1 && edh.every((r) => new URL(r.url).hostname === "www.neptronic.com"));
   assert.deepEqual(matchManuals(REAL, { model: "EDH-120", brand: "Daikin" }), []);
   assert.deepEqual(matchManuals(REAL, { model: "EDH-120" }), [], "EDH* is too short without a brand");
-  const hosts = new Set(REAL.entries.map((e) => new URL(e.url).hostname));
-  for (const h of ["qr-code-documents.s3.amazonaws.com", "dc2kentprodcontent.blob.core.windows.net", "www.radiantcompany.com", "hvaclearningcampus.com"]) assert.ok(!hosts.has(h), h);
+  // Storage hosts appear only with their one approved file each.
+  const storage = REAL.entries.filter((e) => /qr-code-documents\.s3\.amazonaws\.com|dc2kentprodcontent\.blob\.core\.windows\.net/.test(e.url)).map((e) => e.url).sort();
+  assert.deepEqual(storage, ["https://dc2kentprodcontent.blob.core.windows.net/installationmanuals/TDBD_TSID/TDBD_English.pdf", "https://qr-code-documents.s3.amazonaws.com/HTPG/HT-EN-IOM.pdf"]);
+  assert.equal(REAL.entries.length, 70);
 });
