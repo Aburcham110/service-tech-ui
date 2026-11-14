@@ -1,8 +1,8 @@
 /* psychro.html: 4 steps (Return, Supply, Air, Results). Values persist on this phone. */
-import { evaluate, pointRows, copyText } from "./psychro-ui.js?v=48";
-import { buildChart } from "./psychro-chart.js?v=48";
-import { prefillFromQuery } from "./psychro-link.js?v=48";
-import { mountAddToCall, psychroEntry } from "./call-notes.js?v=48";
+import { evaluate, pointRows, copyText } from "./psychro-ui.js?v=49";
+import { buildChart } from "./psychro-chart.js?v=49";
+import { prefillFromQuery } from "./psychro-link.js?v=49";
+import { mountAddToCall, psychroEntry } from "./call-notes.js?v=49";
 
 const STEPS = ["return", "supply", "air", "results"];
 const FIELDS = ["retDb", "retHumMode", "retHum", "supDb", "supHumMode", "supHum", "pressureMode", "pressureValue", "cfm", "airflowAt", "tesp", "ratedTons"];
