@@ -24,7 +24,7 @@ export function renderOemCard(host, index, input, doc = host.ownerDocument) {
   else {
     const ul = el("ul", "oem-list");
     for (const r of card.rows) {
-      const li = el("li");
+      const li = el("li", r.nonOem ? "oem-not-oem" : null);
       const a = el("a", "oem-link");
       a.href = r.url; a.target = "_blank"; a.rel = "noopener noreferrer";
       a.appendChild(el("strong", null, r.brand + " — " + r.docTitle));

@@ -27,7 +27,7 @@ test("generator: keeps only listed statuses with an Official URL", () => {
 
 test("generator: output fields only (no Filename, Library folder or Notes); ; keys split and trimmed", () => {
   const r = buildManualIndex(readFileSync(fx("ok.csv"), "utf8"));
-  for (const e of r.entries) assert.deepEqual(Object.keys(e), ["brand", "model", "matchKeys", "docTitle", "status", "url", "verifiedDate"]);
+  for (const e of r.entries) assert.deepEqual(Object.keys(e), ["brand", "model", "matchKeys", "docTitle", "status", "url", "verifiedDate", "nonOem"]);
   const s = JSON.stringify(r.entries);
   assert.ok(!/SECRET-NOTE|SECRET-FOLDER|fx-a\.pdf|multi\s+line note/.test(s));
   assert.deepEqual(r.entries[0].matchKeys, ["FXA*TEST", "FXB*TEST"]);
@@ -62,7 +62,7 @@ test("bundled data/manual-index.json: allowlisted https links only, no excluded 
   const d = JSON.parse(readFileSync(new URL("../data/manual-index.json", import.meta.url), "utf8"));
   assert.ok(d.entries.length > 0);
   for (const e of d.entries) {
-    assert.deepEqual(Object.keys(e), ["brand", "model", "matchKeys", "docTitle", "status", "url", "verifiedDate"]);
+    assert.deepEqual(Object.keys(e), ["brand", "model", "matchKeys", "docTitle", "status", "url", "verifiedDate", "nonOem"]);
     assert.match(e.url, /^https:\/\//);
     assert.ok(isOfficialUrl(e.url), e.url);
     assert.ok(!/shareddocs|manualslib/i.test(e.url));

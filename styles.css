@@ -391,3 +391,4 @@ input.imported, select.imported { outline: 2px solid var(--warn, #e0a030); }
 .oem-list li { margin: 6px 0; }
 .oem-link { display: block; }
 .oem-meta { display: block; opacity: 0.8; }
+.oem-not-oem .oem-meta { color: #f59e0b; opacity: 1; }

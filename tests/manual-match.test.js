@@ -119,3 +119,27 @@ test("real index: allowlisted brand hosts match by brand; storage hosts only wit
   assert.deepEqual(storage, ["https://dc2kentprodcontent.blob.core.windows.net/installationmanuals/TDBD_TSID/TDBD_English.pdf", "https://qr-code-documents.s3.amazonaws.com/HTPG/HT-EN-IOM.pdf"]);
   assert.equal(REAL.entries.length, 70);
 });
+
+test("non-OEM hosts: 'Not OEM source' label instead of the status, sorted after Reference", () => {
+  const e = (url, status, docTitle, extra = {}) => ({ brand: "Fixtureco", model: "fixture", matchKeys: ["FIXT*"], docTitle, status, url, verifiedDate: "2026-11-13", ...extra });
+  const ix = { entries: [
+    e("https://www.radiantcompany.com/fixture.pdf", "MATCHED", "A seller doc"),
+    e("https://www.hvaclearningcampus.com/fixture", "MATCHED", "B training"),
+    e("https://hvaclearningcampus.com/fixture2", "RELATED", "C training"),
+    e("https://flagged.invalid/x.pdf", "MATCHED", "D flagged", { nonOem: true }),
+    e("https://oem.invalid/ref.pdf", "REFERENCE", "Z reference"),
+    e("https://oem.invalid/exact.pdf", "MATCHED", "Y exact"),
+  ] };
+  const r = matchManuals(ix, { model: "FIXT-1", brand: "Fixtureco" });
+  assert.deepEqual(r.map((x) => x.label), ["Exact", "Reference", "Not OEM source", "Not OEM source", "Not OEM source", "Not OEM source"]);
+  assert.deepEqual(r.slice(2).map((x) => x.docTitle), ["A seller doc", "B training", "C training", "D flagged"]);
+  assert.ok(r.slice(2).every((x) => x.nonOem) && !r[0].nonOem);
+  assert.equal(statusLabel("MATCHED", { url: "https://www.radiantcompany.com/a.pdf" }), "Not OEM source");
+  assert.equal(statusLabel("MATCHED", { url: "https://www.radiant-company.invalid/a.pdf" }), "Exact");
+});
+
+test("real index: radiantcompany row is flagged nonOem; OEM rows are not", () => {
+  const REAL = JSON.parse(readFileSync(new URL("../data/manual-index.json", import.meta.url), "utf8"));
+  for (const x of REAL.entries) assert.equal(x.nonOem, /^(www\.)?(hvaclearningcampus\.com|radiantcompany\.com)$/.test(new URL(x.url).hostname), x.url);
+  assert.equal(REAL.entries.filter((x) => x.nonOem).length, 1);
+});

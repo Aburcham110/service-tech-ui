@@ -8,6 +8,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { isOfficialUrl, isExcluded } from "./official-domains.js";
+import { NON_OEM_HOSTS } from "./manual-match.js";
 
 export const DEFAULT_CSV = "/workspace/hvac-library-index/index-results.csv";
 export const KEEP_STATUSES = ["MATCHED", "MATCHED (newer rev)", "MATCHED (newer edition)", "RELATED", "REFERENCE"];
@@ -60,6 +61,7 @@ export function buildManualIndex(csvText) {
       status,
       url,
       verifiedDate: cell(r, "date"),
+      nonOem: NON_OEM_HOSTS.includes(host),
     });
   }
   return { entries, dropped, fatal, counts: { rows: body.length, kept, written: entries.length, dropped: dropped.length } };
