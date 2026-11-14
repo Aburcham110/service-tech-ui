@@ -56,6 +56,41 @@ export function brandNames(rowBrand) {
 }
 export const brandMatches = (rowBrand, brand) => brandNames(rowBrand).includes(normBrand(brand));
 
+/** Brand as shown in a picker: index notes like "(not Daikin)" or "(likely; not Daikin)" removed, other text kept. */
+export function brandLabel(rowBrand) {
+  return String(rowBrand || "").replace(/\s*\(([^)]*)\)/g, (m, inner) => (/^\s*(not|likely)\b/i.test(inner) ? "" : m)).replace(/\s+/g, " ").trim();
+}
+/** First real name of an index brand ("ECR / Utica" -> "ECR"): the value the brand filter receives. */
+export function brandValue(rowBrand) {
+  const parts = String(rowBrand || "").split(/[()\/;,]/).map((x) => x.trim()).filter((x) => x && !/^(not|likely)\b/i.test(x));
+  return parts[0] || "";
+}
+const JUNK_BRANDS = new Set(["unknown", ""]);
+
+/** Brand picker list: the base brands first, in the order given (each { value, label, aliases? }), then every other
+ *  brand in the manual index, alphabetical by label. Case-insensitive dedupe on the same brand names the filter uses,
+ *  so "Copeland (Emerson)", "York (JCI)" or "Norlake / Master-Bilt (RSG)" never add a second entry. */
+export function brandOptions(base, entries) {
+  const out = []; const seen = new Set();
+  const covered = (names) => names.some((n) => seen.has(n));
+  for (const b of base || []) {
+    const value = typeof b === "string" ? b : b.value;
+    const label = typeof b === "string" ? b : (b.label || b.value);
+    const names = [value, ...((b && b.aliases) || [])].flatMap(brandNames);
+    if (!value || covered(brandNames(value))) continue;
+    out.push({ value, label, extra: false }); names.forEach((n) => seen.add(n));
+  }
+  const extras = [...new Set((entries || []).map((e) => String(e.brand || "").trim()))]
+    .map((raw) => ({ raw, label: brandLabel(raw), value: brandValue(raw), names: brandNames(raw) }))
+    .filter((x) => x.value && x.names.length && !JUNK_BRANDS.has(x.names[0]))
+    .sort((a, b) => a.label.localeCompare(b.label, "en", { sensitivity: "base" }));
+  for (const x of extras) {
+    if (covered(x.names)) continue;
+    out.push({ value: x.value, label: x.label, extra: true }); x.names.forEach((n) => seen.add(n));
+  }
+  return out;
+}
+
 const ORDER = (status, entry) => {
   if (entry && isNonOem(entry)) return 5;
   if (status === "MATCHED") return 0;
