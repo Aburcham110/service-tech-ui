@@ -90,7 +90,7 @@ export function matchManuals(index, { model, brand } = {}) {
 
 /** Same-origin load of the bundled index (precached by sw.js). */
 export function loadManualIndex() {
-  return fetch(new URL("../data/manual-index.json?v=45", import.meta.url)).then((r) => {
+  return fetch(new URL("../data/manual-index.json?v=46", import.meta.url)).then((r) => {
     if (!r.ok) throw new Error("manual index " + r.status);
     return r.json();
   });
