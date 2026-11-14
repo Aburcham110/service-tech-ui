@@ -1,11 +1,11 @@
 /** manuals.html: renders the offline manuals helper from the precached index. Picking a brand renders its
  *  terms and links immediately (change event); the last scanned plate pre-fills brand/model. */
-import { loadManualsIndex, brandKey, matchModel, listUnmatched, clearUnmatched, unmatchedText, loginLabel, LOCK } from "./manuals.js?v=47";
-import { searchTerms, portalLinks, bestLink, allTermsText, LABEL } from "./manuals-helper.js?v=47";
-import { renderSendButton } from "./missing-model.js?v=47";
-import { getLastPlate } from "./last-plate.js?v=47";
-import { loadManualIndex } from "./manual-match.js?v=47";
-import { renderOemCard } from "./manual-links-ui.js?v=47";
+import { loadManualsIndex, brandKey, matchModel, listUnmatched, clearUnmatched, unmatchedText, loginLabel, LOCK } from "./manuals.js?v=48";
+import { searchTerms, portalLinks, bestLink, allTermsText, LABEL } from "./manuals-helper.js?v=48";
+import { renderSendButton } from "./missing-model.js?v=48";
+import { getLastPlate } from "./last-plate.js?v=48";
+import { loadManualIndex, brandOptions, brandMatches } from "./manual-match.js?v=48";
+import { renderOemCard } from "./manual-links-ui.js?v=48";
 
 const q = new URLSearchParams(location.search);
 const pick = document.getElementById("mh-brand");
@@ -22,21 +22,33 @@ function copy(text, btn) {
 const oemHost = document.getElementById("mh-oem");
 const oemIndex = loadManualIndex().catch(() => ({ entries: [] }));
 
-Promise.all([loadManualsIndex(), oemIndex]).then(([index, manualIndex]) => {
-  pick.appendChild(new Option("Choose brand…", ""));
-  Object.keys(index.brands).sort().forEach((b) => pick.appendChild(new Option(b, b)));
+loadManualsIndex().then((index) => {
+  // Base brands (manuals index, same order as before) show at once; brands that are only in the OEM manual index
+  // are appended when data/manual-index.json loads (same-origin, precached).
+  const base = Object.keys(index.brands).sort().map((k) => ({ value: k, aliases: index.brands[k].aliases }));
+  let manualIndex = null; // null until data/manual-index.json loads, so no early 'No indexed manual'
+  const fillPicker = () => {
+    const keep = pick.value;
+    pick.textContent = "";
+    pick.appendChild(new Option("Choose brand…", ""));
+    brandOptions(base, manualIndex ? manualIndex.entries : []).forEach((o) => pick.appendChild(new Option(o.label, o.value)));
+    pick.value = keep;
+  };
+  fillPicker();
   // URL params win; otherwise the last scanned plate pre-fills brand + model.
   const plate = getLastPlate() || {};
   const fromPlate = !q.get("brand") && !q.get("model") ? plate : (brandKey(index, q.get("brand")) === brandKey(index, plate.brand) && !q.get("model") ? { model: plate.model } : {});
-  pick.value = brandKey(index, q.get("brand") || fromPlate.brand) || "";
+  const wantBrand = q.get("brand") || fromPlate.brand || "";
+  pick.value = brandKey(index, wantBrand) || "";
   modelIn.value = (q.get("model") || fromPlate.model || "").slice(0, 60);
   if (fromPlate.model && modelIn.value) modelIn.dataset.fromScan = "1";
   const render = () => {
     root.innerHTML = "";
     const b = pick.value;
     // One "OEM manuals" card whenever a model is set (brand optional: unknown brand = stricter keys).
-    if (oemHost) renderOemCard(oemHost, manualIndex, { brand: b, model: modelIn.value }, document);
+    if (oemHost) { if (manualIndex) renderOemCard(oemHost, manualIndex, { brand: b, model: modelIn.value }, document); else oemHost.hidden = true; }
     if (!b) { root.appendChild(el("p", "use-when", "Pick a brand (Bohn, Ruud, Coleman… are listed under their parent).")); return; }
+    if (!index.brands[b]) { root.appendChild(el("p", "footer-note", "Search terms and portal links aren't in the app for this brand yet. Use the OEM manuals card above.")); return; }
     root.appendChild(el("div", "disclaimer mh-label", LABEL));
     if (modelIn.dataset.fromScan) root.appendChild(el("p", "footer-note", "Model pre-filled from your last scan — edit if this is a different unit."));
     const m = matchModel(index, { brand: b, model: modelIn.value });
@@ -78,6 +90,12 @@ Promise.all([loadManualsIndex(), oemIndex]).then(([index, manualIndex]) => {
     root.appendChild(el("p", "footer-note online-only", "Portals open online. Aliases: " + (index.brands[b].aliases || []).join(", ") + "."));
   };
   renderUnmatched();
+  oemIndex.then((mi) => {
+    manualIndex = mi;
+    fillPicker();
+    if (!pick.value && wantBrand) { const o = [...pick.options].find((x) => x.value && brandMatches(wantBrand, x.value)); if (o) pick.value = o.value; }
+    render();
+  });
   pick.addEventListener("change", render);
   modelIn.addEventListener("input", () => { delete modelIn.dataset.fromScan; render(); });
   render();
