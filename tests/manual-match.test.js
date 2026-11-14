@@ -117,7 +117,7 @@ test("real index: allowlisted brand hosts match by brand; storage hosts only wit
   // Storage hosts appear only with their one approved file each.
   const storage = REAL.entries.filter((e) => /qr-code-documents\.s3\.amazonaws\.com|dc2kentprodcontent\.blob\.core\.windows\.net/.test(e.url)).map((e) => e.url).sort();
   assert.deepEqual(storage, ["https://dc2kentprodcontent.blob.core.windows.net/installationmanuals/TDBD_TSID/TDBD_English.pdf", "https://qr-code-documents.s3.amazonaws.com/HTPG/HT-EN-IOM.pdf"]);
-  assert.equal(REAL.entries.length, 70);
+  assert.equal(REAL.entries.length, 69);
 });
 
 test("non-OEM hosts: 'Not OEM source' label instead of the status, sorted after Reference", () => {

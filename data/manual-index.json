@@ -111,8 +111,16 @@
    "brand": "Daikin",
    "model": "Multi-split outdoor 2/3/4/5MXS-W, 2/3/4MXL-W, 2/3/4MXLH-W",
    "matchKeys": [
-    "*MXS*W*",
-    "*MXL*W*"
+    "2MXS18WMVJU",
+    "3MXS24WMVJU",
+    "4MXS36WMVJU",
+    "5MXS48WVJU",
+    "2MXL18WMVJU",
+    "3MXL24WMVJU",
+    "4MXL36WVJU",
+    "2MXLH18WVJU",
+    "3MXLH24WVJU",
+    "4MXLH36WVJU"
    ],
    "docTitle": "Service Manual SiUS122226EA",
    "status": "MATCHED",
@@ -135,25 +143,27 @@
   },
   {
    "brand": "Daikin",
-   "model": "VRV IV-S heat pump RXTQ36/48/60TAVJU",
+   "model": "VRV IV-S heat pump RXTQ36/48/60TAVJU(A) and TBVJUA/B",
    "matchKeys": [
-    "RXTQ*TAVJU"
+    "RXTQ*TAVJU*",
+    "RXTQ*TBVJU*"
    ],
-   "docTitle": "Service Manual SiUS331604E",
-   "status": "MATCHED (newer rev)",
+   "docTitle": "Service Manual SiUS331604EF",
+   "status": "MATCHED",
    "url": "https://daikincomfort.com/docs/default-source/vrv-iv-s-series/sm-rxtq_tb_sius331604ef.pdf",
    "verifiedDate": "2026-11-13",
    "nonOem": false
   },
   {
    "brand": "Daikin",
-   "model": "VRV Aurora heat pump RXLQ72-240TA (TJU/YDU/YCU), RXYQ72-384TAYCU",
+   "model": "VRV Aurora heat pump RXLQ72-240TA/TB (TJA/YDA/YCA), RXYQ72-384TAYCA",
    "matchKeys": [
     "RXLQ*TA*",
+    "RXLQ*TB*",
     "RXYQ*TAYC*"
    ],
-   "docTitle": "Service Manual SiUS341802E",
-   "status": "MATCHED (newer rev)",
+   "docTitle": "Service Manual SiUS341802EC",
+   "status": "MATCHED",
    "url": "https://daikincomfort.com/docs/default-source/vrv-aurora-heat-pump/sm-rxlq_tb_sius341802ec.pdf",
    "verifiedDate": "2026-11-13",
    "nonOem": false
@@ -276,8 +286,8 @@
    "matchKeys": [
     "FXAQ*PVJU"
    ],
-   "docTitle": "Engineering Data EDUS391100-F6 (older rev)",
-   "status": "MATCHED (newer rev)",
+   "docTitle": "Engineering Data EDUS391100A-F6",
+   "status": "MATCHED",
    "url": "https://daikincomfort.com/docs/default-source/wall-mounted-units/em-fxaq_pvju-(edus391100a-f6).pdf",
    "verifiedDate": "2026-11-13",
    "nonOem": false
@@ -285,7 +295,15 @@
   {
    "brand": "Tecumseh (not Daikin)",
    "model": "Outdoor air-cooled condensing units",
-   "matchKeys": [],
+   "matchKeys": [
+    "AGA*",
+    "AJA*",
+    "AKA*",
+    "AVA*",
+    "AWA*",
+    "AWG*",
+    "VSC*"
+   ],
    "docTitle": "Outdoor Condensing Unit Installation Instructions (NA, EN)",
    "status": "MATCHED",
    "url": "https://www.tecumseh.com/userfiles/documents/installation-instructions/odcu_insta_instruction_na_en.pdf",
@@ -358,8 +376,8 @@
    "matchKeys": [
     "DCS601C71"
    ],
-   "docTitle": "iTC Operation Manual EM05A058 (0509)",
-   "status": "MATCHED (newer rev)",
+   "docTitle": "iTC Operation Manual EM05A058E (ver 6.02.00)",
+   "status": "MATCHED",
    "url": "https://daikincomfort.com/docs/default-source/intelligent-touch-controller-(itc)/om-dcs601c71_ver6-02-00_(em05a058e).pdf",
    "verifiedDate": "2026-11-13",
    "nonOem": false
@@ -457,16 +475,6 @@
    "nonOem": false
   },
   {
-   "brand": "Mate Precision Technologies",
-   "model": "Punch press tooling (not HVAC)",
-   "matchKeys": [],
-   "docTitle": "Technical Solutions Guide LIT00682 Rev E",
-   "status": "MATCHED",
-   "url": "https://www.mate.com/wp-content/uploads/2021/03/LIT00682_TechSolutionsGuide_RevE_LR.pdf",
-   "verifiedDate": "2026-11-13",
-   "nonOem": false
-  },
-  {
    "brand": "Turbo Air",
    "model": "M3 reach-in refrigerators/freezers M3R/M3F",
    "matchKeys": [
@@ -520,9 +528,9 @@
    "matchKeys": [
     "SFH*"
    ],
-   "docTitle": "SFH Installation & Operation Manual P/N 240009735 Rev F (12/2014)",
+   "docTitle": "SFH Installation & Operation Manual P/N 240009735 Rev G (09/30/2016)",
    "status": "MATCHED",
-   "url": "https://uticaboilers.com/wp-content/uploads/2022/02/SFH-Installation-and-Operation-Manual.pdf",
+   "url": "https://uticaboilers.com/wp-content/uploads/2022/02/240009735-REV-G-Starfire-SFH-IOM.pdf",
    "verifiedDate": "2026-11-13",
    "nonOem": false
   },
@@ -530,9 +538,23 @@
    "brand": "Hoshizaki",
    "model": "Steelheart undercounter/worktop refrigeration",
    "matchKeys": [
-    "UR*A",
-    "UF*A",
-    "WR*A"
+    "UR27A*",
+    "UR48A*",
+    "UF27A*",
+    "UF60A*",
+    "WR27A*",
+    "WR36A*",
+    "WR48A*",
+    "WR60A*",
+    "WR72A*",
+    "WF27A*",
+    "WF48A*",
+    "WF60A*",
+    "SR27A*",
+    "SR36A*",
+    "SR48A*",
+    "SR60A*",
+    "SR72A*"
    ],
    "docTitle": "Steelheart Series Service Manual 73217",
    "status": "MATCHED",
@@ -582,8 +604,8 @@
    "matchKeys": [
     "TRCeN800*"
    ],
-   "docTitle": "TRCeN800V Submittal",
-   "status": "MATCHED (newer rev)",
+   "docTitle": "TRCeN800V Submittal (current 3-page edition)",
+   "status": "MATCHED",
    "url": "https://www.solerpalau-usa.com/documents/Submittal/sub-trcen800v.pdf",
    "verifiedDate": "2026-11-13",
    "nonOem": false
@@ -659,7 +681,10 @@
   {
    "brand": "Turbo Air",
    "model": "SMART-7 refrigeration system (Carel controller)",
-   "matchKeys": [],
+   "matchKeys": [
+    "STI*",
+    "STX*"
+   ],
    "docTitle": "Refrigeration System Installation & Operation Manual KUCST210419",
    "status": "RELATED",
    "url": "https://www.turboairinc.com/refrigerationsystem/wp-content/uploads/sites/8/2021/07/Previous-Model_-Refrigeration-System-Intallation-Operation-Manual-SMART-7-For-Danfoss-Controller_EachPorductPag.pdf",
@@ -697,9 +722,45 @@
    "brand": "Copeland",
    "model": "CR KQ/K6/5/K7 hermetic reciprocating compressors",
    "matchKeys": [
-    "CR*KQ*",
-    "CR*K6*",
-    "CR*K7*"
+    "CR14K6*",
+    "CR14K7*",
+    "CR16K6*",
+    "CR16K7*",
+    "CR16KQ*",
+    "CR18K6*",
+    "CR18K7*",
+    "CR18KQ*",
+    "CR19K7*",
+    "CR20K6*",
+    "CR20KQ*",
+    "CR21K7*",
+    "CR22K6*",
+    "CR22KQ*",
+    "CR23K7*",
+    "CR24K6*",
+    "CR24K7*",
+    "CR24KQ*",
+    "CR26K6*",
+    "CR28K6*",
+    "CR28K7*",
+    "CR28KQ*",
+    "CR30K6*",
+    "CR30KQ*",
+    "CR31K7*",
+    "CR32K6*",
+    "CR32KQ*",
+    "CR33KQ*",
+    "CR34K6*",
+    "CR34KQ*",
+    "CR35K6*",
+    "CR35K7*",
+    "CR36KQ*",
+    "CR37KQ*",
+    "CR38K6*",
+    "CR41KQ*",
+    "CR42K6*",
+    "CR47KQ*",
+    "CR53KQ*"
    ],
    "docTitle": "Application bulletin AE4-1329 R3",
    "status": "MATCHED",
@@ -781,7 +842,9 @@
   {
    "brand": "G&D Chillers",
    "model": "Single & dual stage glycol chillers",
-   "matchKeys": [],
+   "matchKeys": [
+    "GD-*"
+   ],
    "docTitle": "Chiller Installation Guide & User Manual (2021a)",
    "status": "MATCHED",
    "url": "https://gdchillers.com/wp-content/uploads/1970/01/Single-Dual-Stage-Chiller-Manual-2021a.pdf",
