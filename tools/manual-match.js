@@ -6,7 +6,16 @@
  *  - A key with fewer than 3 literal characters before its first "*" never matches (e.g. "*MXS*W*").
  *  - Brand known: only rows of that brand. Brand unknown: only keys with >= 5 literal characters before
  *    the first "*" (a key without "*" counts when it is >= 5 characters).
- *  - Blank keys never match. Results are deduped by URL and sorted Exact, Newer rev, Related doc, Reference, then title. */
+ *  - Blank keys never match. Results are deduped by URL and sorted Exact, Newer rev, Related doc, Reference, then title.
+ *  - Rows on NON_OEM_HOSTS (nonOem: true) show "Not OEM source" instead of their status and sort after Reference. */
+
+/** Hosts that are on the allowlist but are not the OEM (training site, seller): shown as "Not OEM source", sorted last. */
+export const NON_OEM_HOSTS = ["hvaclearningcampus.com", "www.hvaclearningcampus.com", "www.radiantcompany.com"];
+export const NON_OEM_LABEL = "Not OEM source";
+export function isNonOem(entry) {
+  if (entry && entry.nonOem === true) return true;
+  try { return NON_OEM_HOSTS.includes(new URL(entry.url).hostname.toLowerCase()); } catch (e) { return false; }
+}
 
 export const NO_MATCH_TEXT = "No indexed manual. Check the OEM portal.";
 export const MIN_PREFIX = 3;
@@ -47,14 +56,16 @@ export function brandNames(rowBrand) {
 }
 export const brandMatches = (rowBrand, brand) => brandNames(rowBrand).includes(normBrand(brand));
 
-const ORDER = (status) => {
+const ORDER = (status, entry) => {
+  if (entry && isNonOem(entry)) return 5;
   if (status === "MATCHED") return 0;
   if (/^MATCHED \(newer/.test(status)) return 1;
   if (status === "RELATED") return 2;
   if (status === "REFERENCE") return 3;
   return 4;
 };
-export function statusLabel(status) {
+export function statusLabel(status, entry) {
+  if (entry && isNonOem(entry)) return NON_OEM_LABEL;
   if (status === "MATCHED") return "Exact";
   if (/^MATCHED \(newer/.test(status)) return "Newer rev";
   if (status === "RELATED") return "Related doc";
@@ -72,14 +83,14 @@ export function matchManuals(index, { model, brand } = {}) {
     .filter((e) => !brandKnown || brandMatches(e.brand, brand))
     .filter((e) => (e.matchKeys || []).some((k) => keyMatches(k, model, { brandKnown })))
     .filter((e) => /^https:\/\//.test(e.url || ""))
-    .sort((a, b) => ORDER(a.status) - ORDER(b.status) || String(a.docTitle).localeCompare(String(b.docTitle)))
+    .sort((a, b) => ORDER(a.status, a) - ORDER(b.status, b) || String(a.docTitle).localeCompare(String(b.docTitle)))
     .filter((e) => !seen.has(e.url) && seen.add(e.url))
-    .map((e) => ({ brand: e.brand, model: e.model, docTitle: e.docTitle, status: e.status, label: statusLabel(e.status), url: e.url, verifiedDate: e.verifiedDate }));
+    .map((e) => ({ brand: e.brand, model: e.model, docTitle: e.docTitle, status: e.status, label: statusLabel(e.status, e), nonOem: isNonOem(e), url: e.url, verifiedDate: e.verifiedDate }));
 }
 
 /** Same-origin load of the bundled index (precached by sw.js). */
 export function loadManualIndex() {
-  return fetch(new URL("../data/manual-index.json?v=45", import.meta.url)).then((r) => {
+  return fetch(new URL("../data/manual-index.json?v=46", import.meta.url)).then((r) => {
     if (!r.ok) throw new Error("manual index " + r.status);
     return r.json();
   });

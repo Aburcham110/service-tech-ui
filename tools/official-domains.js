@@ -28,8 +28,18 @@ export const OEM_DOMAINS = {
   "www.howecorp.com": "Howe", "www.marleymep.com": "Marley Engineered Products", "www.mate.com": "Mate Precision Technologies",
   "www.neptronic.com": "Neptronic", "www.parker.com": "Parker (Sporlan)", "www.regoproducts.com": "RegO",
   "www.scotsman-ice.com": "Scotsman", "www.turboairinc.com": "Turbo Air", "www.viessmann.ca": "Viessmann Canada",
+  // Approved by Arthur directly 2026-11-13.
+  "www.radiantcompany.com": "Radiant Floor Company", "hvaclearningcampus.com": "Daikin Comfort HVAC Learning Campus (training)",
+  "www.hvaclearningcampus.com": "Daikin Comfort HVAC Learning Campus (training)",
 };
-export const PATH_ONLY = { "s3.amazonaws.com": ["/enter.mehvac.com/"], "hvacdirect.com": ["/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf"] }; // Mitsubishi Electric US asset bucket only, not all of S3
+// A path ending in "/" allows that folder; any other path allows only that exact file.
+export const PATH_ONLY = {
+  "s3.amazonaws.com": ["/enter.mehvac.com/"], // Mitsubishi Electric US asset bucket only, not all of S3
+  "hvacdirect.com": ["/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf"],
+  // Shared storage hosts: one exact file each from the Model Manual Index (Arthur, 2026-11-13), nothing else on the host.
+  "qr-code-documents.s3.amazonaws.com": ["/HTPG/HT-EN-IOM.pdf"], // HTPG unit coolers IOM
+  "dc2kentprodcontent.blob.core.windows.net": ["/installationmanuals/TDBD_TSID/TDBD_English.pdf"], // True TDBD/TSID manual
+};
 
 // Non-OEM URLs that are allowed, each listed explicitly (app infrastructure, not documentation links).
 export const EXCLUDED = [
@@ -44,7 +54,7 @@ export const EXCLUDED = [
 export function isOfficialUrl(url) {
   let u; try { u = new URL(url); } catch (e) { return false; }
   const h = u.hostname.toLowerCase();
-  if (PATH_ONLY[h]) return PATH_ONLY[h].some((p) => u.pathname.startsWith(p));
+  if (PATH_ONLY[h]) return PATH_ONLY[h].some((p) => (p.endsWith("/") ? u.pathname.startsWith(p) : u.pathname === p));
   return Object.keys(OEM_DOMAINS).some((d) => h === d || h.endsWith("." + d));
 }
 export const isExcluded = (url) => EXCLUDED.some(([p]) => url.startsWith(p));

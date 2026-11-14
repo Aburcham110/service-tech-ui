@@ -35,6 +35,16 @@ test("OEM manuals card: hidden without a model, one card with linked rows when m
   assert.match(d.root.textContent, /Educational only — verify with OEM/);
 });
 
+test("OEM manuals card: non-OEM rows show the 'Not OEM source' label", () => {
+  const d = fakeDoc();
+  const ix = { entries: [{ brand: "Radiant Floor Company", model: "fixture", matchKeys: ["RADIANT*"], docTitle: "Fixture", status: "MATCHED", url: "https://www.radiantcompany.com/fixture.pdf", verifiedDate: "2026-11-13", nonOem: true }] };
+  renderOemCard(d.root, ix, { brand: "", model: "RADIANT1" }, d);
+  const [li] = all(d.root, "li");
+  assert.equal(li.className, "oem-not-oem");
+  assert.match(li.textContent, /Not OEM source · verified 2026-11-13/);
+  assert.ok(!/Exact/.test(li.textContent));
+});
+
 test("OEM manuals card: no match shows the exact fallback text", () => {
   const d = fakeDoc();
   renderOemCard(d.root, IX, { brand: "Daikin", model: "NOPE12345" }, d);

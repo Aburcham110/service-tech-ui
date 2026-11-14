@@ -108,12 +108,38 @@ test("real index: RXYQ72TATJU (Daikin) finds the EDUS341703A-R2 engineering data
   assert.match(r[0].docTitle, /EDUS341703A-R2/);
 });
 
-test("real index: newly allowlisted brand hosts match by brand; held-out hosts are absent", () => {
+test("real index: allowlisted brand hosts match by brand; storage hosts only with their exact files", () => {
   const REAL = JSON.parse(readFileSync(new URL("../data/manual-index.json", import.meta.url), "utf8"));
   const edh = matchManuals(REAL, { model: "EDH-120", brand: "Neptronic" });
   assert.ok(edh.length >= 1 && edh.every((r) => new URL(r.url).hostname === "www.neptronic.com"));
   assert.deepEqual(matchManuals(REAL, { model: "EDH-120", brand: "Daikin" }), []);
   assert.deepEqual(matchManuals(REAL, { model: "EDH-120" }), [], "EDH* is too short without a brand");
-  const hosts = new Set(REAL.entries.map((e) => new URL(e.url).hostname));
-  for (const h of ["qr-code-documents.s3.amazonaws.com", "dc2kentprodcontent.blob.core.windows.net", "www.radiantcompany.com", "hvaclearningcampus.com"]) assert.ok(!hosts.has(h), h);
+  // Storage hosts appear only with their one approved file each.
+  const storage = REAL.entries.filter((e) => /qr-code-documents\.s3\.amazonaws\.com|dc2kentprodcontent\.blob\.core\.windows\.net/.test(e.url)).map((e) => e.url).sort();
+  assert.deepEqual(storage, ["https://dc2kentprodcontent.blob.core.windows.net/installationmanuals/TDBD_TSID/TDBD_English.pdf", "https://qr-code-documents.s3.amazonaws.com/HTPG/HT-EN-IOM.pdf"]);
+  assert.equal(REAL.entries.length, 70);
+});
+
+test("non-OEM hosts: 'Not OEM source' label instead of the status, sorted after Reference", () => {
+  const e = (url, status, docTitle, extra = {}) => ({ brand: "Fixtureco", model: "fixture", matchKeys: ["FIXT*"], docTitle, status, url, verifiedDate: "2026-11-13", ...extra });
+  const ix = { entries: [
+    e("https://www.radiantcompany.com/fixture.pdf", "MATCHED", "A seller doc"),
+    e("https://www.hvaclearningcampus.com/fixture", "MATCHED", "B training"),
+    e("https://hvaclearningcampus.com/fixture2", "RELATED", "C training"),
+    e("https://flagged.invalid/x.pdf", "MATCHED", "D flagged", { nonOem: true }),
+    e("https://oem.invalid/ref.pdf", "REFERENCE", "Z reference"),
+    e("https://oem.invalid/exact.pdf", "MATCHED", "Y exact"),
+  ] };
+  const r = matchManuals(ix, { model: "FIXT-1", brand: "Fixtureco" });
+  assert.deepEqual(r.map((x) => x.label), ["Exact", "Reference", "Not OEM source", "Not OEM source", "Not OEM source", "Not OEM source"]);
+  assert.deepEqual(r.slice(2).map((x) => x.docTitle), ["A seller doc", "B training", "C training", "D flagged"]);
+  assert.ok(r.slice(2).every((x) => x.nonOem) && !r[0].nonOem);
+  assert.equal(statusLabel("MATCHED", { url: "https://www.radiantcompany.com/a.pdf" }), "Not OEM source");
+  assert.equal(statusLabel("MATCHED", { url: "https://www.radiant-company.invalid/a.pdf" }), "Exact");
+});
+
+test("real index: radiantcompany row is flagged nonOem; OEM rows are not", () => {
+  const REAL = JSON.parse(readFileSync(new URL("../data/manual-index.json", import.meta.url), "utf8"));
+  for (const x of REAL.entries) assert.equal(x.nonOem, /^(www\.)?(hvaclearningcampus\.com|radiantcompany\.com)$/.test(new URL(x.url).hostname), x.url);
+  assert.equal(REAL.entries.filter((x) => x.nonOem).length, 1);
 });

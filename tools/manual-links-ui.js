@@ -1,6 +1,6 @@
 /** "OEM manuals" card (manuals.html): official manual links for the model on screen, from the bundled
  *  data/manual-index.json. Links open the OEM's own site in a new tab; nothing is downloaded, proxied or cached. */
-import { matchManuals, NO_MATCH_TEXT } from "./manual-match.js?v=45";
+import { matchManuals, NO_MATCH_TEXT } from "./manual-match.js?v=46";
 
 export const CARD_TITLE = "OEM manuals";
 export const CARD_NOTE = "Official OEM links from the Model Manual Index (opens online). Educational only — verify with OEM.";
@@ -24,7 +24,7 @@ export function renderOemCard(host, index, input, doc = host.ownerDocument) {
   else {
     const ul = el("ul", "oem-list");
     for (const r of card.rows) {
-      const li = el("li");
+      const li = el("li", r.nonOem ? "oem-not-oem" : null);
       const a = el("a", "oem-link");
       a.href = r.url; a.target = "_blank"; a.rel = "noopener noreferrer";
       a.appendChild(el("strong", null, r.brand + " — " + r.docTitle));
