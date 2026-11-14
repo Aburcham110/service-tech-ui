@@ -1,12 +1,12 @@
 /** tree.html: walks a troubleshooting tree (tools/trees.js) one step at a time. */
-import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=47";
+import { TREES, toolHref, treeHref, quickLinks, jobLogHref } from "./trees.js?v=48";
 import { getTool } from "./registry.js";
-import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=47";
-import { getCardPlate } from "./card-plate.js?v=47";
-import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=47";
-import { loadManualsIndex } from "./manuals.js?v=47";
-import { mountAddToCall, treeNote, treeStepEntry, hasOpenCall } from "./call-notes.js?v=47";
-import { findCodeSet, lookupCode, sourceLink, rowLabel, loadErrorCodes } from "./error-codes.js?v=47";
+import { getLastPlate, plateLabel, nominalVoltage } from "./last-plate.js?v=48";
+import { getCardPlate } from "./card-plate.js?v=48";
+import { pickTree, manualLink, TREE_LABELS } from "./tree-pick.js?v=48";
+import { loadManualsIndex } from "./manuals.js?v=48";
+import { mountAddToCall, treeNote, treeStepEntry, hasOpenCall } from "./call-notes.js?v=48";
+import { findCodeSet, lookupCode, sourceLink, rowLabel, loadErrorCodes } from "./error-codes.js?v=48";
 
 const params = new URLSearchParams(location.search);
 const TYPE_KEY = "serviceTechTreeType_v1"; // last equipment type picked here

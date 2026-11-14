@@ -1,11 +1,11 @@
 /** manuals.html: renders the offline manuals helper from the precached index. Picking a brand renders its
  *  terms and links immediately (change event); the last scanned plate pre-fills brand/model. */
-import { loadManualsIndex, brandKey, matchModel, listUnmatched, clearUnmatched, unmatchedText, loginLabel, LOCK } from "./manuals.js?v=47";
-import { searchTerms, portalLinks, bestLink, allTermsText, LABEL } from "./manuals-helper.js?v=47";
-import { renderSendButton } from "./missing-model.js?v=47";
-import { getLastPlate } from "./last-plate.js?v=47";
-import { loadManualIndex, brandOptions, brandMatches } from "./manual-match.js?v=47";
-import { renderOemCard } from "./manual-links-ui.js?v=47";
+import { loadManualsIndex, brandKey, matchModel, listUnmatched, clearUnmatched, unmatchedText, loginLabel, LOCK } from "./manuals.js?v=48";
+import { searchTerms, portalLinks, bestLink, allTermsText, LABEL } from "./manuals-helper.js?v=48";
+import { renderSendButton } from "./missing-model.js?v=48";
+import { getLastPlate } from "./last-plate.js?v=48";
+import { loadManualIndex, brandOptions, brandMatches } from "./manual-match.js?v=48";
+import { renderOemCard } from "./manual-links-ui.js?v=48";
 
 const q = new URLSearchParams(location.search);
 const pick = document.getElementById("mh-brand");

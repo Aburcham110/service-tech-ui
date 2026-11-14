@@ -7,11 +7,11 @@
  * Nothing is stored (not even localStorage) until the user taps Confirm, and
  * then only the onConfirm callback decides what to keep.
  */
-import { mountGuide, renderReviewSummary, progressLine, INSTRUCTIONS } from "./scan-flow.js?v=47";
-import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=47";
-import { cropStep } from "./plate-crop.js?v=47";
-import { findLabelBox, deglare, clahe } from "./plate-image.js?v=47";
-import { isHeic, heicToFile } from "./heic.js?v=47";
+import { mountGuide, renderReviewSummary, progressLine, INSTRUCTIONS } from "./scan-flow.js?v=48";
+import { parsePlate, mergeParses, LOW_CONFIDENCE, lowBar, reviewReasons, ID_FIELDS } from "./plate-parse.js?v=48";
+import { cropStep } from "./plate-crop.js?v=48";
+import { findLabelBox, deglare, clahe } from "./plate-image.js?v=48";
+import { isHeic, heicToFile } from "./heic.js?v=48";
 
 const VENDOR = "vendor/tesseract/";
 const DECODE_SIDE = 4000;   // decode cap (keeps the label's detail before cropping)
