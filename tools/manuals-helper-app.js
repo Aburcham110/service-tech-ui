@@ -1,9 +1,11 @@
 /** manuals.html: renders the offline manuals helper from the precached index. Picking a brand renders its
  *  terms and links immediately (change event); the last scanned plate pre-fills brand/model. */
-import { loadManualsIndex, brandKey, matchModel, listUnmatched, clearUnmatched, unmatchedText, loginLabel, LOCK } from "./manuals.js?v=44";
-import { searchTerms, portalLinks, bestLink, allTermsText, LABEL } from "./manuals-helper.js?v=44";
-import { renderSendButton } from "./missing-model.js?v=44";
-import { getLastPlate } from "./last-plate.js?v=44";
+import { loadManualsIndex, brandKey, matchModel, listUnmatched, clearUnmatched, unmatchedText, loginLabel, LOCK } from "./manuals.js?v=45";
+import { searchTerms, portalLinks, bestLink, allTermsText, LABEL } from "./manuals-helper.js?v=45";
+import { renderSendButton } from "./missing-model.js?v=45";
+import { getLastPlate } from "./last-plate.js?v=45";
+import { loadManualIndex } from "./manual-match.js?v=45";
+import { renderOemCard } from "./manual-links-ui.js?v=45";
 
 const q = new URLSearchParams(location.search);
 const pick = document.getElementById("mh-brand");
@@ -17,7 +19,10 @@ function copy(text, btn) {
   if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, done); else done();
 }
 
-loadManualsIndex().then((index) => {
+const oemHost = document.getElementById("mh-oem");
+const oemIndex = loadManualIndex().catch(() => ({ entries: [] }));
+
+Promise.all([loadManualsIndex(), oemIndex]).then(([index, manualIndex]) => {
   pick.appendChild(new Option("Choose brand…", ""));
   Object.keys(index.brands).sort().forEach((b) => pick.appendChild(new Option(b, b)));
   // URL params win; otherwise the last scanned plate pre-fills brand + model.
@@ -29,6 +34,8 @@ loadManualsIndex().then((index) => {
   const render = () => {
     root.innerHTML = "";
     const b = pick.value;
+    // One "OEM manuals" card whenever a model is set (brand optional: unknown brand = stricter keys).
+    if (oemHost) renderOemCard(oemHost, manualIndex, { brand: b, model: modelIn.value }, document);
     if (!b) { root.appendChild(el("p", "use-when", "Pick a brand (Bohn, Ruud, Coleman… are listed under their parent).")); return; }
     root.appendChild(el("div", "disclaimer mh-label", LABEL));
     if (modelIn.dataset.fromScan) root.appendChild(el("p", "footer-note", "Model pre-filled from your last scan — edit if this is a different unit."));

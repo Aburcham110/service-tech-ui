@@ -17,6 +17,17 @@ export const OEM_DOMAINS = {
   "copeland.com": "Copeland", "tecumseh.com": "Tecumseh",
   "heatcraftrpd.com": "Heatcraft Refrigeration Products", "intelligencontrols.com": "Heatcraft (InteliGen controls)",
   "manitowocice.com": "Manitowoc Ice",
+  // Exact brand-owned document hosts approved by Arthur 2026-11-13 for the OEM manual links (Model Manual Index).
+  // Listed as full hostnames (www. etc.), so only that host and its own subdomains pass, not the rest of the parent domain.
+  "cdn.daikincloud.io": "Daikin (PIM document CDN)", "www.daikin.eu": "Daikin Europe",
+  "docs.johnsoncontrols.com": "Johnson Controls (York) docs", "docs.k-rp.com": "KeepRite Refrigeration docs",
+  "gdchillers.com": "G&D Chillers", "iceomatic.com": "Ice-O-Matic", "media.rinnai.us": "Rinnai (media host)",
+  "norlake.com": "Norlake / Master-Bilt (RSG)", "secure.hoshizakiamerica.com": "Hoshizaki America",
+  "www.solerpalau-usa.com": "S&P (Soler & Palau) USA", "solerpalaucanada.com": "S&P (Soler & Palau) Canada", "www.solerpalaucanada.com": "S&P (Soler & Palau) Canada",
+  "uticaboilers.com": "ECR / Utica Boilers", "www.captiveaire.com": "CaptiveAire", "www.friedrich.com": "Friedrich",
+  "www.howecorp.com": "Howe", "www.marleymep.com": "Marley Engineered Products", "www.mate.com": "Mate Precision Technologies",
+  "www.neptronic.com": "Neptronic", "www.parker.com": "Parker (Sporlan)", "www.regoproducts.com": "RegO",
+  "www.scotsman-ice.com": "Scotsman", "www.turboairinc.com": "Turbo Air", "www.viessmann.ca": "Viessmann Canada",
 };
 export const PATH_ONLY = { "s3.amazonaws.com": ["/enter.mehvac.com/"], "hvacdirect.com": ["/media/pdf/Fujitsu%20LZAS%20Service%20Manual.pdf"] }; // Mitsubishi Electric US asset bucket only, not all of S3
 

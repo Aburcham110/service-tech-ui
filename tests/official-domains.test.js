@@ -29,3 +29,20 @@ test("every URL in data/*.json, tools/ and the html pages is on the official dom
   assert.equal(badUrls("https://carrier.com.evil.example/a.pdf").length, 1);
   assert.equal(EXCLUDED.length, 6); // exclusions are an explicit, short list
 });
+
+test("brand-owned OEM manual hosts (approved 2026-11-13) pass as exact hosts; held-out hosts stay rejected", () => {
+  const approved = ["cdn.daikincloud.io", "www.daikin.eu", "docs.johnsoncontrols.com", "docs.k-rp.com", "gdchillers.com", "iceomatic.com",
+    "media.rinnai.us", "norlake.com", "secure.hoshizakiamerica.com", "www.solerpalau-usa.com", "solerpalaucanada.com", "www.solerpalaucanada.com",
+    "uticaboilers.com", "www.captiveaire.com", "www.friedrich.com", "www.howecorp.com", "www.marleymep.com", "www.mate.com", "www.neptronic.com",
+    "www.parker.com", "www.regoproducts.com", "www.scotsman-ice.com", "www.turboairinc.com", "www.viessmann.ca"];
+  for (const h of approved) assert.ok(isOfficialUrl("https://" + h + "/doc.pdf"), h);
+  // Held out by Arthur: generic storage hosts, a seller and a training site.
+  for (const u of ["https://qr-code-documents.s3.amazonaws.com/HTPG/HT-EN-IOM.pdf",
+    "https://dc2kentprodcontent.blob.core.windows.net/installationmanuals/TDBD_TSID/TDBD_English.pdf",
+    "https://www.radiantcompany.com/wp-content/uploads/radiantcompanymanual.pdf",
+    "https://hvaclearningcampus.com/a.pdf", "https://www.hvaclearningcampus.com/a.pdf"]) assert.ok(!isOfficialUrl(u), u);
+  // Exact hosts only: the parent domain and sibling subdomains are not opened up.
+  for (const u of ["https://daikin.eu/a.pdf", "https://shop.daikin.eu/a.pdf", "https://daikincloud.io/a.pdf", "https://other.daikincloud.io/a.pdf",
+    "https://johnsoncontrols.com/a.pdf", "https://parker.com/a.pdf", "https://mate.com/a.pdf", "https://hoshizakiamerica.com/a.pdf",
+    "https://rinnai.us/a.pdf", "https://k-rp.com/a.pdf", "https://www.parker.com.evil.example/a.pdf"]) assert.ok(!isOfficialUrl(u), u);
+});
